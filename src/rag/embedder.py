@@ -85,10 +85,11 @@ class Embedder:
                 return self._dense_model
             from sentence_transformers import SentenceTransformer
             import torch
+            device = "cuda" if torch.cuda.is_available() else "cpu"
             try:
-                model = SentenceTransformer(BGE_MODEL_NAME, device="cuda")
-            except torch.OutOfMemoryError:
-                logger.warning("GPU OOM, 降级 CPU")
+                model = SentenceTransformer(BGE_MODEL_NAME, device=device)
+            except (torch.OutOfMemoryError, AssertionError):
+                logger.warning("GPU 不可用或 OOM, 降级 CPU")
                 model = SentenceTransformer(BGE_MODEL_NAME, device="cpu")
             self._dense_model = model
             logger.info("嵌入模型预热完成")
@@ -120,9 +121,10 @@ class Reranker:
                 return self._model
             from sentence_transformers import CrossEncoder
             import torch
+            device = "cuda" if torch.cuda.is_available() else "cpu"
             try:
-                self._model = CrossEncoder(RERANKER_MODEL_NAME, device="cuda")
-            except torch.OutOfMemoryError:
+                self._model = CrossEncoder(RERANKER_MODEL_NAME, device=device)
+            except (torch.OutOfMemoryError, AssertionError):
                 self._model = CrossEncoder(RERANKER_MODEL_NAME, device="cpu")
             logger.info("精排模型预热完成")
             return self._model

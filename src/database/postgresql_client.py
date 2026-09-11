@@ -36,7 +36,7 @@ class PostgreSQLClient:
         try:
             url = (f"postgresql+psycopg://{settings.postgres_user}:{settings.postgres_password}"
                    f"@{settings.postgres_host}:{settings.postgres_port}/{settings.postgres_db}")
-            self._engine = create_engine(url, pool_pre_ping=True)
+            self._engine = create_engine(url, pool_pre_ping=True, connect_args={"connect_timeout": 3})
             with self._engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
             self._init_feedback_table()
