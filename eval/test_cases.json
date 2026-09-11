@@ -1,0 +1,5 @@
+[
+  {"question": "什么是单一来源采购？", "expected_tool": "search_bidding_knowledge"},
+  {"question": "采购最多的标的是什么？", "expected_tool": "search_knowledge_graph"},
+  {"question": "中标金额最高的项目有哪些？", "expected_tool": "search_postgresql"}
+]
