@@ -27,6 +27,7 @@ async def lifespan(app: FastAPI):
     from src.web_search import web_search_client
     from src.mcp.web_search_exa import exa_search_client
     from src.rag.scheduler import start_auto_ingest, stop_auto_ingest
+    from src.tools.system_monitor import system_monitor
     rag_pipeline.initialize()
     bidding_agent.initialize()
     neo4j_client.initialize()
@@ -34,8 +35,10 @@ async def lifespan(app: FastAPI):
     web_search_client.initialize()
     exa_search_client.initialize()
     start_auto_ingest()
+    system_monitor.start()
     logger.info("API 服务启动完成")
     yield
+    system_monitor.stop()
     stop_auto_ingest()
     logger.info("API 服务已关闭")
 
@@ -224,6 +227,13 @@ def health():
         _health_cache["time"] = time.time()
         _health_cache["data"] = data
     return data
+
+
+@app.get("/api/system/metrics")
+def system_metrics():
+    """系统监控快照: CPU / 内存 / 磁盘 / GPU (可选) + 60s 趋势."""
+    from src.tools.system_monitor import system_monitor
+    return system_monitor.snapshot()
 
 
 @app.post("/api/knowledge/reload")
