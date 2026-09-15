@@ -46,6 +46,10 @@ class Settings:
     auto_ingest_enabled: bool = field(default_factory=lambda: os.getenv("AUTO_INGEST_ENABLED", "true").lower() in ("true", "1", "yes"))
     auto_ingest_interval_min: int = field(default_factory=lambda: int(os.getenv("AUTO_INGEST_INTERVAL_MIN", "30")))
     auto_ingest_data_dir: str = field(default_factory=lambda: os.getenv("AUTO_INGEST_DATA_DIR", "data/raw"))
+    # 对话历史压缩
+    history_compress_enabled: bool = field(default_factory=lambda: os.getenv("HISTORY_COMPRESS_ENABLED", "true").lower() in ("true", "1", "yes"))
+    history_compress_after_rounds: int = field(default_factory=lambda: int(os.getenv("HISTORY_COMPRESS_AFTER_ROUNDS", "10")))
+    history_compressed_content_max: int = field(default_factory=lambda: int(os.getenv("HISTORY_COMPRESSED_CONTENT_MAX", "300")))
 
     @property
     def cors_origin_list(self):
