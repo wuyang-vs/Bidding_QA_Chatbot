@@ -35,7 +35,8 @@ echo [1/2] 启动后端 API (端口 8001)...
 start "BiddingQA-Backend" cmd /k ""%PYTHON%" main.py api"
 
 echo [2/2] 启动前端 (端口 3000)...
-start "BiddingQA-Frontend" cmd /k "cd /d "%~dp0frontend" && npm run dev"
+cd frontend
+start "BiddingQA-Frontend" cmd /k "npm run dev"
 
 echo.
 echo ================================================
@@ -46,5 +47,5 @@ echo   API文档: http://localhost:8001/docs
 echo   系统监控: http://localhost:8001/api/system/metrics
 echo ================================================
 echo.
-echo 关闭此窗口不会停止服务. 要停止请关闭后端/前端独立窗口.
+echo 关闭此窗口不会停止服务. 要停止请运行 stop.bat.
 pause
