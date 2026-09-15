@@ -68,6 +68,7 @@ dependencies = [
     { name = "tavily-python" },
     { name = "torch" },
     { name = "transformers" },
+    { name = "typer" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "zai-sdk" },
 ]
@@ -99,6 +100,7 @@ requires-dist = [
     { name = "tavily-python", specifier = ">=0.7.27" },
     { name = "torch", specifier = ">=2.13" },
     { name = "transformers", specifier = ">=5.14" },
+    { name = "typer", specifier = ">=0.27.2" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.51" },
     { name = "zai-sdk", specifier = ">=0.2.3" },
 ]
