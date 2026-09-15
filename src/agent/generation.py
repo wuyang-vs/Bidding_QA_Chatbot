@@ -81,14 +81,22 @@ class GenerationMixin:
 
     def _fallback_rag(self, question, llm, messages):
         from src.rag.pipeline import rag_pipeline
+        from src.agent.audit import audit_answer, build_citation_prompt_suffix
         yield ("status", {"content": "正在检索知识库..."})
         docs = rag_pipeline.search(question, top_k=5)
         context = "\n\n".join(f"【资料{i+1}】\n问: {d['question']}\n答: {d['answer']}"
                               for i, d in enumerate(docs))
         prompt = f"请严格基于以下资料回答问题：\n\n{context}\n\n问题: {question}\n回答:"
         yield ("status", {"content": "正在生成回答..."})
-        yield from self._generate_stream(
-            [{"role": "user", "content": prompt}], llm)
+        answer_parts = []
+        for evt in self._generate_stream(
+                [{"role": "user", "content": prompt}], llm):
+            if evt[0] == "token":
+                answer_parts.append(evt[1].get("content", ""))
+            yield evt
+        full_answer = "".join(answer_parts)
+        audit = audit_answer(full_answer, docs)
         yield ("done", {"sources": docs, "web_sources": [],
                         "tool_called": False, "tool_name": "",
-                        "phase_times": []})
+                        "phase_times": [],
+                        "audit": audit})

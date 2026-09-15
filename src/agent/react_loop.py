@@ -2,6 +2,7 @@
 import logging
 import time
 
+from src.agent.audit import audit_answer, build_citation_prompt_suffix
 from src.agent.constants import MAX_TOOL_ROUNDS
 from src.agent.tool_defense import (
     _looks_like_tool_call, _normalize_tool_content,
@@ -100,12 +101,16 @@ class ReActMixin:
             if last_tool and not all_sources and not web_sources:
                 answer = ("【注意: 所有检索工具均未返回有效结果, "
                           "以下回答可能缺乏依据, 请谨慎参考】\n\n") + answer
+            # 审计
+            merged = self._merge_sources(all_sources)
+            audit = audit_answer(answer, merged)
             for chunk in _pace_stream_chunks(answer):
                 yield ("token", {"content": chunk})
-            yield ("done", {"sources": self._merge_sources(all_sources),
+            yield ("done", {"sources": merged,
                             "web_sources": self._merge_sources(web_sources),
                             "tool_called": bool(last_tool), "tool_name": last_tool,
-                            "phase_times": phase_times})
+                            "phase_times": phase_times,
+                            "audit": audit})
             return
 
         final_messages = self._clean_for_final(messages, question, tool_msgs_start)
@@ -119,14 +124,30 @@ class ReActMixin:
                             "绝对不能编造、猜测或凭常识回答。")
             })
 
+        # 引用溯源: 给 LLM 注入资料编号, 让它标注 [资料N]
+        merged_sources = self._merge_sources(all_sources)
+        citation_suffix = build_citation_prompt_suffix(merged_sources)
+        if citation_suffix:
+            final_messages.append({"role": "system", "content": citation_suffix})
+
         yield ("status", {"content": "正在生成回答..."})
         t_gen = time.time()
-        yield from self._generate_stream(final_messages, llm)
+        # 收集完整答案用于审计 (流式消费同时拼接)
+        answer_parts = []
+        for evt in self._generate_stream(final_messages, llm):
+            if evt[0] == "token":
+                answer_parts.append(evt[1].get("content", ""))
+            yield evt
+        full_answer = "".join(answer_parts)
         phase_times.append(("生成回答", int((time.time() - t_gen) * 1000)))
-        yield ("done", {"sources": self._merge_sources(all_sources),
+
+        # 审计完整答案
+        audit = audit_answer(full_answer, merged_sources)
+        yield ("done", {"sources": merged_sources,
                         "web_sources": self._merge_sources(web_sources),
                         "tool_called": bool(last_tool), "tool_name": last_tool,
-                        "phase_times": phase_times})
+                        "phase_times": phase_times,
+                        "audit": audit})
 
     @staticmethod
     def _merge_sources(sources: list[dict]) -> list[dict]:
