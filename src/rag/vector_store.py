@@ -1,4 +1,4 @@
-"""Qdrant Named Vectors 混合检索 + RRF + 问题分类"""
+"""Qdrant Named Vectors 混合检索 + RRF + 问题分类 + 元数据透传"""
 import logging
 import time
 
@@ -59,14 +59,28 @@ class VectorStore:
         )
 
     def upsert_points(self, points: list[dict], batch_size: int = 64) -> None:
+        """写入 Qdrant, payload 支持元数据字段 (source_file, section_title, doc_type, chunk_id)."""
         c = self._get_client()
         for i in range(0, len(points), batch_size):
             batch = points[i:i + batch_size]
+            qdrant_points = []
+            for p in batch:
+                payload = {
+                    "question": p["question"],
+                    "answer": p["answer"],
+                }
+                # 元数据: 有则存, 无则忽略
+                for meta_key in ("source_file", "section_title", "doc_type", "chunk_id"):
+                    if meta_key in p and p[meta_key]:
+                        payload[meta_key] = p[meta_key]
+                qdrant_points.append(PointStruct(
+                    id=p["id"],
+                    vector={"dense": p["dense"], "sparse": p["sparse"]},
+                    payload=payload,
+                ))
             c.upsert(
                 collection_name=settings.qdrant_collection,
-                points=[PointStruct(id=p["id"], vector={"dense": p["dense"], "sparse": p["sparse"]},
-                                    payload={"question": p["question"], "answer": p["answer"]})
-                        for p in batch])
+                points=qdrant_points)
 
     def collection_exists(self) -> bool:
         try:
@@ -108,10 +122,21 @@ class VectorStore:
         resp = self._retry_call(_call)
         if resp is None:
             return []
-        return [{"id": h.id, "score": h.score,
-                 "question": h.payload.get("question", ""),
-                 "answer": h.payload.get("answer", "")}
-                for h in resp.points]
+        results = []
+        for h in resp.points:
+            item = {
+                "id": h.id,
+                "score": h.score,
+                "question": h.payload.get("question", ""),
+                "answer": h.payload.get("answer", ""),
+            }
+            # 透传元数据
+            for meta_key in ("source_file", "section_title", "doc_type", "chunk_id"):
+                val = h.payload.get(meta_key)
+                if val:
+                    item[meta_key] = val
+            results.append(item)
+        return results
 
 
 vector_store = VectorStore()

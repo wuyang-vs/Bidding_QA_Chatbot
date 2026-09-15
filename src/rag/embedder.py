@@ -1,4 +1,4 @@
-"""Embedder (BGE + BM25) / Reranker (CrossEncoder)"""
+"""Embedder (BGE-M3 Dense + BM25 Sparse) / Reranker (bge-reranker-v2-m3 CrossEncoder)"""
 import json
 import logging
 import math
@@ -8,9 +8,16 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-BGE_MODEL_NAME = "BAAI/bge-small-zh-v1.5"
-RERANKER_MODEL_NAME = "BAAI/bge-reranker-base"
-BGE_QUERY_PREFIX = "为这个句子生成表示以用于检索相关文章："
+# 升级: bge-small-zh-v1.5 → BAAI/bge-m3
+# BGE-M3: 多语言, 1024 维, 支持 ColBERT (Late Interaction)
+BGE_MODEL_NAME = "BAAI/bge-m3"
+# BGE-M3 不需要 bge-small-zh 的长前缀, 空字符串即可
+BGE_QUERY_PREFIX = ""
+BGE_DOC_PREFIX = ""
+
+# 升级: bge-reranker-base → BAAI/bge-reranker-v2-m3
+RERANKER_MODEL_NAME = "BAAI/bge-reranker-v2-m3"
+
 VOCAB_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "vocab.json"
 
 
@@ -92,14 +99,15 @@ class Embedder:
                 logger.warning("GPU 不可用或 OOM, 降级 CPU")
                 model = SentenceTransformer(BGE_MODEL_NAME, device="cpu")
             self._dense_model = model
-            logger.info("嵌入模型预热完成")
+            logger.info("嵌入模型预热完成: %s (dim=%d)", BGE_MODEL_NAME,
+                        model.get_sentence_embedding_dimension())
             return model
 
     def encode_query_dense(self, text: str) -> list[float]:
         return self._load_dense().encode(BGE_QUERY_PREFIX + text, normalize_embeddings=True).tolist()
 
     def encode_document_dense(self, text: str) -> list[float]:
-        return self._load_dense().encode(text, normalize_embeddings=True).tolist()
+        return self._load_dense().encode(BGE_DOC_PREFIX + text, normalize_embeddings=True).tolist()
 
     def fit_sparse(self, documents): self._sparse.fit(documents)
     def save_vocab(self): self._sparse.save()
@@ -126,7 +134,7 @@ class Reranker:
                 self._model = CrossEncoder(RERANKER_MODEL_NAME, device=device)
             except (torch.OutOfMemoryError, AssertionError):
                 self._model = CrossEncoder(RERANKER_MODEL_NAME, device="cpu")
-            logger.info("精排模型预热完成")
+            logger.info("精排模型预热完成: %s", RERANKER_MODEL_NAME)
             return self._model
 
     def rerank(self, query: str, docs: list[dict], top_k: int) -> list[dict]:

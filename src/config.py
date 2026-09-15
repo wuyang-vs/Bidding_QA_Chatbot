@@ -22,8 +22,11 @@ class Settings:
     qdrant_url: str = field(default_factory=lambda: os.getenv("QDRANT_URL", ""))
     qdrant_api_key: str = field(default_factory=lambda: os.getenv("QDRANT_API_KEY", ""))
     qdrant_collection: str = field(default_factory=lambda: os.getenv("QDRANT_COLLECTION", "bid_qa"))
-    qdrant_vector_size: int = field(default_factory=lambda: int(os.getenv("QDRANT_VECTOR_SIZE", "512")))
+    qdrant_vector_size: int = field(default_factory=lambda: int(os.getenv("QDRANT_VECTOR_SIZE", "1024")))
     qdrant_timeout: int = field(default_factory=lambda: int(os.getenv("QDRANT_TIMEOUT", "30")))
+    # RAG 高级配置
+    query_variants_max: int = field(default_factory=lambda: int(os.getenv("QUERY_VARIANTS_MAX", "3")))
+    source_diversity_max: int = field(default_factory=lambda: int(os.getenv("SOURCE_DIVERSITY_MAX", "2")))
     neo4j_uri: str = field(default_factory=lambda: os.getenv("NEO4J_URI", "neo4j://127.0.0.1:7687"))
     neo4j_username: str = field(default_factory=lambda: os.getenv("NEO4J_USERNAME", "neo4j"))
     neo4j_password: str = field(default_factory=lambda: os.getenv("NEO4J_PASSWORD", ""))
