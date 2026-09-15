@@ -236,6 +236,20 @@ def system_metrics():
     return system_monitor.snapshot()
 
 
+@app.get("/api/agent/executions")
+def agent_executions(limit: int = 20, status: str = "", trace_id: str = ""):
+    """查询 Agent 执行记录 (结构化日志)."""
+    from src.agent.execution_log import query_executions
+    return {"executions": query_executions(limit=limit, status=status, trace_id=trace_id)}
+
+
+@app.get("/api/agent/executions/stats")
+def agent_execution_stats():
+    """Agent 执行统计: 总数/状态分布/平均耗时/工具调用 TOP."""
+    from src.agent.execution_log import get_stats
+    return get_stats()
+
+
 @app.post("/api/knowledge/reload")
 def knowledge_reload():
     """手动触发知识库自动扫描 + 增量导入."""
@@ -274,7 +288,7 @@ def document_upload(file: UploadFile, save_to_db: bool = True):
     """
     import tempfile, os
     from src.tools.document_parser import parse_file
-    from src.database.postgresql_client import postgresql_client
+    from src.database.postgresql_client import postgresql_client  # noqa: F401
 
     allowed = {".pdf", ".docx", ".txt", ".md"}
     ext = os.path.splitext(file.filename or "")[1].lower()

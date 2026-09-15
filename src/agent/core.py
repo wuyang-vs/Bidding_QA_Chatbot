@@ -14,6 +14,7 @@ from src.agent.react_loop import ReActMixin
 from src.agent.generation import GenerationMixin
 from src.agent.skills import AVAILABLE_SKILLS, SKILLS_PROMPT, _match_skills
 from src.agent.utils import _sse, _truncate_history
+from src.agent.execution_log import ExecutionLogger
 from src.tools.rag_tools import ALL_TOOLS
 
 logger = logging.getLogger(__name__)
@@ -56,6 +57,9 @@ class BiddingAgent(ReActMixin, GenerationMixin):
             yield ("error", {"content": "知识库未就绪"})
             return
 
+        exec_log = ExecutionLogger()
+        exec_log.set_context(question, provider, web_search_enabled, deep_thinking_enabled)
+
         # ---- 前置意图检测 ----
         if is_out_of_scope(question, history):
             yield ("status", {"content": "问题超出领域范围"})
@@ -64,6 +68,9 @@ class BiddingAgent(ReActMixin, GenerationMixin):
             yield ("done", {"sources": [], "web_sources": [],
                             "tool_called": False, "tool_name": "",
                             "phase_times": [("前置检测", 0)]})
+            exec_log.set_status("out_of_scope")
+            exec_log.add_phase("前置检测", 0)
+            exec_log.finish()
             return
         if is_vague_question(question, history):
             yield ("status", {"content": "问题信息不足"})
@@ -72,6 +79,9 @@ class BiddingAgent(ReActMixin, GenerationMixin):
             yield ("done", {"sources": [], "web_sources": [],
                             "tool_called": False, "tool_name": "",
                             "phase_times": [("前置检测", 0)]})
+            exec_log.set_status("vague")
+            exec_log.add_phase("前置检测", 0)
+            exec_log.finish()
             return
 
         t0 = time.time()
@@ -84,12 +94,23 @@ class BiddingAgent(ReActMixin, GenerationMixin):
                 question, history, web_search_enabled, deep_thinking_enabled)
             yield ("status", {"content": "正在检索与搜索..."})
             for evt_type, kwargs in self._chat_stream_tools(
-                    messages, question, llm, active_tools, web_search_enabled):
+                    messages, question, llm, active_tools, web_search_enabled,
+                    exec_log=exec_log):
                 if evt_type == "done":
                     kwargs["elapsed_ms"] = int((time.time() - t0) * 1000)
+                    exec_log.set_result(
+                        kwargs.get("answer", ""),
+                        len(kwargs.get("sources", [])),
+                        len(kwargs.get("web_sources", [])),
+                        kwargs.get("audit"),
+                    )
+                    exec_log.elapsed_ms = kwargs["elapsed_ms"]
+                    exec_log.finish()
                 yield (evt_type, kwargs)
-        except Exception:
+        except Exception as e:
             logger.exception("Agent 处理异常")
+            exec_log.set_status("error", str(e))
+            exec_log.finish()
             yield ("error", {"content": "生成回答时出现异常，请稍后重试"})
 
     def chat_stream(self, question, history=None, web_search_enabled=False,

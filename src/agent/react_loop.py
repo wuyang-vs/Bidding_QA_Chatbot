@@ -19,7 +19,7 @@ _CAP_CONSTRAINT_TEXT = ("已达到工具调用轮次上限。必须立即基于�
 
 
 class ReActMixin:
-    def _chat_stream_tools(self, messages, question, llm, active_tools, web_search_enabled):
+    def _chat_stream_tools(self, messages, question, llm, active_tools, web_search_enabled, exec_log=None):
         tool_msgs_start = len(messages)
         all_sources, web_sources, last_tool = [], [], ""
         answer = ""
@@ -29,6 +29,8 @@ class ReActMixin:
         t_tools = None
 
         for round_idx in range(1, MAX_TOOL_ROUNDS + 1):
+            if exec_log:
+                exec_log.total_rounds = round_idx
             if round_idx > 1:
                 yield ("status", {"content": "正在分析检索结果..."})
             try:
@@ -44,6 +46,8 @@ class ReActMixin:
             if t_first is None:
                 t_first = time.time()
                 phase_times.append(("首轮分析", int((t_first - t0) * 1000)))
+                if exec_log:
+                    exec_log.add_phase("首轮分析", int((t_first - t0) * 1000))
 
             choice = response.choices[0]
             msg = choice.message
@@ -56,7 +60,9 @@ class ReActMixin:
                                                 for tc in tool_calls]})
                 status = "正在检索与搜索..." if round_idx == 1 else f"正在补充检索（第{round_idx}轮）..."
                 yield ("status", {"content": status})
+                t_tool_start = time.time()
                 results = ToolRunner.run_parallel(tool_calls, question, TOOL_EXECUTORS)
+                t_tool_end = time.time()
                 for tc, r in zip(tool_calls, results):
                     text = self._validate_result(r.name, r.text, r.sources)
                     messages.append({"role": "tool", "tool_call_id": tc.id, "content": text})
@@ -65,6 +71,10 @@ class ReActMixin:
                     else:
                         all_sources.extend(r.sources)
                     last_tool = r.name
+                    if exec_log:
+                        exec_log.add_tool_call(
+                            round_idx, r.name, len(r.sources), text[:60],
+                            int((t_tool_end - t_tool_start) * 1000))
                 t_tools = time.time()
                 continue
 
@@ -95,6 +105,8 @@ class ReActMixin:
 
         if t_tools:
             phase_times.append(("检索与搜索", int((t_tools - t_first) * 1000)))
+            if exec_log:
+                exec_log.add_phase("检索与搜索", int((t_tools - t_first) * 1000))
 
         if answer:
             from src.agent.utils import _pace_stream_chunks
@@ -141,6 +153,8 @@ class ReActMixin:
             yield evt
         full_answer = "".join(answer_parts)
         phase_times.append(("生成回答", int((time.time() - t_gen) * 1000)))
+        if exec_log:
+            exec_log.add_phase("生成回答", int((time.time() - t_gen) * 1000))
 
         # 审计完整答案
         audit = audit_answer(full_answer, merged_sources)
