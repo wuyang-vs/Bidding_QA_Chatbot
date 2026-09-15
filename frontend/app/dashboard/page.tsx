@@ -36,6 +36,15 @@ export default function DashboardPage() {
   if (loading) return <div className="p-8 text-center text-gray-400">加载中...</div>;
   if (!data) return <div className="p-8 text-center text-red-500">加载失败</div>;
 
+  // Null-safe defaults
+  const agent = data.agent || { total: 0, status_breakdown: {}, avg_elapsed_ms: 0, tool_call_top: [] };
+  const kb = data.knowledge_base || { points: 0, ready: false };
+  const db = data.database || { rows: 0, ready: false };
+  const graph = data.graph || { stats: [], ready: false };
+  const sys = data.system || { cpu: 0, memory: 0, disk: 0 };
+  const toolTop = agent.tool_call_top || [];
+  const statusBreakdown = agent.status_breakdown || {};
+
   const statusColors: Record<string, string> = {
     ok: "bg-green-500", error: "bg-red-500",
     out_of_scope: "bg-yellow-500", vague: "bg-orange-500",
@@ -52,28 +61,28 @@ export default function DashboardPage() {
 
         {/* Top cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <StatCard label="知识库条目" value={data.knowledge_base.points} ready={data.knowledge_base.ready} color="blue" />
-          <StatCard label="数据库记录" value={data.database.rows} ready={data.database.ready} color="purple" />
-          <StatCard label="Agent 总请求" value={data.agent.total} ready={true} color="green" />
-          <StatCard label="平均耗时(ms)" value={data.agent.avg_elapsed_ms} ready={true} color="orange" />
+          <StatCard label="知识库条目" value={kb.points} ready={kb.ready} color="blue" />
+          <StatCard label="数据库记录" value={db.rows} ready={db.ready} color="purple" />
+          <StatCard label="Agent 总请求" value={agent.total} ready={true} color="green" />
+          <StatCard label="平均耗时(ms)" value={agent.avg_elapsed_ms} ready={true} color="orange" />
         </div>
 
         {/* System metrics */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <BarCard label="CPU 使用率" value={data.system.cpu} color="bg-blue-500" />
-          <BarCard label="内存使用率" value={data.system.memory} color="bg-purple-500" />
-          <BarCard label="磁盘使用率" value={data.system.disk} color="bg-orange-500" />
+          <BarCard label="CPU 使用率" value={sys.cpu} color="bg-blue-500" />
+          <BarCard label="内存使用率" value={sys.memory} color="bg-purple-500" />
+          <BarCard label="磁盘使用率" value={sys.disk} color="bg-orange-500" />
         </div>
 
         {/* Agent status breakdown */}
         <div className="bg-white dark:bg-gray-900 rounded-xl p-5 mb-6">
           <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Agent 请求状态分布</h2>
-          {data.agent.total === 0 ? (
+          {agent.total === 0 ? (
             <p className="text-gray-400 text-sm">暂无执行记录</p>
           ) : (
             <div className="space-y-2">
-              {Object.entries(data.agent.status_breakdown).map(([status, count]) => {
-                const pct = Math.round((count / data.agent.total) * 100);
+              {Object.entries(statusBreakdown).map(([status, count]) => {
+                const pct = Math.round((count / agent.total) * 100);
                 return (
                   <div key={status} className="flex items-center gap-3">
                     <span className="text-xs w-20 text-gray-600 dark:text-gray-400">{status}</span>
@@ -94,12 +103,12 @@ export default function DashboardPage() {
         {/* Tool call top */}
         <div className="bg-white dark:bg-gray-900 rounded-xl p-5 mb-6">
           <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">工具调用排行</h2>
-          {data.agent.tool_call_top.length === 0 ? (
+          {toolTop.length === 0 ? (
             <p className="text-gray-400 text-sm">暂无工具调用</p>
           ) : (
             <div className="space-y-2">
-              {data.agent.tool_call_top.map(([name, count], i) => {
-                const max = data.agent.tool_call_top[0][1] || 1;
+              {toolTop.map(([name, count], i) => {
+                const max = toolTop[0][1] || 1;
                 const pct = Math.round((count / max) * 100);
                 return (
                   <div key={name} className="flex items-center gap-3">
@@ -120,13 +129,13 @@ export default function DashboardPage() {
         {/* Knowledge graph stats */}
         <div className="bg-white dark:bg-gray-900 rounded-xl p-5">
           <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">知识图谱节点统计</h2>
-          {!data.graph.ready ? (
+          {!graph.ready ? (
             <p className="text-gray-400 text-sm">Neo4j 未连接</p>
-          ) : data.graph.stats.length === 0 ? (
+          ) : !graph.stats || graph.stats.length === 0 ? (
             <p className="text-gray-400 text-sm">暂无数据</p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {data.graph.stats.map((s) => (
+              {(graph.stats || []).map((s) => (
                 <div key={s.label} className="border border-gray-200 dark:border-gray-800 rounded-lg p-3 text-center">
                   <div className="text-2xl font-bold text-gray-900 dark:text-white">{s.cnt}</div>
                   <div className="text-xs text-gray-500 mt-1">{s.label}</div>
