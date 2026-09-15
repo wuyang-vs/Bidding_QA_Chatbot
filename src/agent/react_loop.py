@@ -96,6 +96,10 @@ class ReActMixin:
 
         if answer:
             from src.agent.utils import _pace_stream_chunks
+            # LLM 直接给了答案, 但如果调过工具且工具全空, 追加诚实约束
+            if last_tool and not all_sources and not web_sources:
+                answer = ("【注意: 所有检索工具均未返回有效结果, "
+                          "以下回答可能缺乏依据, 请谨慎参考】\n\n") + answer
             for chunk in _pace_stream_chunks(answer):
                 yield ("token", {"content": chunk})
             yield ("done", {"sources": self._merge_sources(all_sources),
@@ -105,6 +109,16 @@ class ReActMixin:
             return
 
         final_messages = self._clean_for_final(messages, question, tool_msgs_start)
+
+        # 所有工具返回空 → 注入诚实约束, 禁止编造
+        if last_tool and not all_sources and not web_sources:
+            final_messages.append({
+                "role": "system",
+                "content": ("所有检索工具均未返回有效结果。"
+                            "你必须明确告知用户「未找到相关信息」，"
+                            "绝对不能编造、猜测或凭常识回答。")
+            })
+
         yield ("status", {"content": "正在生成回答..."})
         t_gen = time.time()
         yield from self._generate_stream(final_messages, llm)

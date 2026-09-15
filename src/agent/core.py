@@ -4,6 +4,10 @@ import time
 
 from src.clients.llm_factory import get_llm_client
 from src.agent.constants import BASE_TOOL_NAMES, WEB_TOOL_NAMES
+from src.agent.intent import (
+    is_out_of_scope, is_vague_question,
+    scope_rejection_message, vague_guidance_message,
+)
 from src.agent.prompts import SYSTEM_PROMPT
 from src.agent.react_loop import ReActMixin
 from src.agent.generation import GenerationMixin
@@ -50,6 +54,25 @@ class BiddingAgent(ReActMixin, GenerationMixin):
         if not self._ready:
             yield ("error", {"content": "知识库未就绪"})
             return
+
+        # ---- 前置意图检测 ----
+        if is_out_of_scope(question, history):
+            yield ("status", {"content": "问题超出领域范围"})
+            ans = scope_rejection_message(question)
+            yield ("token", {"content": ans})
+            yield ("done", {"sources": [], "web_sources": [],
+                            "tool_called": False, "tool_name": "",
+                            "phase_times": [("前置检测", 0)]})
+            return
+        if is_vague_question(question, history):
+            yield ("status", {"content": "问题信息不足"})
+            ans = vague_guidance_message(question)
+            yield ("token", {"content": ans})
+            yield ("done", {"sources": [], "web_sources": [],
+                            "tool_called": False, "tool_name": "",
+                            "phase_times": [("前置检测", 0)]})
+            return
+
         t0 = time.time()
         try:
             yield ("status", {"content": "正在初始化..."})
