@@ -81,6 +81,35 @@ for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":3000" ^| findstr "LISTENING
 
 if !TREE_FALLBACK!==0 echo   全部端口已释放
 
+REM ---- 策略 4: 按进程名兜底 (极端情况) ----
+echo.
+echo [策略4] 按进程名兜底 (仅杀 BiddingQA 相关)...
+
+set "NAME_FALLBACK=0"
+
+REM 只在端口还活着时才杀 python/node, 避免误伤其他项目
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":8001" ^| findstr "LISTENING"') do (
+    taskkill /f /im python.exe >nul 2>&1
+    if !errorlevel!==0 (
+        echo   python.exe 已终止
+        set "NAME_FALLBACK=1"
+    )
+    goto :after_tree_python
+)
+:after_tree_python
+
+for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":3000" ^| findstr "LISTENING"') do (
+    taskkill /f /im node.exe >nul 2>&1
+    if !errorlevel!==0 (
+        echo   node.exe 已终止
+        set "NAME_FALLBACK=1"
+    )
+    goto :after_tree_node
+)
+:after_tree_node
+
+if !NAME_FALLBACK!==0 echo   无需进程名兜底
+
 echo.
 echo ================================================
 echo   完成.
