@@ -1,3 +1,4 @@
+from __future__ import annotations
 """来源多样性: 限制同源文档数量, 避免单一来源垄断 top_k"""
 import logging
 from collections import Counter

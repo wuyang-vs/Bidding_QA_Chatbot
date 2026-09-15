@@ -1,3 +1,4 @@
+from __future__ import annotations
 """最终生成: 非流式/流式/深度思考/RAG 降级"""
 import logging
 

@@ -1,3 +1,4 @@
+from __future__ import annotations
 """智谱 GLM (zai-sdk)"""
 from zai import ZhipuAiClient
 from src.config import settings

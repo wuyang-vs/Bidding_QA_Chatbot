@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Neo4j 图谱查询 (6 类模板)"""
 import logging
 from neo4j import GraphDatabase
@@ -33,6 +34,29 @@ QUERIES = {
     """,
     "graph_stats": """
         MATCH (n) RETURN labels(n)[0] AS label, count(*) AS cnt
+    """,
+    # --- 竞争对手分析 ---
+    "suppliers_for_subject": """
+        MATCH (sup:Supplier)-[:SUPPLIED_BY]->(s:SubjectMatter)
+        WHERE s.name CONTAINS $keyword
+        RETURN sup.name AS supplier, count(*) AS related_relations
+        ORDER BY related_relations DESC LIMIT 15
+    """,
+    "top_competitors": """
+        MATCH (competitor:Supplier)-[:SUPPLIED_BY]->(sm:SubjectMatter)
+        OPTIONAL MATCH (competitor)-[:COMPETES_WITH]->(peer:Supplier)
+        WHERE sm.name CONTAINS $keyword
+        RETURN competitor.name AS supplier, collect(DISTINCT sm.name) AS subjects,
+               count(DISTINCT sm) AS subject_count,
+               collect(DISTINCT peer.name) AS competitors
+        ORDER BY subject_count DESC LIMIT 10
+    """,
+    "market_concentration": """
+        MATCH (sup:Supplier)-[:SUPPLIED_BY]->(s:SubjectMatter)
+        WHERE s.name CONTAINS $keyword
+        WITH s, collect(DISTINCT sup.name) AS suppliers
+        RETURN s.name AS subject, size(suppliers) AS supplier_count, suppliers
+        ORDER BY supplier_count DESC LIMIT 10
     """,
 }
 

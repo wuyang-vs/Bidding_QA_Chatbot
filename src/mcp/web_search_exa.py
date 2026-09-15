@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Exa MCP 封装 (后台启动, 未就绪仅 Tavily)"""
 import logging
 import re

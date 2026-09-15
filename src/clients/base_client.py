@@ -1,3 +1,4 @@
+from __future__ import annotations
 """LLM 客户端基类"""
 from abc import ABC, abstractmethod
 

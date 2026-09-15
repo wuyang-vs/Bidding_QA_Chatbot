@@ -1,3 +1,4 @@
+from __future__ import annotations
 """LLM 客户端工厂 (带缓存)"""
 import threading
 from src.config import settings

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os, httpx, requests
 def _proxy():
     return os.getenv("HTTPS_PROXY") or os.getenv("HTTP_PROXY") or None

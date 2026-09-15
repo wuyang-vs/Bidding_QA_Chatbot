@@ -1,3 +1,4 @@
+from __future__ import annotations
 """常量 + 基础工具集"""
 MAX_HISTORY_ROUNDS = 5
 MAX_TOOL_ROUNDS = 4

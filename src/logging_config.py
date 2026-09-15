@@ -1,3 +1,4 @@
+from __future__ import annotations
 import logging, sys
 _configured = False
 def setup_logging(level=logging.INFO):

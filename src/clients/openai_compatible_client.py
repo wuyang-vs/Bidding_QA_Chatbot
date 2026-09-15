@@ -1,3 +1,4 @@
+from __future__ import annotations
 """vLLM / Ollama 等 OpenAI 兼容端点"""
 from openai import OpenAI
 from src.http_client import build_httpx_client

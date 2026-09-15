@@ -109,7 +109,7 @@ def main() -> int:
             return 1
 
     # ---- 读取 & 清洗 ----
-    df = read_qa_data(src)
+    df, col_map = read_qa_data(src)
     if df.empty:
         logger.error("清洗后无有效数据，退出")
         return 1

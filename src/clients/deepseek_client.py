@@ -1,3 +1,4 @@
+from __future__ import annotations
 """DeepSeek (OpenAI 兼容协议)"""
 import logging
 from openai import OpenAI

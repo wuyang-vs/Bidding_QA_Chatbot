@@ -1,3 +1,4 @@
+from __future__ import annotations
 """ReAct 多轮工具循环 + _clean_for_final + 来源合并/质量标签"""
 import logging
 import time

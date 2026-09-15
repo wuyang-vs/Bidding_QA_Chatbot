@@ -1,3 +1,4 @@
+from __future__ import annotations
 """BaseTool + ToolRunner (并行/超时/异常隔离)"""
 import json
 import logging

@@ -1,3 +1,4 @@
+from __future__ import annotations
 """工具文本检测/归一化/解析"""
 import json
 import re

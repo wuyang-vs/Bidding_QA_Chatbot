@@ -31,6 +31,7 @@ def find_excel_file() -> Path | None:
 
 def read_qa_data(path: Path) -> tuple[pd.DataFrame, dict]:
     """读取 Excel, 返回 (标准化 DataFrame, 元数据字段映射).
+from __future__ import annotations
     
     DataFrame 保证有 question/answer 列, 可能额外有 source_file/section_title/doc_type/chunk_id.
     """

@@ -1,3 +1,4 @@
+from __future__ import annotations
 """技能加载与匹配 (上下文注入, 非工具调用)"""
 import logging
 from pathlib import Path

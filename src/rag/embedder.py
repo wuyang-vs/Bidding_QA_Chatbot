@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Embedder (BGE-M3 Dense + BM25 Sparse) / Reranker (bge-reranker-v2-m3 CrossEncoder)"""
 import json
 import logging

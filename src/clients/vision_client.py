@@ -1,3 +1,4 @@
+from __future__ import annotations
 """智谱 glm-4.6v-flashx 图片解析"""
 from zai import ZhipuAiClient
 from src.config import settings

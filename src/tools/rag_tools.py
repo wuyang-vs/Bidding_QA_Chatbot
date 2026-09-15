@@ -1,3 +1,4 @@
+from __future__ import annotations
 """工具定义 + TOOL_EXECUTORS + _fmt_* 格式化 + 联网重排"""
 import logging
 

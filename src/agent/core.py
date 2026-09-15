@@ -1,3 +1,4 @@
+from __future__ import annotations
 """BiddingAgent 主体"""
 import logging
 import time

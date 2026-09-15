@@ -1,3 +1,4 @@
+from __future__ import annotations
 """轻量 MCP 客户端 (stdio JSON-RPC 2.0)"""
 import json
 import logging

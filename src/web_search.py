@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Tavily 客户端 (进程内缓存 TTL 600s / 上限 512 条)"""
 import logging
 import threading

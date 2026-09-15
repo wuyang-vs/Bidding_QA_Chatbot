@@ -1,3 +1,4 @@
+﻿from __future__ import annotations
 """PostgreSQL 查询 (6 类模板) + 会话/反馈 CRUD"""
 import logging
 import threading
@@ -18,7 +19,7 @@ ALLOWED_FIELDS = {
     "winning_bidder", "project_code", "publish_time", "winning_time",
     "winning_amount", "agency", "location",
 }
-AGG_FUNCS = {"count", "sum", "avg", "max", "min"}
+AGG_FUNCS = {"count", "sum", "avg", "max", "min", "stddev"}
 TEXT_FIELDS = ["title", "project_name", "subject_matter", "purchaser", "winning_bidder"]
 
 
@@ -65,6 +66,32 @@ class PostgreSQLClient:
                         id SERIAL PRIMARY KEY,
                         session_id TEXT, question TEXT, answer TEXT,
                         rating TEXT, created_at TIMESTAMP DEFAULT NOW())
+                """))
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS bidding_documents (
+                        id SERIAL PRIMARY KEY,
+                        source_file TEXT NOT NULL,
+                        source_path TEXT,
+                        project_name TEXT,
+                        project_code TEXT,
+                        purchaser TEXT,
+                        agency TEXT,
+                        subject_matter TEXT,
+                        budget TEXT,
+                        qualification_requirements JSONB DEFAULT '[]'::jsonb,
+                        scoring_criteria TEXT,
+                        deadline TEXT,
+                        opening_time TEXT,
+                        location TEXT,
+                        raw_text_preview TEXT,
+                        parse_status TEXT,
+                        text_length INTEGER DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT NOW()
+                    )
+                """))
+                conn.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_bd_project_name
+                    ON bidding_documents USING gin (to_tsvector('simple', COALESCE(project_name, '')))
                 """))
         except PostgreSQLQueryError:
             pass
@@ -134,6 +161,64 @@ class PostgreSQLClient:
                 "SELECT * FROM bidding_procurement WHERE publish_time >= :s AND publish_time <= :e LIMIT 50",
                 {"s": start, "e": end})
 
+        if query_type == "price_distribution":
+            """标的物价格分布: count/avg/min/max/stddev + P25/P50/P75/P90."""
+            subject = _escape_like(kwargs.get("subject_matter", ""))
+            cond = f"subject_matter ILIKE '%{subject}%' ESCAPE '\\'" if subject else "1=1"
+            return self._run(f"""
+                SELECT COUNT(*) AS cnt, AVG(winning_amount) AS avg_amount,
+                       MIN(winning_amount) AS min_amount, MAX(winning_amount) AS max_amount,
+                       STDDEV(winning_amount) AS stddev_amount,
+                       PERCENTILE_CONT(0.25) WITHIN GROUP (ORDER BY winning_amount) AS p25,
+                       PERCENTILE_CONT(0.50) WITHIN GROUP (ORDER BY winning_amount) AS p50,
+                       PERCENTILE_CONT(0.75) WITHIN GROUP (ORDER BY winning_amount) AS p75,
+                       PERCENTILE_CONT(0.90) WITHIN GROUP (ORDER BY winning_amount) AS p90
+                FROM bidding_procurement
+                WHERE winning_amount IS NOT NULL AND {cond}
+            """)
+
+        if query_type == "price_trend":
+            """按月/年聚合中标金额趋势."""
+            subject = _escape_like(kwargs.get("subject_matter", ""))
+            granularity = kwargs.get("granularity", "month").lower()
+            period_sql = (
+                "DATE_TRUNC('month', winning_time)" if granularity == "month"
+                else "DATE_TRUNC('year', winning_time)"
+            )
+            cond = f"subject_matter ILIKE '%{subject}%' ESCAPE '\\'" if subject else "1=1"
+            return self._run(f"""
+                SELECT {period_sql} AS period,
+                       COUNT(*) AS cnt,
+                       AVG(winning_amount) AS avg_amount,
+                       SUM(winning_amount) AS total_amount
+                FROM bidding_procurement
+                WHERE winning_amount IS NOT NULL AND {cond}
+                  AND winning_time IS NOT NULL
+                GROUP BY period
+                ORDER BY period DESC
+                LIMIT 24
+            """)
+
+        if query_type == "top_suppliers_by_subject":
+            """某标的物的中标供应商 TOP N."""
+            subject = _escape_like(kwargs.get("subject_matter", ""))
+            limit = kwargs.get("limit", 10)
+            cond = f"subject_matter ILIKE '%{subject}%' ESCAPE '\\'" if subject else "1=1"
+            return self._run(f"""
+                SELECT winning_bidder AS supplier,
+                       COUNT(*) AS win_count,
+                       AVG(winning_amount) AS avg_amount,
+                       SUM(winning_amount) AS total_amount,
+                       MIN(winning_amount) AS min_amount,
+                       MAX(winning_amount) AS max_amount
+                FROM bidding_procurement
+                WHERE winning_amount IS NOT NULL AND {cond} AND winning_bidder IS NOT NULL
+                  AND winning_bidder != ''
+                GROUP BY winning_bidder
+                ORDER BY win_count DESC, total_amount DESC
+                LIMIT {int(limit)}
+            """)
+
         raise PostgreSQLQueryError(f"未知查询类型: {query_type}")
 
     def save_conversation(self, session_id: str, title: str, messages: list) -> None:
@@ -174,6 +259,55 @@ class PostgreSQLClient:
         self._run("INSERT INTO feedback (session_id, question, answer, rating) "
                   "VALUES (:s, :q, :a, :r)",
                   {"s": session_id, "q": question, "a": answer, "r": rating})
+
+    def save_document(self, parsed: dict) -> int:
+        """保存解析后的招标文件到 bidding_documents, 返回 id."""
+        import json as _json
+        qr = parsed.get("qualification_requirements") or []
+        if isinstance(qr, str):
+            qr = [qr]
+        rows = self._run("""
+            INSERT INTO bidding_documents
+            (source_file, source_path, project_name, project_code, purchaser, agency,
+             subject_matter, budget, qualification_requirements, scoring_criteria,
+             deadline, opening_time, location, raw_text_preview, parse_status, text_length)
+            VALUES
+            (:sf, :sp, :pn, :pc, :pu, :ag, :sm, :bg, CAST(:qr AS jsonb), :sc,
+             :dl, :ot, :lo, :rp, :ps, :tl)
+            RETURNING id
+        """, {
+            "sf": parsed.get("source_file", ""),
+            "sp": parsed.get("source_path", ""),
+            "pn": parsed.get("project_name"),
+            "pc": parsed.get("project_code"),
+            "pu": parsed.get("purchaser"),
+            "ag": parsed.get("agency"),
+            "sm": parsed.get("subject_matter"),
+            "bg": parsed.get("budget"),
+            "qr": _json.dumps(qr, ensure_ascii=False),
+            "sc": parsed.get("scoring_criteria"),
+            "dl": parsed.get("deadline"),
+            "ot": parsed.get("opening_time"),
+            "lo": parsed.get("location"),
+            "rp": parsed.get("raw_text_preview"),
+            "ps": parsed.get("parse_status", "unknown"),
+            "tl": parsed.get("text_length", 0),
+        })
+        return rows[0]["id"] if rows else -1
+
+    def list_documents(self, q: str = "") -> list[dict]:
+        if q:
+            kw = _escape_like(q)
+            return self._run(
+                "SELECT id, source_file, project_name, purchaser, budget, "
+                "deadline, created_at FROM bidding_documents "
+                "WHERE project_name ILIKE '%' || :q || '%' ESCAPE '\\' "
+                "OR source_file ILIKE '%' || :q || '%' ESCAPE '\\' "
+                "ORDER BY created_at DESC",
+                {"q": kw})
+        return self._run(
+            "SELECT id, source_file, project_name, purchaser, budget, "
+            "deadline, created_at FROM bidding_documents ORDER BY created_at DESC")
 
 
 postgresql_client = PostgreSQLClient()

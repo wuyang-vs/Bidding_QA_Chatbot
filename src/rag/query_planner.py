@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Query 规划: 受控变体生成 + 会话补全"""
 import logging
 import re

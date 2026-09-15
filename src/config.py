@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from dotenv import load_dotenv
@@ -41,6 +42,10 @@ class Settings:
     api_host: str = field(default_factory=lambda: os.getenv("API_HOST", "0.0.0.0"))
     api_port: int = field(default_factory=lambda: int(os.getenv("API_PORT", "8001")))
     cors_origins: str = field(default_factory=lambda: os.getenv("CORS_ORIGINS", ""))
+    # 知识库自动更新
+    auto_ingest_enabled: bool = field(default_factory=lambda: os.getenv("AUTO_INGEST_ENABLED", "true").lower() in ("true", "1", "yes"))
+    auto_ingest_interval_min: int = field(default_factory=lambda: int(os.getenv("AUTO_INGEST_INTERVAL_MIN", "30")))
+    auto_ingest_data_dir: str = field(default_factory=lambda: os.getenv("AUTO_INGEST_DATA_DIR", "data/raw"))
 
     @property
     def cors_origin_list(self):

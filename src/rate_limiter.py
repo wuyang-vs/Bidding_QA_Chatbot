@@ -1,3 +1,4 @@
+from __future__ import annotations
 import threading, time
 WINDOW_SECONDS = 60
 MAX_REQUESTS = 30

@@ -35,7 +35,7 @@ def test_allowed_fields_contains_text_fields():
 
 
 def test_agg_funcs_set():
-    assert AGG_FUNCS == {"count", "sum", "avg", "max", "min"}
+    assert AGG_FUNCS == {"count", "sum", "avg", "max", "min", "stddev"}
 
 
 # ---- 查询类型路由 (未连接时应抛 PostgreSQLQueryError) ----

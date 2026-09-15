@@ -1,3 +1,4 @@
+from __future__ import annotations
 """RAGPipeline: Query 规划 + 多路 RRF 融合 + 精排 + 来源多样性 + LRU 缓存"""
 import logging
 from functools import lru_cache

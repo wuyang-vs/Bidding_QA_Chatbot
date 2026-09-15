@@ -1,3 +1,4 @@
+from __future__ import annotations
 """_sse / _pace_stream_chunks / _truncate_history"""
 import json
 import time

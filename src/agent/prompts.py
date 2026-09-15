@@ -1,3 +1,4 @@
+from __future__ import annotations
 SYSTEM_PROMPT = """你是招投标智能问答助手，可以调用工具检索信息后回答。
 
 工具选择指引：

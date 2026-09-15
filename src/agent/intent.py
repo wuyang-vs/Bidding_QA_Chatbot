@@ -19,6 +19,7 @@ _MIN_QUESTION_LEN = 6  # 字符数
 
 def is_out_of_scope(question: str, history: list | None = None) -> bool:
     """判断问题是否超出招投标领域.
+from __future__ import annotations
     
     规则:
     - 无领域关键词

@@ -1,3 +1,4 @@
+from __future__ import annotations
 """回答审计: 引用溯源 + 真实性校验 (Hallucination Detection)"""
 import logging
 import re

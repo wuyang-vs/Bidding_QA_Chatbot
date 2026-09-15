@@ -1,3 +1,4 @@
+from __future__ import annotations
 """Qdrant Named Vectors 混合检索 + RRF + 问题分类 + 元数据透传"""
 import logging
 import time
