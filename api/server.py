@@ -689,3 +689,32 @@ def export_docx(req: BidGenerateRequest):
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# ─── 多 Agent 协作 ────────────────────────────────────────────────
+
+class MultiAgentRequest(BaseModel):
+    question: str = Field(..., min_length=1, max_length=2000,
+                          description="用户问题")
+    provider: str = Field(default="", description="LLM provider, 留空用默认")
+    deep_thinking: bool = Field(default=False, description="是否使用深度思考模型")
+
+
+@app.post("/api/multi-agent/run")
+def multi_agent_run(req: MultiAgentRequest):
+    """多 Agent 协作: 主管调度法规/案例/价格专家, 写作专家综合."""
+    from src.agent.multi_agent import run_multi_agent_workflow
+    import threading
+
+    # 限频
+    client_ip = getattr(req, "_client_ip", "unknown")
+    ok, info = rate_limiter.acquire(client_ip, limit=10, window=60)
+    if not ok:
+        raise HTTPException(status_code=429, detail=f"限流: {info}")
+
+    result = run_multi_agent_workflow(
+        question=req.question,
+        provider=req.provider,
+        deep_thinking=req.deep_thinking,
+    )
+    return result
