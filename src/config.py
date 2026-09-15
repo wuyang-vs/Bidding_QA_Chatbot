@@ -21,7 +21,7 @@ class Settings:
     ollama_model: str = field(default_factory=lambda: os.getenv("OLLAMA_MODEL", "deepseek-r1:8b"))
     qdrant_url: str = field(default_factory=lambda: os.getenv("QDRANT_URL", ""))
     qdrant_api_key: str = field(default_factory=lambda: os.getenv("QDRANT_API_KEY", ""))
-    qdrant_collection: str = field(default_factory=lambda: os.getenv("QDRANT_COLLECTION", "bid_qa"))
+    qdrant_collection: str = field(default_factory=lambda: os.getenv("QDRANT_COLLECTION", "bid_qa_v2"))
     qdrant_vector_size: int = field(default_factory=lambda: int(os.getenv("QDRANT_VECTOR_SIZE", "1024")))
     qdrant_timeout: int = field(default_factory=lambda: int(os.getenv("QDRANT_TIMEOUT", "30")))
     # RAG 高级配置
