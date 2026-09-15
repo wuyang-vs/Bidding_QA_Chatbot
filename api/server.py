@@ -250,6 +250,122 @@ def agent_execution_stats():
     return get_stats()
 
 
+# ===================== Dashboard / Graph =====================
+
+@app.get("/api/dashboard")
+def dashboard():
+    """数据看板聚合: 系统健康 + Agent 统计 + 知识库 + 图谱 + 数据库."""
+    from src.agent.execution_log import get_stats as exec_stats
+    from src.rag.pipeline import rag_pipeline
+
+    # Agent 执行统计
+    agent_stats = exec_stats()
+
+    # 知识库
+    kb_count = 0
+    if rag_pipeline.ready:
+        try:
+            kb_count = rag_pipeline.vector_store.count()
+        except Exception:
+            pass
+
+    # 图谱统计
+    graph_stats = []
+    from src.database.neo4j_client import neo4j_client
+    if neo4j_client.ready:
+        graph_stats = neo4j_client.query("graph_stats")
+
+    # 数据库统计
+    db_count = 0
+    try:
+        from src.database.postgresql_client import postgresql_client
+        if postgresql_client.ready:
+            rows = postgresql_client.query("SELECT COUNT(*) AS cnt FROM bidding_procurement")
+            db_count = rows[0]["cnt"] if rows else 0
+    except Exception:
+        pass
+
+    # 系统监控
+    sys_metrics = {}
+    try:
+        from src.tools.system_monitor import system_monitor
+        sys_metrics = system_monitor.snapshot()
+    except Exception:
+        pass
+
+    return {
+        "agent": agent_stats,
+        "knowledge_base": {"points": kb_count, "ready": rag_pipeline.ready},
+        "graph": {"stats": graph_stats, "ready": neo4j_client.ready},
+        "database": {"rows": db_count, "ready": postgresql_client.ready if postgresql_client else False},
+        "system": {
+            "cpu": sys_metrics.get("current", {}).get("cpu_percent", 0),
+            "memory": sys_metrics.get("current", {}).get("memory_percent", 0),
+            "disk": sys_metrics.get("current", {}).get("disk_percent", 0),
+        },
+    }
+
+
+@app.get("/api/graph/subgraph")
+def graph_subgraph(keyword: str = "", limit: int = 30):
+    """知识图谱子图: 返回 nodes + edges (d3.js force-directed 用).
+
+    查询逻辑:
+    1. keyword 为空 → 返回 TOP 标的物 + 关联采购人/供应商
+    2. keyword 不为空 → 以 keyword 为中心, 返回 1 跳邻居
+    """
+    from src.database.neo4j_client import neo4j_client
+    if not neo4j_client.ready:
+        return {"nodes": [], "edges": [], "ready": False}
+
+    nodes_set = {}  # name → {id, name, type}
+    edges = []
+
+    if not keyword:
+        # 全量: TOP 标的物 + 关联实体
+        rows = neo4j_client.query("top_traded")
+        for r in rows:
+            name = r.get("name", "")
+            freq = r.get("freq", 0)
+            if name and name not in nodes_set:
+                nodes_set[name] = {"id": name, "name": name, "type": "SubjectMatter", "freq": freq}
+            # 查该标的物的关联
+            detail = neo4j_client.query("entity_detail", keyword=name)
+            for d in detail:
+                subject = d.get("subject", name)
+                for p in d.get("purchasers", []):
+                    if p not in nodes_set:
+                        nodes_set[p] = {"id": p, "name": p, "type": "Purchaser"}
+                    edges.append({"source": subject, "target": p, "relation": "PURCHASED_BY"})
+                for s in d.get("suppliers", []):
+                    if s not in nodes_set:
+                        nodes_set[s] = {"id": s, "name": s, "type": "Supplier"}
+                    edges.append({"source": subject, "target": s, "relation": "SUPPLIED_BY"})
+            if len(nodes_set) >= limit:
+                break
+    else:
+        # 以 keyword 为中心
+        detail = neo4j_client.query("entity_detail", keyword=keyword)
+        if detail:
+            d = detail[0]
+            subject = d.get("subject", keyword)
+            nodes_set[subject] = {"id": subject, "name": subject, "type": "SubjectMatter"}
+            for p in d.get("purchasers", []):
+                if p not in nodes_set:
+                    nodes_set[p] = {"id": p, "name": p, "type": "Purchaser"}
+                edges.append({"source": subject, "target": p, "relation": "PURCHASED_BY"})
+            for s in d.get("suppliers", []):
+                if s not in nodes_set:
+                    nodes_set[s] = {"id": s, "name": s, "type": "Supplier"}
+                edges.append({"source": subject, "target": s, "relation": "SUPPLIED_BY"})
+
+    return {
+        "nodes": list(nodes_set.values())[:limit],
+        "edges": edges,
+        "ready": True,
+    }
+
+
 @app.post("/api/knowledge/reload")
 def knowledge_reload():
     """手动触发知识库自动扫描 + 增量导入."""

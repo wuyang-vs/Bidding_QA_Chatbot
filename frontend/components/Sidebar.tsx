@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Plus, Search, Trash2, Moon, Sun, MoreVertical, X } from "lucide-react";
+import { Plus, Search, Trash2, Moon, Sun, MoreVertical, X, BarChart3, Share2 } from "lucide-react";
+import Link from "next/link";
 
 interface Props {
   conversations: any[];
@@ -101,6 +102,15 @@ export function Sidebar({
             删除所有对话
           </button>
         )}
+
+        <div className="border-t border-gray-200 dark:border-gray-800 p-2 space-y-1">
+          <Link href="/dashboard" className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">
+            <BarChart3 size={16} /> 数据看板
+          </Link>
+          <Link href="/graph" className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">
+            <Share2 size={16} /> 图谱可视化
+          </Link>
+        </div>
       </aside>
     </>
   );
