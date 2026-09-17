@@ -21,11 +21,13 @@ _META_COLS = {
 
 
 def find_excel_file() -> Path | None:
-    for pat in ("*.xlsx", "*.xls"):
-        for p in DATA_DIR.rglob(pat):
-            if p.name.startswith("~$"):
-                continue
-            return p
+    # 优先 data/raw/, 再退回 data/
+    for subdir in ("raw", "."):
+        for pat in ("*.xlsx", "*.xls"):
+            for p in (DATA_DIR / subdir).glob(pat):
+                if p.name.startswith("~$") or p.name == "test.xlsx":
+                    continue
+                return p
     return None
 
 
@@ -82,15 +84,18 @@ def ingest_data(force: bool = True) -> bool:
     logger.info("有效 Q&A: %d 条", len(df))
     logger.info("识别元数据列: %s", list(meta_found.keys()) or "无 (使用默认值)")
 
-    embedder.fit_sparse(df["answer"].tolist())
+    # 编码 question+answer 拼接文本, 使文档向量同时包含问题和答案语义
+    combined_texts = (df["question"] + " " + df["answer"]).tolist()
+    embedder.fit_sparse(combined_texts)
     embedder.save_vocab()
     vector_store.create_collection(force=force)
 
     points = []
     for i, row in df.iterrows():
         try:
-            dense = embedder.encode_document_dense(row["answer"])
-            sparse = embedder.encode_document_sparse(row["answer"])
+            combined = row["question"] + " " + row["answer"]
+            dense = embedder.encode_document_dense(combined)
+            sparse = embedder.encode_document_sparse(combined)
             point = {
                 "id": i,
                 "dense": dense,

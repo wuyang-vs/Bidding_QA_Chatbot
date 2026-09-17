@@ -27,8 +27,11 @@ def _generate_variants_basic(question: str, max_variants: int = 3) -> list[str]:
     - 只替换已知同义词表中的词
     - 最多生成 max_variants 个变体
     - 保留原查询
+    - max_variants<=0 时只返回原始查询 (单路, 走缓存)
     """
     variants = [question]
+    if max_variants <= 0:
+        return variants
     for term, syns in _SYNONYM_MAP:
         if term not in question:
             continue

@@ -7,7 +7,7 @@ def main():
         sys.exit(0 if ingest_data(force=True) else 1)
     elif cmd == "api":
         import uvicorn
-        uvicorn.run("api.server:app", host="0.0.0.0", port=8001, reload=True)
+        uvicorn.run("api.server:app", host="0.0.0.0", port=8001, reload=False)
     else:
         print(f"未知命令: {cmd}")
 

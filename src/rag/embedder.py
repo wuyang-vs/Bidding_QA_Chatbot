@@ -142,7 +142,7 @@ class Reranker:
         if len(docs) <= 1:
             return docs
         model = self._load()
-        pairs = [(query, d.get("answer", "")) for d in docs]
+        pairs = [(query, d.get("question", "") + " " + d.get("answer", "")) for d in docs]
         scores = model.predict(pairs)
         for d, s in zip(docs, scores):
             d["score"] = float(s)
