@@ -1,0 +1,73 @@
+{
+  "总体": {
+    "Recall@1": 0.9817,
+    "Recall@3": 0.9817,
+    "Recall@5": 0.9817,
+    "MRR": 0.9817,
+    "NDCG@5": 2.8944,
+    "Complete@5": 0.9817,
+    "HitRate": 0.9817,
+    "样本数": 436
+  },
+  "按业务线": {
+    "bidding": {
+      "Recall@1": 0.949,
+      "Recall@3": 0.949,
+      "Recall@5": 0.949,
+      "MRR": 0.949,
+      "NDCG@5": 2.798,
+      "Complete@5": 0.949,
+      "HitRate": 0.949,
+      "样本数": 98
+    },
+    "enterprise": {
+      "Recall@1": 0.9752,
+      "Recall@3": 0.9752,
+      "Recall@5": 0.9752,
+      "MRR": 0.9752,
+      "NDCG@5": 2.8754,
+      "Complete@5": 0.9752,
+      "HitRate": 0.9752,
+      "样本数": 121
+    },
+    "regulation": {
+      "Recall@1": 1.0,
+      "Recall@3": 1.0,
+      "Recall@5": 1.0,
+      "MRR": 1.0,
+      "NDCG@5": 2.9485,
+      "Complete@5": 1.0,
+      "HitRate": 1.0,
+      "样本数": 217
+    }
+  },
+  "按问题类型": {
+    "exact": {
+      "Recall@1": 1.0,
+      "Recall@3": 1.0,
+      "Recall@5": 1.0,
+      "MRR": 1.0,
+      "NDCG@5": 2.9485,
+      "Complete@5": 1.0,
+      "HitRate": 1.0,
+      "样本数": 326
+    },
+    "fuzzy": {
+      "Recall@1": 0.9273,
+      "Recall@3": 0.9273,
+      "Recall@5": 0.9273,
+      "MRR": 0.9273,
+      "NDCG@5": 2.734,
+      "Complete@5": 0.9273,
+      "HitRate": 0.9273,
+      "样本数": 110
+    }
+  },
+  "metadata": {
+    "total_questions": 436,
+    "top_k": 5,
+    "timestamp": "2026-09-17T16:35:25.739870",
+    "corpus_size": 326,
+    "corpus_sha256": "456e7a0c045cb81e92c4712eb17524c7e706eaf9f9a25226094c56d0ec6ac4f6"
+  }
+}

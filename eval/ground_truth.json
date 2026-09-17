@@ -1,0 +1,2618 @@
+[
+  {
+    "question": "国家广播电视总局282台基础设施配套改造项目的开标地点？",
+    "gt_question": "国家广播电视总局282台基础设施配套改造项目的开标地点？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的采购单位是谁？",
+    "gt_question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的采购单位是谁？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "大连理工大学数字化机器人手术实验平台采购项目的采购单位是谁？",
+    "gt_question": "大连理工大学数字化机器人手术实验平台采购项目的采购单位是谁？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标时间是什么时候？",
+    "gt_question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标时间是什么时候？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "最低投标限价？",
+    "gt_question": "什么是最低投标限价？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "什么情形下采购人可以终止采购活动？",
+    "gt_question": "什么情形下采购人可以终止采购活动？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标投标法对必须招标的规模标准是什么？",
+    "gt_question": "招标投标法对必须招标的规模标准是什么？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "评标委员会专家如何产生？",
+    "gt_question": "评标委员会专家如何产生？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "2026年东北区域国家重点档案修复项目的开标地点在哪里？",
+    "gt_question": "2026年东北区域国家重点档案修复项目的开标地点在哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购评审专家库？",
+    "gt_question": "什么是政府采购评审专家库？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购供应商可以提出临时救济措施吗？",
+    "gt_question": "政府采购供应商可以提出临时救济措施吗？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的开标时间？",
+    "gt_question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的开标时间？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购合同公告的要求是什么？",
+    "gt_question": "政府采购合同公告的要求是什么？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "南开大学实验室设备处智慧安全实验室建设采购项目的预算金额是多少？",
+    "gt_question": "南开大学实验室设备处智慧安全实验室建设采购项目的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标公告应当载明哪些",
+    "gt_question": "招标公告应当载明哪些内容？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "天津海关化矿金属材料检测中心2026年仪器",
+    "gt_question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的开标地点在哪里？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "招标人泄露评标信息会怎样？",
+    "gt_question": "招标人泄露评标信息会怎样？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "百炼大模型管理平台升级及运维服务项目的采购单位是谁？",
+    "gt_question": "百炼大模型管理平台升级及运维服务项目的采购单位是谁？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "国家广播电视总局282台基础设施配套改造项目的采购单位是谁？",
+    "gt_question": "国家广播电视总局282台基础设施配套改造项目的采购单位是谁？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "履约保证金的比例上限是多少？",
+    "gt_question": "履约保证金的比例上限是多少？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标人可以自行办理招",
+    "gt_question": "招标人可以自行办理招标事宜吗？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "什么是招标有效期？和投标有效期有什么区别",
+    "gt_question": "什么是招标有效期？和投标有效期有什么区别？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "国家广播电视总局282台基础设施配套改造项目的采购单位是谁？",
+    "gt_question": "国家广播电视总局282台基础设施配套改造项目的采购单位是谁？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是最高投标限价？",
+    "gt_question": "什么是最高投标限价？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的预算金额是多少？",
+    "gt_question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的预算金额是多少？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的行政区域是哪里？",
+    "gt_question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的行政区域是哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "多功能分液器和非接触式微孔板样品处理系统采购项目的预算金额是多少？",
+    "gt_question": "多功能分液器和非接触式微孔板样品处理系统采购项目的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标投标活动应当遵循哪些原则？",
+    "gt_question": "招标投标活动应当遵循哪些原则？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是招标投标活动的投诉处理？",
+    "gt_question": "什么是招标投标活动的投诉处理？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购节能产品清单有什么作用？",
+    "gt_question": "政府采购节能产品清单有什么作用？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是评标专家回避制度？",
+    "gt_question": "什么是评标专家回避制度？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "南开大学实验室设备处智慧安全实验室建设采购项目的代理机构是什么？",
+    "gt_question": "南开大学实验室设备处智慧安全实验室建设采购项目的代理机构是什么？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "大连理工大学数字化机器人手术实验平台采购项目的开标地点在哪里？",
+    "gt_question": "大连理工大学数字化机器人手术实验平台采购项目的开标地点在哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "投标人可以组成联合体投标吗？",
+    "gt_question": "投标人可以组成联合体投标吗？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么情况下招标人可以暂",
+    "gt_question": "什么情况下招标人可以暂停招标投标活动？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "多功能分液器和非接触式微孔板样品处理系统采购项目的开标地点何地？",
+    "gt_question": "多功能分液器和非接触式微孔板样品处理系统采购项目的开标地点在哪里？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "什么是政府采购面向中小企业预留份额？",
+    "gt_question": "什么是政府采购面向中小企业预留份额？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "高内涵成像分析仪采购项目",
+    "gt_question": "高内涵成像分析仪采购项目的预算金额是多少？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的开标地点在哪里？",
+    "gt_question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的开标地点在哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "遂宁市消防救援支队年度食材配送服务项目的开标时间？",
+    "gt_question": "遂宁市消防救援支队年度食材配送服务项目的开标时间？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标人和中标人应当何时签订书面合同？",
+    "gt_question": "招标人和中标人应当何时签订书面合同？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是工程建设项目招标？",
+    "gt_question": "什么是工程建设项目招标？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "高内涵成像分析仪采购项目的开标地点",
+    "gt_question": "高内涵成像分析仪采购项目的开标地点？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "吉林大学中日联谊医院双层电蒸锅采购的代理机构？",
+    "gt_question": "吉林大学中日联谊医院双层电蒸锅采购的代理机构？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购合同终",
+    "gt_question": "什么是政府采购合同终止？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "高内涵成像分析仪采购项目的开标地点？",
+    "gt_question": "高内涵成像分析仪采购项目的开标地点？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购供应商库？",
+    "gt_question": "什么是政府采购供应商库？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是集中采购和分散采购？",
+    "gt_question": "什么是集中采购和分散采购？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院2026-2027年度保安服务项目的开标地点在哪里？",
+    "gt_question": "吉林大学中日联谊医院2026-2027年度保安服务项目的开标地点在哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院护士鞋采购的预算金额是多少？",
+    "gt_question": "吉林大学中日联谊医院护士鞋采购的预算金额是多少？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是工程量清单招标？",
+    "gt_question": "什么是工程量清单招标？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院2026-2027年度保安服务项目的代理机构？",
+    "gt_question": "吉林大学中日联谊医院2026-2027年度保安服务项目的代理机构？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "遂宁市消防救援支队年度食材配送服务项目的采购单位是谁？",
+    "gt_question": "遂宁市消防救援支队年度食材配送服务项目的采购单位是谁？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购中如何处理回避问题？",
+    "gt_question": "政府采购中如何处理回避问题？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是招标投标活动的行政监督？",
+    "gt_question": "什么是招标投标活动的行政监督？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "南开大学实验室设备处智慧安全实验室",
+    "gt_question": "南开大学实验室设备处智慧安全实验室建设采购项目的开标时间？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "吉林大学中日联谊医院双层电蒸锅采购的预算金额是多少？",
+    "gt_question": "吉林大学中日联谊医院双层电蒸锅采购的预算金额是多少？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院护士鞋采购的预算金额多少？",
+    "gt_question": "吉林大学中日联谊医院护士鞋采购的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "吉林大学中日联谊医院护士鞋采购的开标地点",
+    "gt_question": "吉林大学中日联谊医院护士鞋采购的开标地点？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "大连理工大学数字化机器人手术实验平台采购项目的代理机构是什么？",
+    "gt_question": "大连理工大学数字化机器人手术实验平台采购项目的代理机构是什么？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标人编制资格预审文件应当包括哪些内容？",
+    "gt_question": "招标人编制资格预审文件应当包括哪些内容？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "遂宁市消防救援支队年度食材配送服务项目的开标地点？",
+    "gt_question": "遂宁市消防救援支队年度食材配送服务项目的开标地点？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标人可以与投标人就投标价格等实质性内容进行谈判吗？",
+    "gt_question": "招标人可以与投标人就投标价格等实质性内容进行谈判吗？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "百炼大模型管理平台升级及运维服务项目的预算金额多少？",
+    "gt_question": "百炼大模型管理平台升级及运维服务项目的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的开标时间？",
+    "gt_question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的开标时间？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购的采购方式变更",
+    "gt_question": "什么是政府采购的采购方式变更？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "多功能分液器和非接触式微孔板样品处理系统采购项目的代理机构？",
+    "gt_question": "多功能分液器和非接触式微孔板样品处理系统采购项目的代理机构？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购的方式有哪几种？",
+    "gt_question": "政府采购的方式有哪几种？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "国家广播电视总局282台基础设施配套改造项目的预算金额是多少？",
+    "gt_question": "国家广播电视总局282台基础设施配套改造项目的预算金额是多少？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购合同履行中可以追加吗？",
+    "gt_question": "政府采购合同履行中可以追加吗？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标投标保证金退还利息？",
+    "gt_question": "什么是招标投标保证金退还利息？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "政府采购公告发布媒体有哪些？",
+    "gt_question": "政府采购公告发布媒体有哪些？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "投标人串通投标会怎样？",
+    "gt_question": "投标人串通投标会怎样？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院护士鞋采",
+    "gt_question": "吉林大学中日联谊医院护士鞋采购的行政区域是哪里？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "评标委员会否决投标的情形有哪些？",
+    "gt_question": "评标委员会否决投标的情形有哪些？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "国家广播电视总局282台基础设施配套",
+    "gt_question": "国家广播电视总局282台基础设施配套改造项目的代理机构是什么？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "吉林大学中日联谊医院双层电蒸锅采购的开标地点？",
+    "gt_question": "吉林大学中日联谊医院双层电蒸锅采购的开标地点？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "中标候选人的数量有什么要求",
+    "gt_question": "中标候选人的数量有什么要求？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的开标地点在哪里？",
+    "gt_question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的开标地点在哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标地点？",
+    "gt_question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标地点？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "可以采用询价方式采购？",
+    "gt_question": "什么情况下可以采用询价方式采购？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "招标投标行政监督部门有哪些职责",
+    "gt_question": "招标投标行政监督部门有哪些职责？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "什么是不正当竞争行为中的串通投标？",
+    "gt_question": "什么是不正当竞争行为中的串通投标？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "投标保证金的比例上限是多少？",
+    "gt_question": "投标保证金的比例上限是多少？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "开标应当在什么时间和地点进行？",
+    "gt_question": "开标应当在什么时间和地点进行？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么情况下可以采用单一来源方式采购？",
+    "gt_question": "什么情况下可以采用单一来源方式采购？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "2026年东北区域国家重点档案修",
+    "gt_question": "2026年东北区域国家重点档案修复项目的采购单位是谁？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "什么情况下可以采用竞争性谈判方式采购",
+    "gt_question": "什么情况下可以采用竞争性谈判方式采购？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "什么是资格后审？",
+    "gt_question": "什么是资格后审？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "大连理工大学数字化机器人手术实验平台采购项目的代理机构？",
+    "gt_question": "大连理工大学数字化机器人手术实验平台采购项目的代理机构？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标代理机构应当具备什么条件？",
+    "gt_question": "招标代理机构应当具备什么条件？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "评标报告应当包括哪些内容？",
+    "gt_question": "评标报告应当包括哪些内容？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "2026-2027年度吉林大学中日联谊医院《安",
+    "gt_question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的代理机构？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "百炼大模型管理平台升级及运维服务项目的预算金额是多少？",
+    "gt_question": "百炼大模型管理平台升级及运维服务项目的预算金额是多少？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "2026年东北区域国家重点档案修复项目的开标时间？",
+    "gt_question": "2026年东北区域国家重点档案修复项目的开标时间？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的采购单位是谁？",
+    "gt_question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的采购单位是谁？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "大连理工大学数字化机器人手术实验平台",
+    "gt_question": "大连理工大学数字化机器人手术实验平台采购项目的采购单位是谁？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "招标人应当在什么时限内退还投标保证金？",
+    "gt_question": "招标人应当在什么时限内退还投标保证金？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "投标有效期内不得撤销投标文件？",
+    "gt_question": "什么是投标有效期内不得撤销投标文件？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "什么是政府采购资金来源？",
+    "gt_question": "什么是政府采购资金来源？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是诚实信用原则？",
+    "gt_question": "什么是诚实信用原则？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是合同预付款？",
+    "gt_question": "什么是合同预付款？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "高内涵成像分析仪采购项目的代理机构是什么？",
+    "gt_question": "高内涵成像分析仪采购项目的代理机构是什么？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "南开大学实验室设备处智慧安全实验室建设采购项目的行政区域是哪里？",
+    "gt_question": "南开大学实验室设备处智慧安全实验室建设采购项目的行政区域是哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购中的进口产品采购有什么要求？",
+    "gt_question": "政府采购中的进口产品采购有什么要求？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "遂宁市消防救援支队年度食材配送服务项目的代理机构？",
+    "gt_question": "遂宁市消防救援支队年度食材配送服务项目的代理机构？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标文件应当包括哪些内容？",
+    "gt_question": "招标文件应当包括哪些内容？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "百炼大模型管理平台升级及运维服务项目的行政区域是哪里？",
+    "gt_question": "百炼大模型管理平台升级及运维服务项目的行政区域是哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购？",
+    "gt_question": "什么是政府采购？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购分散采购限额标准？",
+    "gt_question": "什么是政府采购分散采购限额标准？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标人和中标人签订合同后可以另行订立协议吗？",
+    "gt_question": "招标人和中标人签订合同后可以另行订立协议吗？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "依法必须招标的项目不",
+    "gt_question": "依法必须招标的项目不招标会怎样？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "大连理工大学数字化机器人手术实验平台采购项目的预算金额是多少？",
+    "gt_question": "大连理工大学数字化机器人手术实验平台采购项目的预算金额是多少？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的采购单位是谁？",
+    "gt_question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的采购单位是谁？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是封闭式框架协议采购？",
+    "gt_question": "什么是封闭式框架协议采购？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是招标投标信用体系？",
+    "gt_question": "什么是招标投标信用体系？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标人可以对潜在投标人进行资格审查吗？",
+    "gt_question": "招标人可以对潜在投标人进行资格审查吗？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购验收应当如何进行？",
+    "gt_question": "政府采购验收应当如何进行？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院双层电蒸锅采购的采购单位是谁？",
+    "gt_question": "吉林大学中日联谊医院双层电蒸锅采购的采购单位是谁？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "依法必须招标的项目不招标会怎样？",
+    "gt_question": "依法必须招标的项目不招标会怎样？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的代理机构是什么？",
+    "gt_question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的代理机构是什么？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院护士鞋采购的开标地点？",
+    "gt_question": "吉林大学中日联谊医院护士鞋采购的开标地点？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购自行采购？",
+    "gt_question": "什么是政府采购自行采购？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "2026年东北区域国家重点档案修复项目的采购单位是谁？",
+    "gt_question": "2026年东北区域国家重点档案修复项目的采购单位是谁？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "南开大学实验室设备处智慧安全实验室建设采购项目的采购单位是谁？",
+    "gt_question": "南开大学实验室设备处智慧安全实验室建设采购项目的采购单位是谁？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的采购单位是谁？",
+    "gt_question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的采购单位是谁？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "2026年东北区域国家重点档案修复项目的预算金额是多少？",
+    "gt_question": "2026年东北区域国家重点档案修复项目的预算金额是多少？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标人可以在招标文件中要求特定的生产供应者吗？",
+    "gt_question": "招标人可以在招标文件中要求特定的生产供应者吗？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是流标",
+    "gt_question": "什么是流标？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "采购人、采购代理机构有哪些违法行为会受处罚",
+    "gt_question": "采购人、采购代理机构有哪些违法行为会受处罚？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "什么是公平原则和公正原则？",
+    "gt_question": "什么是公平原则和公正原则？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "2026年东北区域国家重点档案修复项目的预算金额多少？",
+    "gt_question": "2026年东北区域国家重点档案修复项目的预算金额是多少？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "诚实信用原则？",
+    "gt_question": "什么是诚实信用原则？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标时间",
+    "gt_question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标时间？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "吉林大学中日联谊医院护士鞋采购的代理机构是什么？",
+    "gt_question": "吉林大学中日联谊医院护士鞋采购的代理机构是什么？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是招标有效期？和投标有效期有什么区别？",
+    "gt_question": "什么是招标有效期？和投标有效期有什么区别？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院双层电蒸锅",
+    "gt_question": "吉林大学中日联谊医院双层电蒸锅采购的开标地点在哪里？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "什么是政府采购限额标准？",
+    "gt_question": "什么是政府采购限额标准？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购需求管理？",
+    "gt_question": "什么是政府采购需求管理？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标投标活动中的保密义务有哪些？",
+    "gt_question": "招标投标活动中的保密义务有哪些？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "评标委员会不得有哪些行为？",
+    "gt_question": "评标委员会不得有哪些行为？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是招标控制价？",
+    "gt_question": "什么是招标控制价？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "投标人串通投标会怎样",
+    "gt_question": "投标人串通投标会怎样？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "吉林大学中日联谊医院护士鞋采购的开标时间是什么时候？",
+    "gt_question": "吉林大学中日联谊医院护士鞋采购的开标时间是什么时候？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "投标保证金的退还时限要求是什么",
+    "gt_question": "投标保证金的退还时限要求是什么？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的代理机构？",
+    "gt_question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的代理机构？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院双层电蒸锅采购的开标时间是什么时候？",
+    "gt_question": "吉林大学中日联谊医院双层电蒸锅采购的开标时间是什么时候？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是邀请招标的适用范围？",
+    "gt_question": "什么是邀请招标的适用范围？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是招标投标保证金退还利息？",
+    "gt_question": "什么是招标投标保证金退还利息？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "供应商参加政府采购活动应当具备什么条件？",
+    "gt_question": "供应商参加政府采购活动应当具备什么条件？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院2026-2027年度保安服务项目的代理机构是什么？",
+    "gt_question": "吉林大学中日联谊医院2026-2027年度保安服务项目的代理机构是什么？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院2026-2027年度保安服务项目的采购单位是谁？",
+    "gt_question": "吉林大学中日联谊医院2026-2027年度保安服务项目的采购单位是谁？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购中什么情况下需要重新组织采购活动？",
+    "gt_question": "政府采购中什么情况下需要重新组织采购活动？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标方式有哪几种？",
+    "gt_question": "招标方式有哪几种？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "百炼大模型管理平台升级及运维服务项目的采购单位是谁？",
+    "gt_question": "百炼大模型管理平台升级及运维服务项目的采购单位是谁？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院2026-2027年度保安服务项目的开标地点？",
+    "gt_question": "吉林大学中日联谊医院2026-2027年度保安服务项目的开标地点？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院双层电蒸锅",
+    "gt_question": "吉林大学中日联谊医院双层电蒸锅采购的预算金额是多少？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "南开大学实验室设备处智慧安全实验室建设采购项目的预算金额多少？",
+    "gt_question": "南开大学实验室设备处智慧安全实验室建设采购项目的预算金额是多少？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "供应商有哪些违法行为会受处罚？",
+    "gt_question": "供应商有哪些违法行为会受处罚？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "南开大学实验室设备处智慧安全实验室建设采购项目的开标地点在哪里？",
+    "gt_question": "南开大学实验室设备处智慧安全实验室建设采购项目的开标地点在哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "投标人可以组成联合体",
+    "gt_question": "投标人可以组成联合体投标吗？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "遂宁市消防救援支队年度食材配送服务项目的代理机构是什么？",
+    "gt_question": "遂宁市消防救援支队年度食材配送服务项目的代理机构是什么？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "多功能分液器和非接触式微孔板样品处理系统采购项目的采购单位是谁？",
+    "gt_question": "多功能分液器和非接触式微孔板样品处理系统采购项目的采购单位是谁？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "电子招标投标的法律效力如何？",
+    "gt_question": "电子招标投标的法律效力如何？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购优先采购制度？",
+    "gt_question": "什么是政府采购优先采购制度？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购中什么情况下需要",
+    "gt_question": "政府采购中什么情况下需要重新组织采购活动？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "多功能分液器和非接触式微孔板样品处理系统采购项目的开标地点？",
+    "gt_question": "多功能分液器和非接触式微孔板样品处理系统采购项目的开标地点？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院双层电蒸锅采购的开标地点在哪里？",
+    "gt_question": "吉林大学中日联谊医院双层电蒸锅采购的开标地点在哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是招标投标活动中的禁止行为清单？",
+    "gt_question": "什么是招标投标活动中的禁止行为清单？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标地点在哪里？",
+    "gt_question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标地点在哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "高内涵成像分析仪采购项目的开标时间？",
+    "gt_question": "高内涵成像分析仪采购项目的开标时间？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院护士鞋采购的预算金额是多少？",
+    "gt_question": "吉林大学中日联谊医院护士鞋采购的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是采购需求论证？",
+    "gt_question": "什么是采购需求论证？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购面向中小企业预留份额？",
+    "gt_question": "什么是政府采购面向中小企业预留份额？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "高内涵成像分析仪采购项目的",
+    "gt_question": "高内涵成像分析仪采购项目的开标时间是什么时候？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "国家广播电视总局282台基础设施配套改造项目的开标地点在哪里？",
+    "gt_question": "国家广播电视总局282台基础设施配套改造项目的开标地点在哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "大连理工大学数字化机器人手术实验平台采购项目的开标地点？",
+    "gt_question": "大连理工大学数字化机器人手术实验平台采购项目的开标地点？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是招标投标法的等级管辖？",
+    "gt_question": "什么是招标投标法的等级管辖？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "2026-2027年度吉林大学中日联谊医院《安防",
+    "gt_question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的采购单位是谁？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "国家广播电视总局282台基础设施配套改造项目的开标时间",
+    "gt_question": "国家广播电视总局282台基础设施配套改造项目的开标时间？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "什么情况下应当重新招标？",
+    "gt_question": "什么情况下应当重新招标？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购法对供应商的处罚措施有哪些？",
+    "gt_question": "政府采购法对供应商的处罚措施有哪些？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "大连理工大学数字化机器人手术实验平台采购项目的开标地点在哪里",
+    "gt_question": "大连理工大学数字化机器人手术实验平台采购项目的开标地点在哪里？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "遂宁市消防救援支队年度食材配送服务项目的行政区域是哪里？",
+    "gt_question": "遂宁市消防救援支队年度食材配送服务项目的行政区域是哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的采购单位是谁？",
+    "gt_question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的采购单位是谁？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "2026年东北区域国家重点档案修复项目的开标时间是什么时候？",
+    "gt_question": "2026年东北区域国家重点档案修复项目的开标时间是什么时候？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "百炼大模型管理平台升级及运维服务项目的代理机构是什么",
+    "gt_question": "百炼大模型管理平台升级及运维服务项目的代理机构是什么？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "中标通知书具有什么法律效力？",
+    "gt_question": "中标通知书具有什么法律效力？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "国家广播电视总局282台基础设施配套改造项目的开标地点何地？",
+    "gt_question": "国家广播电视总局282台基础设施配套改造项目的开标地点在哪里？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的行政区域是哪里？",
+    "gt_question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的行政区域是哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "评标委员会成员收受贿赂会怎样？",
+    "gt_question": "评标委员会成员收受贿赂会怎样？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "投标人以他人名义投标或弄虚作假骗取中标的后果是什么？",
+    "gt_question": "投标人以他人名义投标或弄虚作假骗取中标的后果是什么？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院2026-2027年度保安服务项目的开标时间？",
+    "gt_question": "吉林大学中日联谊医院2026-2027年度保安服务项目的开标时间？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购质疑答复书应当包括哪些内容？",
+    "gt_question": "政府采购质疑答复书应当包括哪些内容？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "采购需求公示？",
+    "gt_question": "什么是采购需求公示？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "招标人可以自行办理招标事宜吗？",
+    "gt_question": "招标人可以自行办理招标事宜吗？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购活动的中止？",
+    "gt_question": "什么是政府采购活动的中止？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "什么情况下应当重新招",
+    "gt_question": "什么情况下应当重新招标？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "什么是政府采购监督检查的对象？",
+    "gt_question": "什么是政府采购监督检查的对象？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么情况下可以采用邀请招标？",
+    "gt_question": "什么情况下可以采用邀请招标？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "多功能分液器和非接触式微孔板样品处理系统采购项目的开标时间？",
+    "gt_question": "多功能分液器和非接触式微孔板样品处理系统采购项目的开标时间？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "南开大学实验室设备处智慧安全实验室建设采购项目的代理机构？",
+    "gt_question": "南开大学实验室设备处智慧安全实验室建设采购项目的代理机构？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购法的立法目的？",
+    "gt_question": "什么是政府采购法的立法目的？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购合同公开？",
+    "gt_question": "什么是政府采购合同公开？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购法的法律责任主体？",
+    "gt_question": "什么是政府采购法的法律责任主体？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院2026-2027年度保安服务项目的预算金额是多少？",
+    "gt_question": "吉林大学中日联谊医院2026-2027年度保安服务项目的预算金额是多少？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购项目可以委托采购代理机构吗？",
+    "gt_question": "政府采购项目可以委托采购代理机构吗？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购计划？",
+    "gt_question": "什么是政府采购计划？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的预算金额是多少？",
+    "gt_question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的预算金额是多少？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "多功能分液器和非接触式微孔板样品处理系统采购项目的采购单位是谁？",
+    "gt_question": "多功能分液器和非接触式微孔板样品处理系统采购项目的采购单位是谁？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "高内涵成像分析仪采购项目的代理机构？",
+    "gt_question": "高内涵成像分析仪采购项目的代理机构？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "最高投标限价？",
+    "gt_question": "什么是最高投标限价？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "吉林大学中日联谊医院2026-2027年度保安服务项目的预算金额是多少？",
+    "gt_question": "吉林大学中日联谊医院2026-2027年度保安服务项目的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的行政区域是哪里？",
+    "gt_question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的行政区域是哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是招标代理服务收费？",
+    "gt_question": "什么是招标代理服务收费？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么情况下可以采用询价方式采购？",
+    "gt_question": "什么情况下可以采用询价方式采购？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标方式有哪几种",
+    "gt_question": "招标方式有哪几种？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "遂宁市消防救援支队年度食材配送服务项目的采购单位是谁？",
+    "gt_question": "遂宁市消防救援支队年度食材配送服务项目的采购单位是谁？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标地点？",
+    "gt_question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标地点？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的采购单位是谁？",
+    "gt_question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的采购单位是谁？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标投标法的适用范围是什么？",
+    "gt_question": "招标投标法的适用范围是什么？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购环境标志产品清单？",
+    "gt_question": "什么是政府采购环境标志产品清单？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是招标文件发售？",
+    "gt_question": "什么是招标文件发售？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "百炼大模型管理平台升级及运维服务项目的开标时间",
+    "gt_question": "百炼大模型管理平台升级及运维服务项目的开标时间？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "什么是招标投标法的工程定义？",
+    "gt_question": "什么是招标投标法的工程定义？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院护士鞋采购的开标地点在哪里？",
+    "gt_question": "吉林大学中日联谊医院护士鞋采购的开标地点在哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是两阶段招标？",
+    "gt_question": "什么是两阶段招标？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "多功能分液器和非接触式微孔板样品处理系统采购项目的行政区域是哪里",
+    "gt_question": "多功能分液器和非接触式微孔板样品处理系统采购项目的行政区域是哪里？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "招标人和中标人签订合同后可以另行订立协议吗",
+    "gt_question": "招标人和中标人签订合同后可以另行订立协议吗？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "遂宁市消防救援支队年度食材配送服务项目的开标时间是何时？",
+    "gt_question": "遂宁市消防救援支队年度食材配送服务项目的开标时间是什么时候？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "2026-2027年度吉林大学中日联谊医院《安防",
+    "gt_question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的采购单位是谁？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "百炼大模型管理平台升级及运维服务项目的开标时间是什么时候？",
+    "gt_question": "百炼大模型管理平台升级及运维服务项目的开标时间是什么时候？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院双层电蒸锅采购的行政区域是哪里？",
+    "gt_question": "吉林大学中日联谊医院双层电蒸锅采购的行政区域是哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "多功能分液器和非接触式微孔板样品处理系统采购项目的预算金额是多少",
+    "gt_question": "多功能分液器和非接触式微孔板样品处理系统采购项目的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "吉林大学中日联谊医院2026-2027年度保安服务项目的开标时间是什么时候？",
+    "gt_question": "吉林大学中日联谊医院2026-2027年度保安服务项目的开标时间是什么时候？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么情况下政府采购项目可以终止？",
+    "gt_question": "什么情况下政府采购项目可以终止？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "大连理工大学数字化机器人手术实验平台采购项目的行政区域是哪里？",
+    "gt_question": "大连理工大学数字化机器人手术实验平台采购项目的行政区域是哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "投标保证金的退还时限要求是什么？",
+    "gt_question": "投标保证金的退还时限要求是什么？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "2026年东北区域国家重点档案修复项目的代理机构是什么？",
+    "gt_question": "2026年东北区域国家重点档案修复项目的代理机构是什么？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院护士鞋采购的代理机构？",
+    "gt_question": "吉林大学中日联谊医院护士鞋采购的代理机构？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么情况下投标保证金不予退还？",
+    "gt_question": "什么情况下投标保证金不予退还？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购合同变更有什么要求？",
+    "gt_question": "政府采购合同变更有什么要求？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的预算金额是多少",
+    "gt_question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "遂宁市消防救援支队年度食材配送服务项目的预算金额是多少？",
+    "gt_question": "遂宁市消防救援支队年度食材配送服务项目的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标人收到异议后多长时间内应当答复？",
+    "gt_question": "招标人收到异议后多长时间内应当答复？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购信息变更公告应当在什么时限内发布？",
+    "gt_question": "政府采购信息变更公告应当在什么时限内发布？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是招标投标公开原则？",
+    "gt_question": "什么是招标投标公开原则？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "高内涵成像分析仪采购项目的采购单位是谁？",
+    "gt_question": "高内涵成像分析仪采购项目的采购单位是谁？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "评标委员会如何组成",
+    "gt_question": "评标委员会如何组成？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标时间是什么时候？",
+    "gt_question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标时间是什么时候？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的代理机构？",
+    "gt_question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的代理机构？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的预算金额是多少？",
+    "gt_question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "多功能分液器和非接触式微孔板样品处理系统采购项目的行政区域是哪里？",
+    "gt_question": "多功能分液器和非接触式微孔板样品处理系统采购项目的行政区域是哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的采购单位是谁",
+    "gt_question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的采购单位是谁？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "招标投标法对资格预审的期限有何要求？",
+    "gt_question": "招标投标法对资格预审的期限有何要求？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "国家广播电视总局282台基础设施配套改造项目的代理机构？",
+    "gt_question": "国家广播电视总局282台基础设施配套改造项目的代理机构？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "南开大学实验室设备处智慧安全实验室建设采购项目的开标地点在哪里",
+    "gt_question": "南开大学实验室设备处智慧安全实验室建设采购项目的开标地点在哪里？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "招标人可以否决所有投标吗？",
+    "gt_question": "招标人可以否决所有投标吗？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "2026年东北区域国家重点档案修复项目的预算金额是多少",
+    "gt_question": "2026年东北区域国家重点档案修复项目的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "政府采购的政策功能有哪些",
+    "gt_question": "政府采购的政策功能有哪些？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的采购单位是谁",
+    "gt_question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的采购单位是谁？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的预算金额是多少？",
+    "gt_question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的预算金额是多少？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "南开大学实验室设备处智慧安全实验室建设采购项目的采购单位是谁",
+    "gt_question": "南开大学实验室设备处智慧安全实验室建设采购项目的采购单位是谁？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "吉林大学中日联谊医院2026-2027年度保安服务项目的采购单位是谁？",
+    "gt_question": "吉林大学中日联谊医院2026-2027年度保安服务项目的采购单位是谁？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "大连理工大学数字化机器人手术实验平台采购项目的采购单位是谁？",
+    "gt_question": "大连理工大学数字化机器人手术实验平台采购项目的采购单位是谁？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购的采购方式变更？",
+    "gt_question": "什么是政府采购的采购方式变更？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的开标地点？",
+    "gt_question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的开标地点？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "国家广播电视总局282台基础设施配套改造项目的预算金额是多少？",
+    "gt_question": "国家广播电视总局282台基础设施配套改造项目的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "多功能分液器和非接触式微孔板样品处理系统采购项目的代理机构是什么？",
+    "gt_question": "多功能分液器和非接触式微孔板样品处理系统采购项目的代理机构是什么？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "2026年东北区域国家重点档案修复项目的行政区域是哪里？",
+    "gt_question": "2026年东北区域国家重点档案修复项目的行政区域是哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标人可以对评标结果提出异议吗？",
+    "gt_question": "招标人可以对评标结果提出异议吗？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购预算应当如何编制？",
+    "gt_question": "政府采购预算应当如何编制？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "大连理工大学数字化机器人手术实验",
+    "gt_question": "大连理工大学数字化机器人手术实验平台采购项目的开标时间？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "吉林大学中日联谊医院2026-2027年度保安服务项目的行政区域是哪里？",
+    "gt_question": "吉林大学中日联谊医院2026-2027年度保安服务项目的行政区域是哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "百炼大模型管理平台升级及运维服务项目的开标地点？",
+    "gt_question": "百炼大模型管理平台升级及运维服务项目的开标地点？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "采购人、采购代理机构有哪些违法行为会受处罚？",
+    "gt_question": "采购人、采购代理机构有哪些违法行为会受处罚？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "多功能分液器和非接触式微孔板样品处理系统采购项目的预算金额是多少？",
+    "gt_question": "多功能分液器和非接触式微孔板样品处理系统采购项目的预算金额是多少？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "2026年东北区域国家重点档案修复项目的预算金额是多少？",
+    "gt_question": "2026年东北区域国家重点档案修复项目的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院双层电蒸锅采购的代理机构是什么？",
+    "gt_question": "吉林大学中日联谊医院双层电蒸锅采购的代理机构是什么？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购档案管理有什么要求？",
+    "gt_question": "政府采购档案管理有什么要求？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标时间是何时？",
+    "gt_question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标时间是什么时候？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "南开大学实验室设备处智慧安全实验室建设采购项目的预算金额是多少？",
+    "gt_question": "南开大学实验室设备处智慧安全实验室建设采购项目的预算金额是多少？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "开标应当在什么时间和地点进行",
+    "gt_question": "开标应当在什么时间和地点进行？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "南开大学实验室设备处智慧安全实验室建设采购项目的开标地点？",
+    "gt_question": "南开大学实验室设备处智慧安全实验室建设采购项目的开标地点？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购优先采",
+    "gt_question": "什么是政府采购优先采购制度？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "什么情况下招标人可以暂停招标投标活动？",
+    "gt_question": "什么情况下招标人可以暂停招标投标活动？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是竞争性磋商采购方式？",
+    "gt_question": "什么是竞争性磋商采购方式？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "国家广播电视总局282台基础设施配套改造项目的开标时间是什么时候？",
+    "gt_question": "国家广播电视总局282台基础设施配套改造项目的开标时间是什么时候？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购绩效评价？",
+    "gt_question": "什么是政府采购绩效评价？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "遂宁市消防救援支队年度食材配送服务项目的预算金额是多少？",
+    "gt_question": "遂宁市消防救援支队年度食材配送服务项目的预算金额是多少？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "遂宁市消防救援支队年度食材配送服务项目的代理机构",
+    "gt_question": "遂宁市消防救援支队年度食材配送服务项目的代理机构？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的预算金额是多少？",
+    "gt_question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的预算金额是多少？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的行政区域是哪里",
+    "gt_question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的行政区域是哪里？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "复旦大学国家基础研究创新提升工程建设项目（化学",
+    "gt_question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的代理机构是什么？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "2026-2027年度吉林大学中日联谊医院《安",
+    "gt_question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的开标地点？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "政府采购合同类型有哪",
+    "gt_question": "政府采购合同类型有哪些？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备",
+    "gt_question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的采购单位是谁？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "投标文件截止时间后可以补充修改投标文件吗？",
+    "gt_question": "投标文件截止时间后可以补充修改投标文件吗？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购自行采购？",
+    "gt_question": "什么是政府采购自行采购？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的行政区域是哪里？",
+    "gt_question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的行政区域是哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购信用记录查询及使用有什么要求？",
+    "gt_question": "政府采购信用记录查询及使用有什么要求？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的开标时间是什么时候？",
+    "gt_question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的开标时间是什么时候？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "投标人撤回投标文件的条件是什么？",
+    "gt_question": "投标人撤回投标文件的条件是什么？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购评审专家如何产生？",
+    "gt_question": "政府采购评审专家如何产生？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购质疑函应当包括哪些内容？",
+    "gt_question": "政府采购质疑函应当包括哪些内容？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标人对已发出的招标文件进行必要的澄清或修改的时限要求是什么？",
+    "gt_question": "招标人对已发出的招标文件进行必要的澄清或修改的时限要求是什么？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的代理机构是什么？",
+    "gt_question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的代理机构是什么？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "南开大学实验室设备处智慧安全实验室建设采购项目的采购单位是谁？",
+    "gt_question": "南开大学实验室设备处智慧安全实验室建设采购项目的采购单位是谁？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是流标？",
+    "gt_question": "什么是流标？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院双层电蒸锅",
+    "gt_question": "吉林大学中日联谊医院双层电蒸锅采购的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "什么是招标投标法的立法目的？",
+    "gt_question": "什么是招标投标法的立法目的？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "高内涵成像分析仪采购项目的采购单位是谁",
+    "gt_question": "高内涵成像分析仪采购项目的采购单位是谁？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "投标人不得有哪些行为？",
+    "gt_question": "投标人不得有哪些行为？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标时间？",
+    "gt_question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标时间？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是必须进行招标的工程建设项目？",
+    "gt_question": "什么是必须进行招标的工程建设项目？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院护士鞋采购的开标时间？",
+    "gt_question": "吉林大学中日联谊医院护士鞋采购的开标时间？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购合同终止？",
+    "gt_question": "什么是政府采购合同终止？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是投标有效期内不得撤销投标文件？",
+    "gt_question": "什么是投标有效期内不得撤销投标文件？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是综合评估法？",
+    "gt_question": "什么是综合评估法？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "百炼大模型管理平台升级及运维服务项目的行政区域是哪里",
+    "gt_question": "百炼大模型管理平台升级及运维服务项目的行政区域是哪里？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标地点",
+    "gt_question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标地点？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "政府采购的信息应当如何公开？",
+    "gt_question": "政府采购的信息应当如何公开？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购计划",
+    "gt_question": "什么是政府采购计划？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "南开大学实验室设备处智慧安全实验室建设采购项目的开标地点",
+    "gt_question": "南开大学实验室设备处智慧安全实验室建设采购项目的开标地点？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "投标文件的送达有什么要求",
+    "gt_question": "投标文件的送达有什么要求？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "百炼大模型管理平台升级及运维服务项目的代理机构？",
+    "gt_question": "百炼大模型管理平台升级及运维服务项目的代理机构？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "多功能分液器和非接触式微孔板样品处理系统采购项目的开标时间是什么时候？",
+    "gt_question": "多功能分液器和非接触式微孔板样品处理系统采购项目的开标时间是什么时候？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "南开大学实验室设备处智慧安全实验室建设采购项目的开标时间是什么时候？",
+    "gt_question": "南开大学实验室设备处智慧安全实验室建设采购项目的开标时间是什么时候？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购供应商可以提出",
+    "gt_question": "政府采购供应商可以提出临时救济措施吗？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的代理机构？",
+    "gt_question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的代理机构？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标人不得设置哪些不合理条件限制潜在投标人",
+    "gt_question": "招标人不得设置哪些不合理条件限制潜在投标人？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "招标公告应当载明哪些内容？",
+    "gt_question": "招标公告应当载明哪些内容？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是最低投标限价？",
+    "gt_question": "什么是最低投标限价？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购资金来源",
+    "gt_question": "什么是政府采购资金来源？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "中标候选人的数量有什么要求？",
+    "gt_question": "中标候选人的数量有什么要求？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购的回避原则？",
+    "gt_question": "什么是政府采购的回避原则？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购投诉应当在什么时限内提出？",
+    "gt_question": "政府采购投诉应当在什么时限内提出？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购的监督检查包括哪些内容？",
+    "gt_question": "政府采购的监督检查包括哪些内容？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购项目可以委托",
+    "gt_question": "政府采购项目可以委托采购代理机构吗？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "高内涵成像分析仪采购项目的预算金额是多少？",
+    "gt_question": "高内涵成像分析仪采购项目的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购合同公告的要求是什么",
+    "gt_question": "政府采购合同公告的要求是什么？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "吉林大学中日联谊医院护士鞋采购的行政区域是哪里？",
+    "gt_question": "吉林大学中日联谊医院护士鞋采购的行政区域是哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的预算金额是多少？",
+    "gt_question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "国家广播电视总局282台基础设施配套改造项目的开标时间？",
+    "gt_question": "国家广播电视总局282台基础设施配套改造项目的开标时间？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "评标委员会如何组成？",
+    "gt_question": "评标委员会如何组成？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "百炼大模型管理平台升级及运维服务项目的代理机构是什么？",
+    "gt_question": "百炼大模型管理平台升级及运维服务项目的代理机构是什么？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购信息公开目录？",
+    "gt_question": "什么是政府采购信息公开目录？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标时间？",
+    "gt_question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标时间？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "工程建设项目招标？",
+    "gt_question": "什么是工程建设项目招标？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "百炼大模型管理平台升级及运维服务项目的开标地点在哪里？",
+    "gt_question": "百炼大模型管理平台升级及运维服务项目的开标地点在哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "高内涵成像分析仪采购项目的开标时间是什么时候？",
+    "gt_question": "高内涵成像分析仪采购项目的开标时间是什么时候？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "国家广播电视总局282台基础设施配套改造项目的行政区域是哪里？",
+    "gt_question": "国家广播电视总局282台基础设施配套改造项目的行政区域是哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院双层电蒸锅采购的采购单位是谁？",
+    "gt_question": "吉林大学中日联谊医院双层电蒸锅采购的采购单位是谁？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购供应商投诉处理决定的期限是多久？",
+    "gt_question": "政府采购供应商投诉处理决定的期限是多久？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "投标文件的送达有什么要求？",
+    "gt_question": "投标文件的送达有什么要求？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购合同应当如何签订？",
+    "gt_question": "政府采购合同应当如何签订？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "南开大学实验室设备处智慧安全实验室建设采购项目的代理机构是什么",
+    "gt_question": "南开大学实验室设备处智慧安全实验室建设采购项目的代理机构是什么？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "多功能分液器和非接触式微孔板样品处理系统采购项目的开标地点在哪里？",
+    "gt_question": "多功能分液器和非接触式微孔板样品处理系统采购项目的开标地点在哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "高内涵成像分析仪采购项目的采购单位是谁？",
+    "gt_question": "高内涵成像分析仪采购项目的采购单位是谁？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院双层电蒸锅采购的开标时间？",
+    "gt_question": "吉林大学中日联谊医院双层电蒸锅采购的开标时间？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的预算金额是多少？",
+    "gt_question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "投标文件未按规定密封会被拒收吗？",
+    "gt_question": "投标文件未按规定密封会被拒收吗？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "2026年东北区域国家重点档案修复项目的代理机构？",
+    "gt_question": "2026年东北区域国家重点档案修复项目的代理机构？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是政府采购批量集中采购？",
+    "gt_question": "什么是政府采购批量集中采购？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是招标投标活动的投诉处理",
+    "gt_question": "什么是招标投标活动的投诉处理？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "遂宁市消防救援支队年度食材配送服务项目的开标时间是什么时候？",
+    "gt_question": "遂宁市消防救援支队年度食材配送服务项目的开标时间是什么时候？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "2026年东北区域国家重点档案修复项目的开标地点？",
+    "gt_question": "2026年东北区域国家重点档案修复项目的开标地点？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标时间",
+    "gt_question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标时间？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "吉林大学中日联谊医院护士鞋采购的采购单位是谁？",
+    "gt_question": "吉林大学中日联谊医院护士鞋采购的采购单位是谁？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "供应商对政府采购活动有异议怎么办？",
+    "gt_question": "供应商对政府采购活动有异议怎么办？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "大连理工大学数字化机器人手术实验平台采购项目的开标时间是什么时候？",
+    "gt_question": "大连理工大学数字化机器人手术实验平台采购项目的开标时间是什么时候？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "南开大学实验室设备处智慧安全实验室建设采购项目的预算金额多少？",
+    "gt_question": "南开大学实验室设备处智慧安全实验室建设采购项目的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的代理机构是什么？",
+    "gt_question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的代理机构是什么？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "遂宁市消防救援支队年度食材配送服务项目的开标地点在哪里？",
+    "gt_question": "遂宁市消防救援支队年度食材配送服务项目的开标地点在哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院护士鞋采购的采购单位是谁？",
+    "gt_question": "吉林大学中日联谊医院护士鞋采购的采购单位是谁？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购中什么情况下可以采取应急采购？",
+    "gt_question": "政府采购中什么情况下可以采取应急采购？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的代理机构？",
+    "gt_question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的代理机构？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "资格预审公告应当载明哪些内容？",
+    "gt_question": "资格预审公告应当载明哪些内容？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的预算金额是多少？",
+    "gt_question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的采购单位是谁？",
+    "gt_question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的采购单位是谁？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "评标报告应当包括哪些",
+    "gt_question": "评标报告应当包括哪些内容？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "评标方法有哪几种？",
+    "gt_question": "评标方法有哪几种？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么情况下可以采用竞争性谈判方式采购？",
+    "gt_question": "什么情况下可以采用竞争性谈判方式采购？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的预算金额多少？",
+    "gt_question": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "电子招标投标的法律效力如何",
+    "gt_question": "电子招标投标的法律效力如何？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的开标时间是什么时候？",
+    "gt_question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的开标时间是什么时候？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是采购需求公示？",
+    "gt_question": "什么是采购需求公示？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "吉林大学中日联谊医院双层电蒸锅采购的预算金额是多少？",
+    "gt_question": "吉林大学中日联谊医院双层电蒸锅采购的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标文件应当包括哪些内容",
+    "gt_question": "招标文件应当包括哪些内容？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "开标过程应当如何记录？",
+    "gt_question": "开标过程应当如何记录？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标人不得设置哪些不合理条件限制潜在投标人？",
+    "gt_question": "招标人不得设置哪些不合理条件限制潜在投标人？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "百炼大模型管理平台升级及运维服务项目的开标时间？",
+    "gt_question": "百炼大模型管理平台升级及运维服务项目的开标时间？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标人可以对潜在投标人",
+    "gt_question": "招标人可以对潜在投标人进行资格审查吗？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "政府采购的监督检查有哪些内容？",
+    "gt_question": "政府采购的监督检查包括哪些内容？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "高内涵成像分析仪采购项目的行政区域是哪里？",
+    "gt_question": "高内涵成像分析仪采购项目的行政区域是哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标人泄露评标信息会",
+    "gt_question": "招标人泄露评标信息会怎样？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "政府采购合同类型有哪些？",
+    "gt_question": "政府采购合同类型有哪些？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购的政策功能有哪些？",
+    "gt_question": "政府采购的政策功能有哪些？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "资格预审公告应当载明",
+    "gt_question": "资格预审公告应当载明哪些内容？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "什么是联合体投标的资质认定规则？",
+    "gt_question": "什么是联合体投标的资质认定规则？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "大连理工大学数字化机器人手术实验平台采购项目的预算金额是多少？",
+    "gt_question": "大连理工大学数字化机器人手术实验平台采购项目的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是经评审的最低投标价法？",
+    "gt_question": "什么是经评审的最低投标价法？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标人不得为投标人规定哪些限制条件？",
+    "gt_question": "招标人不得为投标人规定哪些限制条件？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购当事人包括哪些？",
+    "gt_question": "政府采购当事人包括哪些？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标投标异议应当如何处理？",
+    "gt_question": "招标投标异议应当如何处理？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是招标投标法的法",
+    "gt_question": "什么是招标投标法的法律责任主体？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的采购单位是谁？",
+    "gt_question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的采购单位是谁？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "投标人必须具备什么条件？",
+    "gt_question": "投标人必须具备什么条件？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "南开大学实验室设备处智慧安全实验室建设采购项目的开标时间？",
+    "gt_question": "南开大学实验室设备处智慧安全实验室建设采购项目的开标时间？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "2026-2027年度吉林大学中日联谊医院《安防监控",
+    "gt_question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的开标时间是什么时候？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "什么是资格后审",
+    "gt_question": "什么是资格后审？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的开标地点？",
+    "gt_question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的开标地点？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "投标文件应当如何提交？",
+    "gt_question": "投标文件应当如何提交？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购的方式有哪几种",
+    "gt_question": "政府采购的方式有哪几种？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "什么是政府采购活动的中止？",
+    "gt_question": "什么是政府采购活动的中止？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是招标投标法的法律责任主体？",
+    "gt_question": "什么是招标投标法的法律责任主体？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "高内涵成像分析仪采购项目的预算金额是多少？",
+    "gt_question": "高内涵成像分析仪采购项目的预算金额是多少？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标地点在哪里？",
+    "gt_question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标地点在哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "高内涵成像分析仪采购项目的开标地点在哪里？",
+    "gt_question": "高内涵成像分析仪采购项目的开标地点在哪里？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是招标投标书面报告制度？",
+    "gt_question": "什么是招标投标书面报告制度？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "大连理工大学数字化机器人手术实验平台采购项目的开标时间？",
+    "gt_question": "大连理工大学数字化机器人手术实验平台采购项目的开标时间？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是依法必须招标的工程项目？",
+    "gt_question": "什么是依法必须招标的工程项目？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "什么是招标投标活动中",
+    "gt_question": "什么是招标投标活动中的禁止行为清单？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "国家广播电视总局282台基础设施配套",
+    "gt_question": "国家广播电视总局282台基础设施配套改造项目的采购单位是谁？",
+    "business_line": "bidding",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "封闭式框架协议采购？",
+    "gt_question": "什么是封闭式框架协议采购？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "政府采购验收应当如何进行",
+    "gt_question": "政府采购验收应当如何进行？",
+    "business_line": "regulation",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "2026年东北区域国家重点档案修复项目的采购单位是谁？",
+    "gt_question": "2026年东北区域国家重点档案修复项目的采购单位是谁？",
+    "business_line": "bidding",
+    "question_type": "exact"
+  },
+  {
+    "question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的代理机构是什么？",
+    "gt_question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的代理机构是什么？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "多功能分液器和非接触式微孔板样品处理系统采购项目的代理机构是什么",
+    "gt_question": "多功能分液器和非接触式微孔板样品处理系统采购项目的代理机构是什么？",
+    "business_line": "enterprise",
+    "question_type": "fuzzy"
+  },
+  {
+    "question": "中标人可以分包吗？",
+    "gt_question": "中标人可以分包吗？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "百炼大模型管理平台升级及运维服务项目的预算金额是多少？",
+    "gt_question": "百炼大模型管理平台升级及运维服务项目的预算金额是多少？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标投标行政监督部门有哪些职责？",
+    "gt_question": "招标投标行政监督部门有哪些职责？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标人拒收投标文件的法定情形有哪些？",
+    "gt_question": "招标人拒收投标文件的法定情形有哪些？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "国家广播电视总局282台基础设施配套改造项目的代理机构是什么？",
+    "gt_question": "国家广播电视总局282台基础设施配套改造项目的代理机构是什么？",
+    "business_line": "enterprise",
+    "question_type": "exact"
+  },
+  {
+    "question": "招标人不得有哪些限制竞争的行为？",
+    "gt_question": "招标人不得有哪些限制竞争的行为？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  },
+  {
+    "question": "政府采购合同可以分包履行吗？",
+    "gt_question": "政府采购合同可以分包履行吗？",
+    "business_line": "regulation",
+    "question_type": "exact"
+  }
+]
