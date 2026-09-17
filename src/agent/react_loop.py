@@ -123,7 +123,8 @@ class ReActMixin:
                             "web_sources": self._merge_sources(web_sources),
                             "tool_called": bool(last_tool), "tool_name": last_tool,
                             "phase_times": phase_times,
-                            "audit": audit})
+                            "audit": audit,
+                            "answer": answer})
             return
 
         final_messages = self._clean_for_final(messages, question, tool_msgs_start)
@@ -162,7 +163,8 @@ class ReActMixin:
                         "web_sources": self._merge_sources(web_sources),
                         "tool_called": bool(last_tool), "tool_name": last_tool,
                         "phase_times": phase_times,
-                        "audit": audit})
+                        "audit": audit,
+                        "answer": full_answer})
 
     @staticmethod
     def _merge_sources(sources: list[dict]) -> list[dict]:

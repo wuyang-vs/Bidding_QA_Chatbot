@@ -70,6 +70,7 @@ class BiddingAgent(ReActMixin, GenerationMixin):
                             "phase_times": [("前置检测", 0)]})
             exec_log.set_status("out_of_scope")
             exec_log.add_phase("前置检测", 0)
+            exec_log.set_result(ans, 0, 0, None)
             exec_log.finish()
             return
         if is_vague_question(question, history):
@@ -81,6 +82,7 @@ class BiddingAgent(ReActMixin, GenerationMixin):
                             "phase_times": [("前置检测", 0)]})
             exec_log.set_status("vague")
             exec_log.add_phase("前置检测", 0)
+            exec_log.set_result(ans, 0, 0, None)
             exec_log.finish()
             return
 

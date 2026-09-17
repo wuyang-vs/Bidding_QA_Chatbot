@@ -56,7 +56,10 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">数据看板</h1>
-          <Link href="/" className="text-blue-600 hover:underline text-sm">← 返回问答</Link>
+          <div className="flex items-center gap-3 text-sm">
+            <Link href="/agent" className="text-blue-600 hover:underline">Agent 过程</Link>
+            <Link href="/" className="text-blue-600 hover:underline">← 返回问答</Link>
+          </div>
         </div>
 
         {/* Top cards */}
