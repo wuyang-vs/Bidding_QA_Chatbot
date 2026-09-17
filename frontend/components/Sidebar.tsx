@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Plus, Search, Trash2, Moon, Sun, MoreVertical, X, BarChart3, Share2, Bot } from "lucide-react";
+import { Plus, Search, Trash2, Moon, Sun, MoreVertical, X, BarChart3, Share2, Bot, FileText } from "lucide-react";
 import Link from "next/link";
 
 interface Props {
@@ -106,6 +106,9 @@ export function Sidebar({
         <div className="border-t border-gray-200 dark:border-gray-800 p-2 space-y-1">
           <Link href="/agent" className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">
             <Bot size={16} /> Agent 过程
+          </Link>
+          <Link href="/documents" className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">
+            <FileText size={16} /> 文件解析
           </Link>
           <Link href="/dashboard" className="flex items-center gap-2 px-2 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">
             <BarChart3 size={16} /> 数据看板

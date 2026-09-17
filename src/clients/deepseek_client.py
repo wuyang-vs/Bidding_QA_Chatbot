@@ -28,16 +28,18 @@ class DeepSeekClient(BaseLLMClient):
         return self._model
 
     def chat(self, messages, **kwargs) -> str:
+        temperature = kwargs.pop("temperature", 0.3)
         resp = self._client.chat.completions.create(
-            model=self._model, messages=messages, temperature=0.3, **kwargs)
+            model=self._model, messages=messages, temperature=temperature, **kwargs)
         content = resp.choices[0].message.content
         if not content:
             content = getattr(resp.choices[0].message, "reasoning_content", "") or ""
         return content
 
     def chat_stream(self, messages, **kwargs):
+        temperature = kwargs.pop("temperature", 0.3)
         stream = self._client.chat.completions.create(
-            model=self._model, messages=messages, temperature=0.3, stream=True, **kwargs)
+            model=self._model, messages=messages, temperature=temperature, stream=True, **kwargs)
         reasoning_buf = ""
         has_content = False
         for chunk in stream:
@@ -53,8 +55,9 @@ class DeepSeekClient(BaseLLMClient):
             yield reasoning_buf
 
     def chat_stream_thinking(self, messages, **kwargs):
+        temperature = kwargs.pop("temperature", 0.3)
         stream = self._client.chat.completions.create(
-            model=self._model, messages=messages, temperature=0.3, stream=True, **kwargs)
+            model=self._model, messages=messages, temperature=temperature, stream=True, **kwargs)
         for chunk in stream:
             delta = chunk.choices[0].delta
             reasoning = getattr(delta, "reasoning_content", None)

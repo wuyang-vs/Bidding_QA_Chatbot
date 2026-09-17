@@ -19,13 +19,15 @@ class ZhipuClient(BaseLLMClient):
         return self._model
 
     def chat(self, messages, **kwargs) -> str:
+        temperature = kwargs.pop("temperature", 0.3)
         resp = self._client.chat.completions.create(
-            model=self._model, messages=messages, temperature=0.3, **kwargs)
+            model=self._model, messages=messages, temperature=temperature, **kwargs)
         return resp.choices[0].message.content or ""
 
     def chat_stream(self, messages, **kwargs):
+        temperature = kwargs.pop("temperature", 0.3)
         resp = self._client.chat.completions.create(
-            model=self._model, messages=messages, temperature=0.3, stream=True, **kwargs)
+            model=self._model, messages=messages, temperature=temperature, stream=True, **kwargs)
         for chunk in resp:
             c = chunk.choices[0].delta.content
             if c:
