@@ -620,13 +620,96 @@ def rejection_check(req: RejectionCheckRequest):
 
 # ---------- 人工复核 (审计留痕) ----------
 
+class ResponseCheckRequest(BaseModel):
+    tender_text: str = ""
+    tender_db_id: int | None = None
+    bid_text: str = ""
+    bid_db_id: int | None = None
+    clause: str = ""  # 可选, 指定条款号如 "3.2"
+
+
+@app.post("/api/scoring/table")
+def scoring_table(req: dict):
+    """评分辅助表 — 根据招标文件评分办法生成结构化打分表模板.
+
+    Body: {"db_id": int}  取该招标文件的 scoring_criteria
+    """
+    from src.tools.scoring_table import generate_scoring_table
+    from src.clients.llm_factory import get_llm_client
+    from src.database.postgresql_client import postgresql_client
+
+    db_id = req.get("db_id")
+    scoring_text = req.get("scoring_text", "")
+    if db_id is not None and postgresql_client.ready:
+        rows = postgresql_client._run(
+            "SELECT scoring_criteria FROM bidding_documents WHERE id = :id", {"id": db_id})
+        if rows:
+            scoring_text = rows[0].get("scoring_criteria") or scoring_text
+
+    if not scoring_text:
+        raise HTTPException(400, "未找到评分办法, 请提供 scoring_text 或确保文档含评分办法章节")
+
+    llm = get_llm_client()
+    return generate_scoring_table(scoring_text, llm_client=llm)
+
+
+@app.post("/api/response/check")
+def response_check(req: ResponseCheckRequest):
+    """投标响应性检查 — 对照招标实质性条款, 判定投标逐条响应情况."""
+    from src.tools.response_checker import check_response
+    from src.clients.llm_factory import get_llm_client
+    from src.database.postgresql_client import postgresql_client
+
+    tender: str | dict = req.tender_text
+    if req.tender_db_id is not None and postgresql_client.ready:
+        rows = postgresql_client._run(
+            "SELECT * FROM bidding_documents WHERE id = :id", {"id": req.tender_db_id})
+        if rows:
+            tender = rows[0]
+
+    bid: str | dict = req.bid_text
+    if req.bid_db_id is not None and postgresql_client.ready:
+        rows = postgresql_client._run(
+            "SELECT * FROM bidding_documents WHERE id = :id", {"id": req.bid_db_id})
+        if rows:
+            bid = rows[0]
+
+    if not tender:
+        raise HTTPException(400, "请提供 tender_text 或 tender_db_id")
+    if not bid:
+        raise HTTPException(400, "请提供 bid_text 或 bid_db_id")
+
+    llm = get_llm_client()
+    return check_response(
+        tender, bid,
+        clause=req.clause or None,
+        llm_client=llm,
+    )
+
+
 class ReviewSubmitRequest(BaseModel):
     document_id: int
-    review_type: str  # compliance | qualification | rejection
+    review_type: str  # compliance | qualification | rejection | response
     verdict: str      # approved | rejected
     comment: str = ""
     reviewer: str = ""
     result_snapshot: dict | None = None
+
+
+class BidCompareRequest(BaseModel):
+    bids: list[dict]  # [{"bidder_name": str, "text": str}, ...]
+
+
+@app.post("/api/bids/compare")
+def bids_compare(req: BidCompareRequest):
+    """多家投标对比 — 抽取多份投标关键字段并并排展示."""
+    from src.tools.bid_comparator import compare_bids
+    from src.clients.llm_factory import get_llm_client
+
+    if not req.bids:
+        raise HTTPException(400, "请提供至少一份投标文件")
+    llm = get_llm_client()
+    return compare_bids(req.bids, llm_client=llm)
 
 
 @app.post("/api/reviews")
@@ -636,7 +719,7 @@ def submit_review(req: ReviewSubmitRequest):
 
     if not postgresql_client.ready:
         raise HTTPException(503, "PostgreSQL 未连接, 无法保存复核记录")
-    if req.review_type not in ("compliance", "qualification", "rejection"):
+    if req.review_type not in ("compliance", "qualification", "rejection", "response", "scoring"):
         raise HTTPException(400, f"非法 review_type: {req.review_type}")
     if req.verdict not in ("approved", "rejected"):
         raise HTTPException(400, f"非法 verdict: {req.verdict}")

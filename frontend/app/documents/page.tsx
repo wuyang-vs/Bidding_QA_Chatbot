@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FileText, Upload, Loader2, CheckCircle, AlertCircle, Eye, X, Shield, ClipboardCheck, AlertTriangle, CheckSquare, FileWarning, UserCheck, History } from "lucide-react";
+import { FileText, Upload, Loader2, CheckCircle, AlertCircle, Eye, X, Shield, ClipboardCheck, AlertTriangle, CheckSquare, FileWarning, UserCheck, History, FileCheck } from "lucide-react";
 
 interface ParsedDoc {
   db_id?: number;
@@ -86,6 +86,46 @@ interface RejectionResult {
   verdict: "unknown" | "safe" | "attention" | "danger" | string;
   note?: string;
   docId?: number;
+}
+
+interface ResponseClause {
+  id: string;
+  clause_no?: string;
+  category: string;
+  tender_clause: string;
+  requirement?: string;
+  status: "response" | "positive" | "negative" | "none" | string;
+  evidence?: string;
+  detail?: string;
+}
+
+interface ResponseResult {
+  summary: { total: number; response: number; positive: number; negative: number; none: number };
+  clauses: ResponseClause[];
+  verdict: "pass" | "attention" | "danger" | "unknown" | string;
+  note?: string;
+  docId?: number;
+}
+
+interface ScoringItem {
+  id: string;
+  dimension: string;
+  weight: number;
+  max_score: number;
+  scoring_rule?: string;
+}
+
+interface ScoringResult {
+  total_score: number;
+  items: ScoringItem[];
+  note?: string;
+  docId?: number;
+}
+
+interface CompareResult {
+  fields: string[];
+  bidders: { name: string; values: Record<string, string> }[];
+  note?: string;
 }
 
 interface ReviewRecord {
@@ -583,6 +623,282 @@ function RejectionPanel({ result, onClose }: { result: RejectionResult; onClose?
   );
 }
 
+// ================== 投标响应性检查结果 ==================
+
+function ResponsePanel({ result, onClose }: { result: ResponseResult; onClose?: () => void }) {
+  const { summary, clauses, verdict, note } = result;
+
+  const verdictMap: Record<string, { text: string; cls: string }> = {
+    pass: { text: "✅ 全部响应", cls: "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200" },
+    attention: { text: "⚠️ 部分未响应", cls: "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200" },
+    danger: { text: "❌ 存在负偏离", cls: "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200" },
+    unknown: { text: "响应性检查", cls: "bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200" },
+  };
+
+  const statusBadge = (s: string) => {
+    const map: Record<string, { t: string; c: string }> = {
+      response: { t: "响应", c: "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200" },
+      positive: { t: "正偏离", c: "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200" },
+      negative: { t: "负偏离", c: "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200" },
+      none: { t: "未响应", c: "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300" },
+    };
+    const m = map[s] || { t: s, c: "bg-gray-200 text-gray-700" };
+    return <span className={`text-xs px-2 py-0.5 rounded font-medium ${m.c}`}>{m.t}</span>;
+  };
+
+  const cardCls = (s: string) =>
+    s === "negative" ? "border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/20" :
+    s === "none" ? "border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40" :
+    s === "positive" ? "border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20" :
+    "border-gray-200 dark:border-gray-800";
+
+  return (
+    <div className="mt-4 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+      <div className="bg-teal-50 dark:bg-teal-950/30 border-b border-teal-200 dark:border-teal-800 p-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <FileCheck className="text-teal-600" size={18} />
+          <span className="text-sm font-medium text-teal-900 dark:text-teal-100">投标响应性检查</span>
+          <span className={`text-xs px-2 py-0.5 rounded font-medium ${verdictMap[verdict]?.cls || verdictMap.unknown.cls}`}>
+            {verdictMap[verdict]?.text || "响应性检查"}
+          </span>
+        </div>
+        {onClose && (
+          <button onClick={onClose} className="text-teal-500 hover:text-teal-700 text-xs">关闭</button>
+        )}
+      </div>
+
+      <div className="p-5">
+        <div className="flex flex-wrap gap-4 mb-4">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{summary.total}</div>
+            <div className="text-xs text-gray-500">实质性条款</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-green-600">{summary.response}</div>
+            <div className="text-xs text-gray-500">响应</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-blue-600">{summary.positive}</div>
+            <div className="text-xs text-gray-500">正偏离</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-red-600">{summary.negative}</div>
+            <div className="text-xs text-gray-500">负偏离</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-gray-500">{summary.none}</div>
+            <div className="text-xs text-gray-500">未响应</div>
+          </div>
+        </div>
+
+        {note && (
+          <div className="mb-3 text-xs text-yellow-700 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-950/40 rounded p-2">{note}</div>
+        )}
+
+        {clauses.length === 0 ? (
+          <div className="text-sm text-gray-500 bg-gray-50 dark:bg-gray-900 rounded p-3">未提取到实质性条款</div>
+        ) : (
+          <div className="space-y-2">
+            {clauses.map((c) => (
+              <div key={c.id} className={`border rounded-lg p-3 ${cardCls(c.status)}`}>
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className="text-xs font-mono text-gray-400">{c.id}</span>
+                  {c.clause_no && <span className="text-xs px-1.5 py-0.5 bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300 rounded">{c.clause_no}</span>}
+                  <span className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded">{c.category}</span>
+                  {statusBadge(c.status)}
+                </div>
+                <div className="text-sm text-gray-900 dark:text-gray-100 break-words">{c.tender_clause}</div>
+                {c.requirement && c.requirement !== c.tender_clause && (
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">要求: {c.requirement}</div>
+                )}
+                {c.evidence && (
+                  <div className="mt-1 pl-3 border-l-2 border-teal-400 text-xs text-gray-700 dark:text-gray-300 italic">
+                    投标原文: "{c.evidence}"
+                  </div>
+                )}
+                {c.detail && (
+                  <div className="text-xs text-teal-700 dark:text-teal-300 mt-1">📝 {c.detail}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {result.docId != null && (
+          <ReviewBox docId={result.docId} type="response" accent="purple" snapshot={{ summary, verdict }} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ================== 评分辅助表 ==================
+
+function ScoringPanel({ result, onClose }: { result: ScoringResult; onClose?: () => void }) {
+  const { items, total_score, note } = result;
+  const [bidderCount, setBidderCount] = useState(2);
+  const [scores, setScores] = useState<Record<string, number[]>>({});
+
+  // 初始化每行的得分数组
+  useEffect(() => {
+    const init: Record<string, number[]> = {};
+    items.forEach((it) => { init[it.id] = new Array(bidderCount).fill(0); });
+    setScores(init);
+  }, [items, bidderCount]);
+
+  const setScore = (itemId: string, idx: number, val: number) => {
+    setScores((prev) => {
+      const arr = [...(prev[itemId] || new Array(bidderCount).fill(0))];
+      arr[idx] = val;
+      return { ...prev, [itemId]: arr };
+    });
+  };
+
+  const totals = Array.from({ length: bidderCount }, (_, idx) =>
+    items.reduce((sum, it) => sum + (scores[it.id]?.[idx] || 0), 0)
+  );
+
+  return (
+    <div className="mt-4 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+      <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 p-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <ClipboardCheck className="text-amber-600" size={18} />
+          <span className="text-sm font-medium text-amber-900 dark:text-amber-100">评分辅助表</span>
+          <span className="text-xs px-2 py-0.5 rounded font-medium bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200">
+            满分 {total_score} 分
+          </span>
+        </div>
+        {onClose && (
+          <button onClick={onClose} className="text-amber-500 hover:text-amber-700 text-xs">关闭</button>
+        )}
+      </div>
+
+      <div className="p-5">
+        {note && (
+          <div className="mb-3 text-xs text-yellow-700 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-950/40 rounded p-2">{note}</div>
+        )}
+
+        <div className="flex items-center gap-3 mb-3">
+          <label className="text-xs text-gray-500">投标人家数:</label>
+          <select value={bidderCount} onChange={(e) => setBidderCount(Number(e.target.value))}
+                  className="text-xs border border-gray-300 dark:border-gray-700 rounded px-2 py-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+            {[1,2,3,4,5,6].map((n) => <option key={n} value={n}>{n} 家</option>)}
+          </select>
+          <span className="text-xs text-gray-400">在下方表格中填入各投标人每项得分</span>
+        </div>
+
+        {items.length === 0 ? (
+          <div className="text-sm text-gray-500 bg-gray-50 dark:bg-gray-900 rounded p-3">未解析到评分项</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="bg-amber-50 dark:bg-amber-950/30">
+                  <th className="border border-gray-200 dark:border-gray-700 p-2 text-left text-amber-900 dark:text-amber-100">评分项</th>
+                  <th className="border border-gray-200 dark:border-gray-700 p-2 text-center text-amber-900 dark:text-amber-100">权重</th>
+                  <th className="border border-gray-200 dark:border-gray-700 p-2 text-left text-amber-900 dark:text-amber-100">评分标准</th>
+                  {Array.from({ length: bidderCount }, (_, i) => (
+                    <th key={i} className="border border-gray-200 dark:border-gray-700 p-2 text-center text-amber-900 dark:text-amber-100">投标人{i + 1}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((it) => (
+                  <tr key={it.id}>
+                    <td className="border border-gray-200 dark:border-gray-700 p-2 text-gray-900 dark:text-gray-100">{it.dimension}</td>
+                    <td className="border border-gray-200 dark:border-gray-700 p-2 text-center text-gray-700 dark:text-gray-300">{it.weight}</td>
+                    <td className="border border-gray-200 dark:border-gray-700 p-2 text-xs text-gray-600 dark:text-gray-400">{it.scoring_rule || "—"}</td>
+                    {Array.from({ length: bidderCount }, (_, idx) => (
+                      <td key={idx} className="border border-gray-200 dark:border-gray-700 p-1">
+                        <input
+                          type="number"
+                          min={0}
+                          max={it.max_score}
+                          value={scores[it.id]?.[idx] ?? 0}
+                          onChange={(e) => setScore(it.id, idx, Number(e.target.value))}
+                          className="w-full text-center text-sm bg-transparent focus:outline-none focus:bg-amber-50 dark:focus:bg-amber-950/40 rounded p-1 text-gray-900 dark:text-gray-100"
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+                <tr className="bg-amber-100 dark:bg-amber-950/40 font-bold">
+                  <td colSpan={3} className="border border-gray-200 dark:border-gray-700 p-2 text-right text-amber-900 dark:text-amber-100">加权总分</td>
+                  {totals.map((t, i) => (
+                    <td key={i} className="border border-gray-200 dark:border-gray-700 p-2 text-center text-amber-900 dark:text-amber-100">{t.toFixed(2)}</td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {result.docId != null && (
+          <ReviewBox docId={result.docId} type="scoring" accent="purple" snapshot={{ total_score, item_count: items.length }} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ================== 多家投标对比 ==================
+
+function ComparePanel({ result, onClose }: { result: CompareResult; onClose?: () => void }) {
+  const { fields, bidders, note } = result;
+
+  return (
+    <div className="mt-4 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+      <div className="bg-indigo-50 dark:bg-indigo-950/30 border-b border-indigo-200 dark:border-indigo-800 p-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <ClipboardCheck className="text-indigo-600" size={18} />
+          <span className="text-sm font-medium text-indigo-900 dark:text-indigo-100">多家投标对比</span>
+          <span className="text-xs px-2 py-0.5 rounded font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">
+            {bidders.length} 家
+          </span>
+        </div>
+        {onClose && (
+          <button onClick={onClose} className="text-indigo-500 hover:text-indigo-700 text-xs">关闭</button>
+        )}
+      </div>
+
+      <div className="p-5">
+        {note && (
+          <div className="mb-3 text-xs text-yellow-700 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-950/40 rounded p-2">{note}</div>
+        )}
+
+        {fields.length === 0 ? (
+          <div className="text-sm text-gray-500 bg-gray-50 dark:bg-gray-900 rounded p-3">无可对比字段</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="bg-indigo-50 dark:bg-indigo-950/30">
+                  <th className="border border-gray-200 dark:border-gray-700 p-2 text-left text-indigo-900 dark:text-indigo-100">对比项</th>
+                  {bidders.map((b, i) => (
+                    <th key={i} className="border border-gray-200 dark:border-gray-700 p-2 text-center text-indigo-900 dark:text-indigo-100">{b.name}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {fields.map((f) => (
+                  <tr key={f}>
+                    <td className="border border-gray-200 dark:border-gray-700 p-2 text-gray-900 dark:text-gray-100 font-medium">{f}</td>
+                    {bidders.map((b, i) => (
+                      <td key={i} className="border border-gray-200 dark:border-gray-700 p-2 text-center text-gray-700 dark:text-gray-300 break-words max-w-[200px]">
+                        {b.values[f] || "—"}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ================== 主页面 ==================
 
 export default function DocumentsPage() {
@@ -613,6 +929,26 @@ export default function DocumentsPage() {
   const [rejInput, setRejInput] = useState("");
   const rejTargetId = useRef<number | null>(null);
 
+  // 投标响应性检查
+  const [respLoading, setRespLoading] = useState(false);
+  const [respResult, setRespResult] = useState<ResponseResult | null>(null);
+  const [respInputOpen, setRespInputOpen] = useState(false);
+  const [respBidText, setRespBidText] = useState("");
+  const [respClause, setRespClause] = useState("");
+  const respTargetId = useRef<number | null>(null);
+
+  // 评分辅助表
+  const [scoringLoading, setScoringLoading] = useState(false);
+  const [scoringResult, setScoringResult] = useState<ScoringResult | null>(null);
+
+  // 多家投标对比
+  const [cmpLoading, setCmpLoading] = useState(false);
+  const [cmpResult, setCmpResult] = useState<CompareResult | null>(null);
+  const [cmpOpen, setCmpOpen] = useState(false);
+  const [cmpBids, setCmpBids] = useState<{ name: string; text: string }[]>([
+    { name: "投标人A", text: "" }, { name: "投标人B", text: "" }, { name: "投标人C", text: "" },
+  ]);
+
   const loadDocs = async () => {
     setLoading(true);
     try {
@@ -634,6 +970,9 @@ export default function DocumentsPage() {
     setCompResult(null);
     setQualResult(null);
     setRejResult(null);
+    setRespResult(null);
+    setScoringResult(null);
+    setCmpResult(null);
     setUploading(true);
     try {
       const fd = new FormData();
@@ -745,6 +1084,79 @@ export default function DocumentsPage() {
     setRejInputOpen(true);
   };
 
+  const runResponseCheck = async (dbId: number, bidText: string, clause: string) => {
+    setRespLoading(true);
+    setRespResult(null);
+    try {
+      const r = await fetch(`${API}/api/response/check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tender_db_id: dbId, bid_text: bidText, clause }),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      setRespResult({ ...(await r.json()), docId: dbId });
+    } catch (e: any) {
+      setRespResult({
+        summary: { total: 0, response: 0, positive: 0, negative: 0, none: 0 },
+        clauses: [], verdict: "unknown",
+        note: `检查失败: ${e?.message || "未知错误"}`,
+        docId: dbId,
+      });
+      setError(`响应性检查失败: ${e?.message}`);
+    } finally {
+      setRespLoading(false);
+    }
+  };
+
+  const openRespInput = (dbId: number) => {
+    respTargetId.current = dbId;
+    setRespBidText("");
+    setRespClause("");
+    setRespInputOpen(true);
+  };
+
+  const runScoring = async (dbId: number) => {
+    setScoringLoading(true);
+    setScoringResult(null);
+    try {
+      const r = await fetch(`${API}/api/scoring/table`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ db_id: dbId }),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      setScoringResult({ ...(await r.json()), docId: dbId });
+    } catch (e: any) {
+      setError(`评分辅助表生成失败: ${e?.message}`);
+    } finally {
+      setScoringLoading(false);
+    }
+  };
+
+  const runCompare = async () => {
+    const valid = cmpBids.filter((b) => b.text.trim() && b.name.trim());
+    if (valid.length < 2) {
+      setError("请至少填写 2 家投标人的名称和内容");
+      return;
+    }
+    setCmpLoading(true);
+    setCmpResult(null);
+    try {
+      const r = await fetch(`${API}/api/bids/compare`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bids: valid.map((b) => ({ bidder_name: b.name, text: b.text })) }),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      setCmpResult(await r.json());
+      setCmpOpen(false);
+    } catch (e: any) {
+      setError(`投标对比失败: ${e?.message}`);
+    } finally {
+      setCmpLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
       <div>
@@ -754,6 +1166,15 @@ export default function DocumentsPage() {
         <p className="text-sm text-gray-500 mt-1">
           上传 PDF / Word / TXT / Markdown，自动抽取项目信息；支持合规性检查和资格条件审查。
         </p>
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={() => setCmpOpen(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition"
+        >
+          <ClipboardCheck size={14} /> 多家投标对比
+        </button>
       </div>
 
       {/* 上传区 */}
@@ -884,6 +1305,22 @@ export default function DocumentsPage() {
                   {rejLoading ? <Loader2 className="animate-spin" size={14} /> : <FileWarning size={14} />}
                   废标条款检查
                 </button>
+                <button
+                  onClick={() => openRespInput(parsed.db_id!)}
+                  disabled={respLoading}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white rounded-lg transition"
+                >
+                  {respLoading ? <Loader2 className="animate-spin" size={14} /> : <FileCheck size={14} />}
+                  响应性检查
+                </button>
+                <button
+                  onClick={() => runScoring(parsed.db_id!)}
+                  disabled={scoringLoading}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg transition"
+                >
+                  {scoringLoading ? <Loader2 className="animate-spin" size={14} /> : <ClipboardCheck size={14} />}
+                  评分辅助表
+                </button>
               </div>
             )}
           </div>
@@ -891,7 +1328,7 @@ export default function DocumentsPage() {
       )}
 
       {/* 检查结果区 (从列表触发时 parsed 可能为空, 故独立放置) */}
-      {(compResult || qualResult || rejResult) && (
+      {(compResult || qualResult || rejResult || respResult || scoringResult) && (
         <div className="space-y-0">
           {compResult && (
             <CompliancePanel result={compResult} onClose={() => setCompResult(null)} />
@@ -902,7 +1339,18 @@ export default function DocumentsPage() {
           {rejResult && (
             <RejectionPanel result={rejResult} onClose={() => setRejResult(null)} />
           )}
+          {respResult && (
+            <ResponsePanel result={respResult} onClose={() => setRespResult(null)} />
+          )}
+          {scoringResult && (
+            <ScoringPanel result={scoringResult} onClose={() => setScoringResult(null)} />
+          )}
         </div>
+      )}
+
+      {/* 多家投标对比结果 (独立) */}
+      {cmpResult && (
+        <ComparePanel result={cmpResult} onClose={() => setCmpResult(null)} />
       )}
 
       {/* 已解析列表 */}
@@ -951,6 +1399,19 @@ export default function DocumentsPage() {
                       title="废标条款检查">
                       <FileWarning size={16} />
                     </button>
+                    <button
+                      onClick={() => openRespInput(d.id)}
+                      className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950 rounded-lg transition"
+                      title="响应性检查">
+                      <FileCheck size={16} />
+                    </button>
+                    <button
+                      onClick={() => runScoring(d.id)}
+                      disabled={scoringLoading}
+                      className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950 disabled:opacity-50 rounded-lg transition"
+                      title="评分辅助表">
+                      <ClipboardCheck size={16} />
+                    </button>
                     <button onClick={() => setDetail(d)}
                             className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
                             title="查看详情">
@@ -997,6 +1458,17 @@ export default function DocumentsPage() {
                   onClick={() => openRejInput(detail.id)}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition">
                   <FileWarning size={14} /> 废标检查
+                </button>
+                <button
+                  onClick={() => openRespInput(detail.id)}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-teal-600 hover:bg-teal-700 text-white rounded-lg transition">
+                  <FileCheck size={14} /> 响应检查
+                </button>
+                <button
+                  onClick={() => runScoring(detail.id)}
+                  disabled={scoringLoading}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg transition">
+                  {scoringLoading ? <Loader2 className="animate-spin" size={14} /> : <ClipboardCheck size={14} />} 评分辅助表
                 </button>
               </div>
             </div>
@@ -1095,6 +1567,139 @@ ISO 9001 质量管理体系认证
                 className="px-4 py-2 text-sm bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition">
                 {rejInput.trim() ? "提取条款并自查" : "仅提取条款"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 投标响应性检查输入弹窗 */}
+      {respInputOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setRespInputOpen(false)}>
+          <div className="bg-white dark:bg-gray-900 rounded-xl max-w-2xl w-full p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-medium flex items-center gap-2">
+                <FileCheck size={18} className="text-teal-600" /> 投标响应性检查
+              </h3>
+              <button onClick={() => setRespInputOpen(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">
+                <X size={18} />
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mb-3">
+              粘贴投标文件内容, 系统将对照招标文件实质性条款逐条判定响应情况。
+              可指定条款号 (如 "3.2") 只检查该条款, 留空则检查全部实质性条款。
+            </p>
+            <div className="mb-3">
+              <label className="block text-xs text-gray-500 mb-1">指定条款号 (可选)</label>
+              <input
+                value={respClause}
+                onChange={(e) => setRespClause(e.target.value)}
+                placeholder="如: 3.2"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">投标文件内容</label>
+              <textarea
+                value={respBidText}
+                onChange={(e) => setRespBidText(e.target.value)}
+                rows={10}
+                placeholder="粘贴投标文件正文, 例如:
+投标报价: 人民币 820 万元
+投标工期: 100 个日历天
+质保期: 3 年..."
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-500 font-mono"
+              />
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={() => setRespInputOpen(false)}
+                className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  const text = respBidText.trim();
+                  if (!text) return;
+                  setRespInputOpen(false);
+                  if (respTargetId.current) {
+                    runResponseCheck(respTargetId.current, text, respClause.trim());
+                  }
+                }}
+                disabled={!respBidText.trim()}
+                className="px-4 py-2 text-sm bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white rounded-lg transition">
+                开始检查
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 多家投标对比弹窗 */}
+      {cmpOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setCmpOpen(false)}>
+          <div className="bg-white dark:bg-gray-900 rounded-xl max-w-3xl w-full p-5 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-medium flex items-center gap-2">
+                <ClipboardCheck size={18} className="text-indigo-600" /> 多家投标对比
+              </h3>
+              <button onClick={() => setCmpOpen(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">
+                <X size={18} />
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mb-3">
+              粘贴各投标人的投标文件内容, 系统将抽取关键字段并并排对比。
+            </p>
+            <div className="space-y-3">
+              {cmpBids.map((b, i) => (
+                <div key={i} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <input
+                      value={b.name}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setCmpBids((prev) => prev.map((x, j) => j === i ? { ...x, name: v } : x));
+                      }}
+                      placeholder={`投标人 ${i + 1} 名称`}
+                      className="flex-1 rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                    {cmpBids.length > 2 && (
+                      <button
+                        onClick={() => setCmpBids((prev) => prev.filter((_, j) => j !== i))}
+                        className="text-red-500 hover:text-red-700 text-xs">移除</button>
+                    )}
+                  </div>
+                  <textarea
+                    value={b.text}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setCmpBids((prev) => prev.map((x, j) => j === i ? { ...x, text: v } : x));
+                    }}
+                    rows={4}
+                    placeholder="粘贴该投标人的投标文件内容..."
+                    className="w-full rounded border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 flex items-center justify-between">
+              <button
+                onClick={() => setCmpBids((prev) => [...prev, { name: `投标人${prev.length + 1}`, text: "" }])}
+                className="text-xs text-indigo-600 hover:text-indigo-700">
+                + 添加投标人
+              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCmpOpen(false)}
+                  className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">
+                  取消
+                </button>
+                <button
+                  onClick={runCompare}
+                  disabled={cmpLoading}
+                  className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg transition">
+                  {cmpLoading ? <Loader2 className="animate-spin" size={14} /> : "开始对比"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
