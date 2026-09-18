@@ -13,6 +13,7 @@ from src.auth.access_scope import get_current_user
 from src.tools.base import BaseTool
 from src.tools.bid_generator import SECTIONS, generate_section
 from src.tools.bid_service import row_to_tender
+from src.tools.company_profile import get_profile
 
 logger = logging.getLogger(__name__)
 
@@ -107,11 +108,19 @@ def _exec_generate_bid_draft(args, question):
             logger.warning("标书工具-相似案例检索失败: %s", e)
 
     llm = get_llm_client()
-    md = generate_section(tender, section, cases, llm_client=llm)
+    # 当前身份企业资料: 自动回填占位符 (未登录/无档案时 profile=None, 保留占位符)
+    profile = get_profile(user["id"]) if user else None
+    md, fill_info = generate_section(
+        tender, section, cases, llm_client=llm, company_profile=profile)
     header = (f"已基于招标文件 id={db_id}"
               f"（{tender.get('project_name') or rows[0].get('source_file')}）"
               f"生成【{SECTIONS[section]['title']}】章节草稿，请原样输出以下 Markdown：\n\n")
-    return header + md, []
+    tail = ""
+    if profile and fill_info.get("missing_company"):
+        tail = ("\n\n（提示: 以下企业资料字段缺失, 占位符未能回填: "
+                + "、".join(f"[{x}]" for x in fill_info["missing_company"][:6])
+                + "，可在企业资料库补全后重新生成）")
+    return header + md + tail, []
 
 
 BID_AGENT_TOOLS = [ListBidDocuments(), GenerateBidDraft()]

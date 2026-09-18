@@ -659,6 +659,62 @@ class BidGenerateRequest(BaseModel):
     export_title: str = ""           # 导出文件名/文档标题 (可选)
 
 
+# ---------- ⑪ 企业资料库 (账号 1:1, 必须登录) ----------
+
+class CertItem(BaseModel):
+    name: str = ""
+    level: str = ""
+    cert_no: str = ""
+    valid_until: str = ""
+
+
+class PastProjectItem(BaseModel):
+    name: str = ""
+    owner: str = ""
+    amount: str = ""
+    date: str = ""
+    role: str = ""
+
+
+class CompanyProfileRequest(BaseModel):
+    company_name: str = ""
+    company_short: str = ""
+    address: str = ""
+    legal_person: str = ""
+    registered_capital: str = ""
+    established_date: str = ""
+    contact_person: str = ""
+    contact_phone: str = ""
+    contact_email: str = ""
+    bank_name: str = ""
+    bank_account: str = ""
+    business_scope: str = ""
+    certs: list[CertItem] = Field(default_factory=list)
+    past_projects: list[PastProjectItem] = Field(default_factory=list)
+
+
+@app.get("/api/profile")
+def get_profile(user: dict = Depends(get_current_user_required)):
+    """读取当前登录账号的企业资料档案。"""
+    from src.tools.company_profile import get_profile, profile_completeness
+    profile = get_profile(user["id"])
+    return {"profile": profile, "completeness": profile_completeness(profile)}
+
+
+@app.put("/api/profile")
+def put_profile(req: CompanyProfileRequest,
+                user: dict = Depends(get_current_user_required)):
+    """全量更新当前登录账号的企业资料档案。"""
+    from src.tools.company_profile import upsert_profile, profile_completeness
+    data = req.model_dump()
+    try:
+        profile = upsert_profile(user["id"], data)
+    except Exception as e:
+        logger.exception("企业资料保存失败")
+        raise HTTPException(500, f"企业资料保存失败: {e}")
+    return {"profile": profile, "completeness": profile_completeness(profile)}
+
+
 @app.post("/api/bid/generate")
 def bid_generate(req: BidGenerateRequest,
                  user: dict | None = Depends(get_current_user_optional)):
@@ -717,15 +773,21 @@ def bid_generate(req: BidGenerateRequest,
     if not section_keys:
         section_keys = list(SECTIONS.keys())
 
-    # 4. 生成
+    # 4. 企业资料 + 生成 (登录用户自动回填占位符)
+    from src.tools.company_profile import get_profile as _get_company_profile
+    profile = _get_company_profile(user["id"]) if user else None
     llm = get_llm_client()
-    md = generate_full_bid(tender, cases, llm_client=llm, sections=section_keys)
+    md, fill_info = generate_full_bid(
+        tender, cases, llm_client=llm, sections=section_keys,
+        company_profile=profile)
 
     return {
         "project_name": tender.get("project_name", ""),
         "sections_generated": [SECTIONS[k]["title"] for k in section_keys],
         "similar_cases_found": len(cases),
         "markdown": md,
+        "fill_info": fill_info,
+        "profile_used": bool(profile and profile.get("company_name")),
     }
 
 
@@ -758,41 +820,184 @@ def bid_section(req: BidSectionRequest,
                 user: dict | None = Depends(get_current_user_optional)):
     """生成投标文件单个章节 (同步), 行级权限与 /api/bid/generate 一致。"""
     from src.tools.bid_generator import SECTIONS, generate_section
+    from src.tools.company_profile import get_profile
     from src.clients.llm_factory import get_llm_client
     tender, cases = _prepare_bid_section(req, user)
+    profile = get_profile(user["id"]) if user else None
     llm = get_llm_client()
-    md = generate_section(tender, req.section, cases, llm_client=llm)
+    md, fill_info = generate_section(
+        tender, req.section, cases, llm_client=llm, company_profile=profile)
     return {
         "db_id": req.db_id,
         "section_key": req.section,
         "title": SECTIONS[req.section]["title"],
         "similar_cases_found": len(cases),
         "markdown": md,
+        "fill_info": fill_info,
+        "profile_used": bool(profile and profile.get("company_name")),
     }
 
 
 @app.post("/api/bid/section/stream")
 def bid_section_stream(req: BidSectionRequest,
                        user: dict | None = Depends(get_current_user_optional)):
-    """生成投标文件单个章节 (SSE 流式: meta → token* → done)。"""
+    """生成投标文件单个章节 (SSE 流式: meta → token* → done, 企业资料实时回填)。"""
     from src.tools.bid_generator import SECTIONS, stream_section
+    from src.tools.company_profile import get_profile
     from src.clients.llm_factory import get_llm_client
     from src.agent.utils import _sse
 
     tender, cases = _prepare_bid_section(req, user)
+    profile = get_profile(user["id"]) if user else None
     title = SECTIONS[req.section]["title"]
 
     def gen():
         yield _sse("meta", section_key=req.section, title=title,
-                   db_id=req.db_id, similar_cases_found=len(cases))
+                   db_id=req.db_id, similar_cases_found=len(cases),
+                   profile_used=bool(profile and profile.get("company_name")))
         try:
             llm = get_llm_client()
-            for chunk in stream_section(tender, req.section, cases, llm_client=llm):
+            for chunk in stream_section(
+                    tender, req.section, cases, llm_client=llm,
+                    company_profile=profile):
                 yield _sse("token", content=chunk)
             yield _sse("done", section_key=req.section, title=title)
         except Exception as e:
             logger.exception("单章流式生成失败")
             yield _sse("error", content=f"章节生成失败: {e}")
+
+    return StreamingResponse(gen(), media_type="text/event-stream")
+
+
+# ---------- ⑪ 逐条响应对照矩阵 + 整本一键合稿 ----------
+
+class BidMatrixRequest(BaseModel):
+    db_id: int | None = None
+    markdown: str = ""              # 已生成的投标稿; 空串=视为未提交任何响应(应全红)
+    project_name: str = ""
+    subject_matter: str = ""
+    qualification_requirements: list[str] = Field(default_factory=list)
+
+
+@app.post("/api/bid/matrix")
+def bid_matrix(req: BidMatrixRequest,
+               user: dict | None = Depends(get_current_user_optional)):
+    """逐条招标要求 → 投标响应状态对照 (含不合格统计与 Markdown 附录)。"""
+    from src.tools.bid_service import resolve_tender
+    from src.tools.requirement_matrix import (
+        build_requirement_matrix, render_matrix_markdown,
+    )
+    from src.clients.llm_factory import get_llm_client
+
+    _assert_doc_readable(user, req.db_id)
+    tender = resolve_tender(req.db_id, req.model_dump(), include_raw=True)
+    if not (tender.get("raw_text") or tender.get("qualification_requirements")):
+        raise HTTPException(400, "招标文件缺少原文/资质要求, 无法生成对照表")
+    llm = get_llm_client()
+    matrix = build_requirement_matrix(
+        tender, tender.get("raw_text", ""), req.markdown or "", llm_client=llm)
+    matrix_md = render_matrix_markdown(matrix)
+    return {
+        "db_id": req.db_id,
+        "matrix": matrix["rows"],
+        "summary": matrix["summary"],
+        "hard_failures": matrix["hard_failures"],
+        "verdict": matrix["verdict"],
+        "markdown": matrix_md,
+    }
+
+
+class BidFullRequest(BaseModel):
+    db_id: int | None = None
+    sections: list[str] | None = None     # 默认全部 5 章
+    include_similar_cases: bool = True
+    include_matrix: bool = True
+    # db_id 缺失时手填
+    project_name: str = ""
+    purchaser: str = ""
+    subject_matter: str = ""
+    budget: str = ""
+    qualification_requirements: list[str] = Field(default_factory=list)
+
+
+@app.post("/api/bid/full/stream")
+def bid_full_stream(req: BidFullRequest,
+                    user: dict | None = Depends(get_current_user_optional)):
+    """整本投标文件一键生成 SSE:
+
+    meta → (section_start → token* → section_done)* → matrix_done → done
+    封面/目录/合稿/待补清单在 done.markdown; 不合格项随 matrix_done 结构化下发。
+    """
+    from src.tools.bid_generator import SECTIONS, stream_section, assemble_full_bid
+    from src.tools.bid_service import resolve_tender, fetch_similar_cases
+    from src.tools.company_profile import get_profile
+    from src.tools.requirement_matrix import (
+        build_requirement_matrix, render_matrix_markdown,
+    )
+    from src.clients.llm_factory import get_llm_client
+    from src.agent.utils import _sse
+
+    _assert_doc_readable(user, req.db_id)
+    section_keys = [k for k in (req.sections or list(SECTIONS.keys())) if k in SECTIONS]
+    if not section_keys:
+        raise HTTPException(400, f"非法章节列表, 可选 {list(SECTIONS.keys())}")
+    tender = resolve_tender(req.db_id, req.model_dump(), include_raw=True)
+    cases = fetch_similar_cases(tender, user) if req.include_similar_cases else []
+    profile = get_profile(user["id"]) if user else None
+    company = (profile or {}).get("company_name", "")
+
+    def gen():
+        yield _sse("meta", db_id=req.db_id,
+                   sections=[{"key": k, "title": SECTIONS[k]["title"]}
+                             for k in section_keys],
+                   company_name=company,
+                   project_name=tender.get("project_name", ""),
+                   similar_cases_found=len(cases))
+        section_mds: list[tuple[str, str]] = []
+        try:
+            llm = get_llm_client()
+            total = len(section_keys)
+            for idx, key in enumerate(section_keys, 1):
+                title = SECTIONS[key]["title"]
+                yield _sse("section_start", index=idx, total=total, key=key, title=title)
+                body_parts: list[str] = []
+                for chunk in stream_section(
+                        tender, key, cases, llm_client=llm,
+                        company_profile=profile):
+                    body_parts.append(chunk)
+                    yield _sse("token", key=key, content=chunk)
+                body = "".join(body_parts).strip()
+                md = f"## {title}\n\n{body}"
+                section_mds.append((key, md))
+                yield _sse("section_done", index=idx, total=total, key=key,
+                           title=title, chars=len(md))
+
+            matrix = None
+            matrix_md = ""
+            if req.include_matrix and (
+                    tender.get("raw_text") or tender.get("qualification_requirements")):
+                yield _sse("status", content="正在生成招标要求逐条响应对照...")
+                bid_body = "\n\n".join(md for _, md in section_mds)
+                matrix = build_requirement_matrix(
+                    tender, tender.get("raw_text", ""), bid_body, llm_client=llm)
+                matrix_md = render_matrix_markdown(matrix)
+                yield _sse("matrix_done", rows=matrix["rows"],
+                           summary=matrix["summary"], verdict=matrix["verdict"],
+                           hard_failures=matrix["hard_failures"])
+
+            full_md, fill_info = assemble_full_bid(
+                tender, section_mds, company_profile=profile, matrix_md=matrix_md)
+            yield _sse("done",
+                       markdown=full_md,
+                       fill_info=fill_info,
+                       profile_used=bool(company),
+                       similar_cases_found=len(cases),
+                       matrix_summary=(matrix or {}).get("summary"),
+                       hard_failures=(matrix or {}).get("hard_failures", []),
+                       verdict=(matrix or {}).get("verdict", "pass"))
+        except Exception as e:
+            logger.exception("整本标书生成失败")
+            yield _sse("error", content=f"整本标书生成失败: {e}")
 
     return StreamingResponse(gen(), media_type="text/event-stream")
 
@@ -1411,8 +1616,12 @@ def export_docx(req: BidGenerateRequest,
     if req.markdown.strip():
         md = req.markdown
     else:
+        from src.tools.company_profile import get_profile as _gp
+        _profile = _gp(user["id"]) if user else None
         llm = get_llm_client()
-        md = generate_full_bid(tender, cases, llm_client=llm, sections=section_keys)
+        md, _fill = generate_full_bid(
+            tender, cases, llm_client=llm, sections=section_keys,
+            company_profile=_profile)
 
     doc_title = req.export_title or tender.get("project_name") or "投标书草稿"
     data = markdown_to_docx(md, title=doc_title)

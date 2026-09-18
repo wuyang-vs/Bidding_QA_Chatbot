@@ -18,13 +18,28 @@ from typing import Any
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import RGBColor
+
+RED = RGBColor(0xFF, 0x00, 0x00)
+AMBER = RGBColor(0xC0, 0x60, 0x00)
+
+
+def _color_of(text: str):
+    if "🔴" in text:
+        return RED
+    if "🟡" in text:
+        return AMBER
+    return None
 
 
 def _add_paragraph(doc: Document, text: str, style: str | None = None, bold: bool = False) -> None:
     p = doc.add_paragraph(style=style)
+    color = _color_of(text)
     if bold:
         run = p.add_run(text)
         run.bold = True
+        if color:
+            run.font.color.rgb = color
     else:
         # 处理 **bold** 内联
         parts = re.split(r"(\*\*[^*]+\*\*)", text)
@@ -33,7 +48,13 @@ def _add_paragraph(doc: Document, text: str, style: str | None = None, bold: boo
                 run = p.add_run(part[2:-2])
                 run.bold = True
             elif part:
-                p.add_run(part)
+                run = p.add_run(part)
+            else:
+                continue
+            if color:
+                run.font.color.rgb = color
+                if "🔴" in text:
+                    run.bold = True
 
 
 def _add_markdown_table(doc: Document, header_row: list[str], data_rows: list[list[str]]) -> None:
@@ -45,12 +66,19 @@ def _add_markdown_table(doc: Document, header_row: list[str], data_rows: list[li
         hdr_cells[i].text = ""
         run = hdr_cells[i].paragraphs[0].add_run(h.strip())
         run.bold = True
-    # data
+    # data: 含 🔴 的行整行红色加粗, 含 🟡 的行琥珀色
     for ri, row in enumerate(data_rows):
+        row_color = RED if any("🔴" in c for c in row) else (
+            AMBER if any("🟡" in c for c in row) else None)
         cells = table.rows[ri + 1].cells
         for ci, val in enumerate(row):
             if ci < len(cells):
-                cells[ci].text = val.strip()
+                cells[ci].text = ""
+                run = cells[ci].paragraphs[0].add_run(val.strip())
+                if row_color:
+                    run.font.color.rgb = row_color
+                    if row_color == RED:
+                        run.bold = True
 
 
 def markdown_to_docx(md_text: str, title: str = "报告") -> bytes:

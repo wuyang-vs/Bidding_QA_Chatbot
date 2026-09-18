@@ -83,13 +83,14 @@ class TestBidGenerator:
         from src.tools.bid_generator import generate_section
         fake_llm = MagicMock()
         fake_llm.chat.return_value = "# 技术方案内容..."
-        result = generate_section(
+        result, fill_info = generate_section(
             {"project_name": "测试项目", "subject_matter": "服务器"},
             "technical",
             similar_cases=[],
             llm_client=fake_llm,
         )
         assert "## 技术方案" in result
+        assert isinstance(fill_info, dict)
 
     def test_invalid_section_key(self):
         from src.tools.bid_generator import generate_section
@@ -101,12 +102,27 @@ class TestBidGenerator:
         fake_llm = MagicMock()
         fake_llm.chat.return_value = "内容..."
         tender = {"project_name": "测试项目", "subject_matter": "服务器", "budget": "500万"}
-        md = generate_full_bid(tender, similar_cases=[], llm_client=fake_llm)
-        assert "# 投标书草稿" in md
+        md, fill_info = generate_full_bid(tender, similar_cases=[], llm_client=fake_llm)
         assert "测试项目" in md
+        assert "投 标 文 件" in md
+        assert isinstance(fill_info, dict)
         # 所有指定章节标题都在
         for key in SECTIONS:
             assert SECTIONS[key]["title"] in md
+
+    def test_profile_placeholder_fill(self):
+        from src.tools.bid_generator import generate_section
+        fake_llm = MagicMock()
+        fake_llm.chat.return_value = "致 [公司全称]，法人[法定代表人]，参数[具体参数]"
+        result, fill_info = generate_section(
+            {"project_name": "P", "subject_matter": "软件"},
+            "technical", similar_cases=[], llm_client=fake_llm,
+            company_profile={"company_name": "华信公司", "legal_person": "张三"},
+        )
+        assert "华信公司" in result and "张三" in result
+        assert "[公司全称]" not in result
+        assert "公司全称" not in fill_info["missing_company"]
+        assert "具体参数" in fill_info["pending_business"]
 
 
 # ========== compliance_checker ==========

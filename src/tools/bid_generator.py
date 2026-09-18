@@ -12,7 +12,13 @@ Agent 调用方式 (通过 skill 触发):
 from __future__ import annotations
 
 import logging
+from datetime import date
 from typing import Any
+
+from src.tools.company_profile import (
+    apply_profile_placeholders, fill_placeholders_stream, profile_prompt_block,
+    unfilled_notice,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -134,8 +140,9 @@ def build_section_messages(
     section_key: str,
     similar_cases: list[dict] | None = None,
     budget_hint: str = "",
+    company_profile: dict | None = None,
 ) -> tuple[str, str]:
-    """构造单章生成所需的 (system, user) 消息, 供同步/流式两条路径复用."""
+    """构造单章生成所需的 (system, user) 消息, 供同步/流式两条路径复用。"""
     if section_key not in SECTIONS:
         raise ValueError(f"未知章节: {section_key}, 可选: {list(SECTIONS)}")
     section = SECTIONS[section_key]
@@ -144,10 +151,15 @@ def build_section_messages(
     budget = budget_hint or parsed_tender.get("budget") or "(未提供)"
     user_msg = section["prompt"].format(
         tender_info=tender_text, cases=cases_text, budget=budget)
+    profile_block = profile_prompt_block(company_profile)
+    if profile_block:
+        user_msg += "\n\n" + profile_block
     system_msg = (
         "你是资深投标文件撰稿人. 根据招标要求和参考案例, "
         "撰写专业、可落地的投标章节草稿. "
-        "严格遵守所有禁止事项: 不编造具体资质编号/财务数据."
+        "严格遵守所有禁止事项: 不编造具体资质编号/财务数据. "
+        "若提供了投标人企业资料, 必须直接使用真实公司全称/姓名/编号, "
+        "不得把 [公司全称]/[法定代表人] 等已给资料的占位符写进正文."
     )
     return system_msg, user_msg
 
@@ -158,15 +170,12 @@ def generate_section(
     similar_cases: list[dict] | None = None,
     llm_client=None,
     budget_hint: str = "",
-) -> str:
-    """生成单个章节.
+    company_profile: dict | None = None,
+) -> tuple[str, dict]:
+    """生成单个章节并做企业资料占位符回填。
 
-    Args:
-        parsed_tender: document_parser.parse_file() 输出的 dict, 或用户直接给的招标信息
-        section_key: technical / commercial / qualification / project_management / after_sales
-        similar_cases: RAG 检索到的同类案例 (可选)
-        llm_client: LLM 客户端, 默认从 llm_factory 获取
-        budget_hint: 预算补充说明
+    Returns:
+        (markdown, fill_info)  fill_info 见 apply_profile_placeholders
     """
     if section_key not in SECTIONS:
         raise ValueError(f"未知章节: {section_key}, 可选: {list(SECTIONS)}")
@@ -176,13 +185,15 @@ def generate_section(
         llm_client = get_llm_client()
 
     system_msg, user_msg = build_section_messages(
-        parsed_tender, section_key, similar_cases, budget_hint)
+        parsed_tender, section_key, similar_cases, budget_hint, company_profile)
     content = llm_client.chat([
         {"role": "system", "content": system_msg},
         {"role": "user", "content": user_msg},
     ], temperature=0.4)
 
-    return f"## {SECTIONS[section_key]['title']}\n\n{content.strip()}"
+    body, fill_info = apply_profile_placeholders(content.strip(), company_profile)
+    md = f"## {SECTIONS[section_key]['title']}\n\n{body}"
+    return md, fill_info
 
 
 def stream_section(
@@ -191,17 +202,83 @@ def stream_section(
     similar_cases: list[dict] | None = None,
     llm_client=None,
     budget_hint: str = "",
+    company_profile: dict | None = None,
 ):
-    """流式生成单章正文 (不含标题, 标题由调用方用 SECTIONS[key]['title'] 拼接)."""
+    """流式生成单章正文 (占位符实时回填, 不含章节标题)。"""
     if llm_client is None:
         from src.clients.llm_factory import get_llm_client
         llm_client = get_llm_client()
     system_msg, user_msg = build_section_messages(
-        parsed_tender, section_key, similar_cases, budget_hint)
-    yield from llm_client.chat_stream([
+        parsed_tender, section_key, similar_cases, budget_hint, company_profile)
+    raw = llm_client.chat_stream([
         {"role": "system", "content": system_msg},
         {"role": "user", "content": user_msg},
     ], temperature=0.4)
+    yield from fill_placeholders_stream(raw, company_profile)
+
+
+def build_cover(tender: dict, company_profile: dict | None = None) -> str:
+    """整本投标书封面 + 编制信息。"""
+    from src.tools.company_profile import _norm
+    p = _norm(company_profile)
+    project = tender.get("project_name") or "(未指定项目)"
+    today = date.today().isoformat()
+    lines = [
+        f"# {project}",
+        "",
+        "# 投 标 文 件",
+        "",
+        "",
+        f"**投标人（盖章）**：{p.get('company_name') or '[公司全称]'}  ",
+        f"**法定代表人或授权代表**：{p.get('legal_person') or '[法定代表人]'}  ",
+        f"**项目编号**：{tender.get('project_code') or '-'}  ",
+        f"**采购人**：{tender.get('purchaser') or '-'}  ",
+        f"**投标截止时间**：{tender.get('deadline') or '-'}  ",
+        f"**编制日期**：{today}",
+        "",
+        "---",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def build_toc(section_keys: list[str]) -> str:
+    lines = ["## 目 录", ""]
+    for i, key in enumerate(section_keys, 1):
+        lines.append(f"{i}. {SECTIONS[key]['title']}")
+    lines += ["", "---", ""]
+    return "\n".join(lines)
+
+
+def assemble_full_bid(tender: dict, section_mds: list[tuple[str, str]],
+                      company_profile: dict | None = None,
+                      matrix_md: str = "") -> tuple[str, dict]:
+    """把各章 Markdown 合为整本; 汇总占位符回填情况并追加待补清单。
+
+    Args:
+        section_mds: [(section_key, markdown), ...] 已生成并回填的章节
+        matrix_md: 逐条响应对照表 Markdown (可选, 作为附录)
+    Returns:
+        (整本 markdown, fill_info 聚合)
+    """
+    keys = [k for k, _ in section_mds]
+    parts = [build_cover(tender, company_profile), build_toc(keys)]
+    for _, md in section_mds:
+        parts.append(md)
+        parts.append("")
+    if matrix_md:
+        parts.append("---")
+        parts.append("")
+        parts.append(matrix_md)
+        parts.append("")
+    # 整本层面扫描残留占位符并生成待补清单
+    from src.tools.company_profile import apply_profile_placeholders
+    full_so_far = "\n".join(parts)
+    _, info = apply_profile_placeholders(full_so_far, company_profile)
+    notice = unfilled_notice(info)
+    if notice:
+        parts.append(notice)
+    return "\n".join(parts), info
 
 
 def generate_full_bid(
@@ -209,50 +286,29 @@ def generate_full_bid(
     similar_cases: list[dict] | None = None,
     llm_client=None,
     sections: list[str] | None = None,
-) -> str:
-    """生成完整投标书草稿 (所有章节)."""
+    company_profile: dict | None = None,
+) -> tuple[str, dict]:
+    """生成完整投标书草稿 (所有章节, 同步)。
+
+    Returns:
+        (整本 markdown, 聚合 fill_info)
+    """
     if sections is None:
         sections = list(SECTIONS.keys())
 
-    parts: list[str] = [
-        f"# 投标书草稿: {parsed_tender.get('project_name', '(未指定项目)')}",
-        "",
-        f"**项目编号**: {parsed_tender.get('project_code', '-')}  ",
-        f"**采购人**: {parsed_tender.get('purchaser', '-')}  ",
-        f"**预算**: {parsed_tender.get('budget', '-')}  ",
-        f"**投标截止**: {parsed_tender.get('deadline', '-')}",
-        "",
-        "---",
-        "",
-    ]
-
+    section_mds: list[tuple[str, str]] = []
     for key in sections:
         logger.info("  📝 生成章节: %s", SECTIONS[key]["title"])
         try:
-            sec_text = generate_section(parsed_tender, key, similar_cases, llm_client)
+            sec_text, _info = generate_section(
+                parsed_tender, key, similar_cases, llm_client,
+                company_profile=company_profile)
         except Exception as e:
             logger.warning("  章节 %s 生成失败: %s", key, e)
             sec_text = f"## {SECTIONS[key]['title']}\n\n_本章生成失败, 请手动补充_\n"
-        parts.append(sec_text)
-        parts.append("")
+        section_mds.append((key, sec_text))
 
-    # 待补清单
-    parts.extend([
-        "---",
-        "",
-        "## 📋 待补清单 (所有占位符汇总)",
-        "",
-        "- [ ] [公司全称] — 公司正式名称",
-        "- [ ] [公司地址] — 注册地址",
-        "- [ ] [法定代表人] — 姓名 + 职务",
-        "- [ ] [资质证书编号] — 按招标要求逐项填",
-        "- [ ] [项目经理姓名/资质] — 项目经理简历",
-        "- [ ] [参考值, 以实际测算为准] — 商务报价数字",
-        "- [ ] [具体参数] — 技术参数响应表",
-        "- [ ] [服务承诺, 以公司标准为准] — 售后条款",
-    ])
-
-    return "\n".join(parts)
+    return assemble_full_bid(parsed_tender, section_mds, company_profile)
 
 
 def suggest_sections(parsed_tender: dict) -> list[str]:

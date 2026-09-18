@@ -168,6 +168,24 @@ class PostgreSQLClient:
                 user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
                 created_at TIMESTAMP DEFAULT NOW())""",
             "CREATE INDEX IF NOT EXISTS idx_rsh_doc ON review_stage_history (document_id, created_at)",
+            # ⑪ 企业资料库: 与登录账号 1:1, 用于标书占位符自动回填与资格比对
+            """CREATE TABLE IF NOT EXISTS company_profiles (
+                user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+                company_name TEXT DEFAULT '',
+                company_short TEXT DEFAULT '',
+                address TEXT DEFAULT '',
+                legal_person TEXT DEFAULT '',
+                registered_capital TEXT DEFAULT '',
+                established_date TEXT DEFAULT '',
+                contact_person TEXT DEFAULT '',
+                contact_phone TEXT DEFAULT '',
+                contact_email TEXT DEFAULT '',
+                bank_name TEXT DEFAULT '',
+                bank_account TEXT DEFAULT '',
+                business_scope TEXT DEFAULT '',
+                certs JSONB DEFAULT '[]'::jsonb,
+                past_projects JSONB DEFAULT '[]'::jsonb,
+                updated_at TIMESTAMP DEFAULT NOW())""",
         ):
             try:
                 with self._engine.begin() as conn:
