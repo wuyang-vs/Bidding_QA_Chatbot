@@ -14,7 +14,9 @@ logger = logging.getLogger(__name__)
 
 class SearchBiddingKnowledge(BaseTool):
     name: str = "search_bidding_knowledge"
-    description: str = "检索招投标知识库，适用于法规、流程、概念类问题"
+    description: str = ("检索招投标知识库（含已上传的招标文件原文、法规库、流程与概念），"
+                        "适用于查询具体项目的投标截止时间、预算金额、资质要求、废标条款、"
+                        "评分办法，以及法规、流程、概念类问题")
     parameters: dict = {
         "type": "object",
         "properties": {"query": {"type": "string", "description": "检索问题"}},
@@ -83,7 +85,9 @@ def _fmt_rag(docs: list[dict]) -> str:
         return "未检索到相关文档"
     lines = []
     for i, d in enumerate(docs, 1):
-        lines.append(f"【资料{i}】\n问: {d['question']}\n答: {d['answer']}\n相关度: {d.get('score', 0):.3f}")
+        src = d.get("source_file") or "知识库"
+        tag = "招标文件" if d.get("doc_type") == "tender_document" else "知识库"
+        lines.append(f"【资料{i}】(来源:{tag} {src})\n问: {d['question']}\n答: {d['answer']}\n相关度: {d.get('score', 0):.3f}")
     return "\n\n".join(lines)
 
 

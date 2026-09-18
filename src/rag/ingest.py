@@ -137,3 +137,98 @@ def ingest_data(force: bool = True) -> bool:
     logger.info("写入 Qdrant: %d 点", vector_store.count())
     embedder.save_vocab()
     return True
+
+
+# ---------- 招标文件 (上传文档) 入库 ----------
+# 招标文件分片使用独立 ID 段, 避免与 FAQ 数据 (从 0 起) 冲突
+_TENDER_ID_BASE = 10_000_000
+_TENDER_ID_SLOTS = 10_000
+_CHUNK_SIZE = 500
+_CHUNK_OVERLAP = 80
+
+
+def _chunk_tender_text(text: str, size: int = _CHUNK_SIZE,
+                       overlap: int = _CHUNK_OVERLAP) -> list[str]:
+    """按行聚合的滑动窗口分片, 尽量不切断条款行."""
+    lines = [ln.strip() for ln in (text or "").splitlines()]
+    lines = [ln for ln in lines if ln]
+    if not lines:
+        return []
+    chunks: list[str] = []
+    buf = ""
+    for ln in lines:
+        candidate = (buf + "\n" + ln) if buf else ln
+        if len(candidate) <= size:
+            buf = candidate
+        else:
+            if buf:
+                chunks.append(buf)
+            # 超长行硬切; 否则以当前行开启新块, 带上上一块尾部做重叠
+            tail = buf[-overlap:] if buf and len(buf) > overlap else ""
+            buf = (tail + "\n" + ln) if tail else ln
+            while len(buf) > size:
+                chunks.append(buf[:size])
+                buf = buf[size - overlap:]
+    if buf:
+        chunks.append(buf)
+    return chunks
+
+
+def _heading_of(chunk: str) -> str:
+    """取分片中首个短行作为章节/条款标题."""
+    for ln in chunk.splitlines():
+        ln = ln.strip()
+        if ln and len(ln) <= 40:
+            return ln
+    return chunk[:30].replace("\n", " ")
+
+
+def ingest_tender_document(db_id: int, raw_text: str,
+                           source_file: str = "", project_name: str = "") -> int:
+    """把一份上传的招标文件全文分片 → dense+sparse 向量 → upsert 到 Qdrant.
+
+    重传同 db_id 时先删旧分片. 返回写入分片数.
+    """
+    if not vector_store.collection_exists():
+        vector_store.create_collection(force=False)
+
+    # 去旧分片
+    deleted = vector_store.delete_by_payload("db_id", int(db_id))
+    if deleted:
+        logger.info("招标文件 #%s 清理旧分片 %d 个", db_id, deleted)
+
+    chunks = _chunk_tender_text(raw_text)
+    if not chunks:
+        logger.warning("招标文件 #%s 无有效文本, 跳过向量化", db_id)
+        return 0
+
+    embedder.fit_sparse(chunks)
+    embedder.save_vocab()
+
+    title = project_name or source_file or f"tender_doc_{db_id}"
+    points = []
+    for i, ch in enumerate(chunks):
+        heading = _heading_of(ch)
+        combined = f"{heading}\n{ch}"
+        points.append({
+            "id": _TENDER_ID_BASE + int(db_id) * _TENDER_ID_SLOTS + i,
+            "dense": embedder.encode_document_dense(combined),
+            "sparse": embedder.encode_document_sparse(combined),
+            "question": f"【招标文件】{title} - {heading}",
+            "answer": ch,
+            "source_file": source_file or f"tender_doc_{db_id}",
+            "section_title": heading,
+            "doc_type": "tender_document",
+            "chunk_id": f"tender-{db_id}-{i}",
+            "business_line": "tender",
+            "db_id": int(db_id),
+        })
+    vector_store.upsert_points(points)
+    logger.info("招标文件 #%s《%s》写入 %d 个分片, Qdrant 总点数=%d",
+                db_id, title[:30], len(points), vector_store.count())
+    return len(points)
+
+
+def delete_tender_document(db_id: int) -> int:
+    """删除某份招标文件的全部分片."""
+    return vector_store.delete_by_payload("db_id", int(db_id))

@@ -41,7 +41,8 @@ def _cached_search(question: str, top_k: int) -> tuple:
     recall_limit = max(top_k * 6, 30)
     docs = vector_store.hybrid_search(dense, sparse, limit=recall_limit, question=question)
     docs = reranker.rerank(question, docs, top_k)
-    return tuple((d.get("question", ""), d.get("answer", ""), d.get("score", 0.0)) for d in docs)
+    # 保留完整 dict (含 source_file/doc_type/db_id 等引用元数据)
+    return tuple(docs)
 
 
 class RAGPipeline:
@@ -71,9 +72,8 @@ class RAGPipeline:
         logger.info("Query 规划: %d 个变体", len(variants))
 
         if len(variants) == 1:
-            # 单路, 走缓存
-            return [{"question": q, "answer": a, "score": s}
-                    for q, a, s in _cached_search(variants[0], top_k)]
+            # 单路, 走缓存 (返回完整 dict, 保留引用元数据)
+            return [dict(d) for d in _cached_search(variants[0], top_k)]
 
         # 2. 多路并行检索
         recall_limit = max(top_k * 6, 30)

@@ -6,7 +6,7 @@ import time
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance, VectorParams, SparseVectorParams, PointStruct,
-    Prefetch, RrfQuery, Rrf,
+    Prefetch, RrfQuery, Rrf, Filter, FieldCondition, MatchValue,
 )
 from qdrant_client.http.exceptions import ResponseHandlingException
 
@@ -71,8 +71,9 @@ class VectorStore:
                     "answer": p["answer"],
                 }
                 # 元数据: 有则存, 无则忽略
-                for meta_key in ("source_file", "section_title", "doc_type", "chunk_id"):
-                    if meta_key in p and p[meta_key]:
+                for meta_key in ("source_file", "section_title", "doc_type",
+                                 "chunk_id", "business_line", "db_id"):
+                    if meta_key in p and p[meta_key] not in (None, ""):
                         payload[meta_key] = p[meta_key]
                 qdrant_points.append(PointStruct(
                     id=p["id"],
@@ -93,6 +94,22 @@ class VectorStore:
         try:
             return self._get_client().count(settings.qdrant_collection).count
         except Exception:
+            return 0
+
+    def delete_by_payload(self, key: str, value) -> int:
+        """按 payload 条件删除点 (如某份招标文件重传时去旧分片), 返回删除数."""
+        c = self._get_client()
+        try:
+            before = c.count(settings.qdrant_collection).count
+            c.delete(
+                collection_name=settings.qdrant_collection,
+                points_selector=Filter(must=[
+                    FieldCondition(key=key, match=MatchValue(value=value))]),
+            )
+            after = c.count(settings.qdrant_collection).count
+            return max(before - after, 0)
+        except Exception as e:
+            logger.warning("delete_by_payload(%s=%s) 失败: %s", key, value, e)
             return 0
 
     def _retry_call(self, fn, retries: int = 2, delay: float = 1.0):
@@ -132,9 +149,10 @@ class VectorStore:
                 "answer": h.payload.get("answer", ""),
             }
             # 透传元数据
-            for meta_key in ("source_file", "section_title", "doc_type", "chunk_id"):
+            for meta_key in ("source_file", "section_title", "doc_type",
+                             "chunk_id", "business_line", "db_id"):
                 val = h.payload.get(meta_key)
-                if val:
+                if val not in (None, ""):
                     item[meta_key] = val
             results.append(item)
         return results

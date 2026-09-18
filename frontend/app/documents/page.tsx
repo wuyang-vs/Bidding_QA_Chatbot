@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { FileText, Upload, Loader2, CheckCircle, AlertCircle, Eye, X, Shield, ClipboardCheck, AlertTriangle, CheckSquare, FileWarning, UserCheck, History, FileCheck, User, LogOut } from "lucide-react";
 
 interface ParsedDoc {
@@ -1192,13 +1193,16 @@ export default function DocumentsPage() {
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <FileText className="text-blue-600" /> 招标文件解析 & 审查
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          上传 PDF / Word / TXT / Markdown，自动抽取项目信息；支持合规性检查和资格条件审查。
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <FileText className="text-blue-600" /> 招标文件解析 & 审查
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            上传 PDF / Word / TXT / Markdown，自动抽取项目信息；支持合规性检查和资格条件审查。
+          </p>
+        </div>
+        <Link href="/" className="text-blue-600 hover:underline text-sm whitespace-nowrap mt-2">← 返回问答</Link>
       </div>
 
       <div className="flex justify-between items-center">

@@ -39,58 +39,122 @@ def register_tool(name: str, fn: Callable) -> None:
 
 
 def _ensure_tools_registered() -> None:
-    """惰性注册所有 6 个工具节点 (首次调用时)."""
-    if _TOOL_REGISTRY:
-        return
+    """惰性注册所有 6 个工具节点 (首次调用时); 单个失败不影响其他, 后续调用自动补注册."""
     llm = _get_llm()
-    try:
-        from src.tools.compliance_checker import check_compliance
-        register_tool("compliance_check", lambda p: check_compliance(p.get("tender_text") or "", llm_client=llm))
-    except Exception as e:
-        logger.warning("register compliance_check 失败: %s", e)
-    try:
-        from src.tools.qualification_checker import check_qualification
-        # 资格条件可能是 list 也可能是 str
-        def _q_params(p):
-            tr = p.get("qualification_requirements") or p.get("criteria_text") or ""
-            cq = p.get("qualification_text") or p.get("company_qualifications") or ""
-            if isinstance(tr, str) and tr:
-                tr = [s.strip() for s in tr.split("\n") if s.strip()]
-            if isinstance(cq, str) and cq:
-                cq = [s.strip() for s in cq.split("\n") if s.strip()]
-            return check_qualification(tr or None, cq or None, llm_client=llm)
-        register_tool("qualification_check", _q_params)
-    except Exception as e:
-        logger.warning("register qualification_check 失败: %s", e)
-    try:
-        from src.tools.rejection_checker import check_rejection
-        register_tool("rejection_check", lambda p: check_rejection(
-            p.get("tender_text") or "",
-            db_id=p.get("tender_db_id") or p.get("db_id"),
-            llm_client=llm))
-    except Exception as e:
-        logger.warning("register rejection_check 失败: %s", e)
-    try:
-        from src.tools.response_checker import check_response
-        register_tool("response_check", lambda p: check_response(
-            p.get("tender_text") or "",
-            p.get("bid_text") or "",
-            p.get("clause"),
-            llm_client=llm))
-    except Exception as e:
-        logger.warning("register response_check 失败: %s", e)
-    try:
-        from src.tools.scoring_table import generate_scoring_table
-        register_tool("scoring_table", lambda p: generate_scoring_table(
-            p.get("scoring_text") or "", llm_client=llm))
-    except Exception as e:
-        logger.warning("register scoring_table 失败: %s", e)
-    try:
-        from src.tools.bid_comparator import compare_bids
-        register_tool("bid_compare", lambda p: compare_bids(
-            p.get("bids") or [], llm_client=llm))
-    except Exception as e:
-        logger.warning("register bid_compare 失败: %s", e)
+
+    def _fetch_doc(db_id: Any) -> dict | None:
+        """按 db_id 取已解析招标文件整行 (工具接受 dict 行)."""
+        if not db_id:
+            return None
+        try:
+            from src.database.postgresql_client import postgresql_client
+            if not postgresql_client.ready:
+                return None
+            rows = postgresql_client._run(
+                "SELECT * FROM bidding_documents WHERE id=:id", {"id": int(db_id)})
+            return rows[0] if rows else None
+        except Exception as e:
+            logger.warning("读取招标文件失败 db_id=%s: %s", db_id, e)
+            return None
+
+    if "compliance_check" not in _TOOL_REGISTRY:
+        try:
+            from src.tools.compliance_checker import check_compliance
+
+            def _compliance(p: dict):
+                content = p.get("tender_text") or _fetch_doc(
+                    p.get("tender_db_id") or p.get("db_id"))
+                if not content:
+                    raise ValueError("缺少招标文件: 需 tender_text 或 tender_db_id")
+                return check_compliance(content, llm_client=llm)
+
+            register_tool("compliance_check", _compliance)
+        except Exception as e:
+            logger.warning("register compliance_check 失败: %s", e)
+
+    if "qualification_check" not in _TOOL_REGISTRY:
+        try:
+            from src.tools.qualification_checker import check_qualification
+
+            def _qualification(p: dict):
+                # 资格要求: 显式文本/list → db_id 回退取库
+                tr: Any = p.get("qualification_requirements") or p.get("criteria_text") or ""
+                if not tr:
+                    doc = _fetch_doc(p.get("db_id") or p.get("tender_db_id"))
+                    if doc and isinstance(doc.get("qualification_requirements"), list):
+                        tr = doc["qualification_requirements"]
+                if isinstance(tr, str) and tr:
+                    tr = [s.strip() for s in tr.splitlines() if s.strip()]
+                cq: Any = p.get("qualification_text") or p.get("company_qualifications") or ""
+                if isinstance(cq, str) and cq:
+                    cq = [s.strip() for s in cq.splitlines() if s.strip()]
+                if not tr:
+                    raise ValueError("缺少资格要求: 需 criteria_text 或 db_id")
+                return check_qualification(tr or None, cq or None, llm_client=llm)
+
+            register_tool("qualification_check", _qualification)
+        except Exception as e:
+            logger.warning("register qualification_check 失败: %s", e)
+
+    if "rejection_check" not in _TOOL_REGISTRY:
+        try:
+            from src.tools.bid_rejection_checker import check_bid_rejection
+
+            def _rejection(p: dict):
+                content = p.get("tender_text") or _fetch_doc(
+                    p.get("tender_db_id") or p.get("db_id"))
+                if not content:
+                    raise ValueError("缺少招标文件: 需 tender_text 或 tender_db_id")
+                return check_bid_rejection(
+                    content, bidder_status=p.get("bidder_status") or None, llm_client=llm)
+
+            register_tool("rejection_check", _rejection)
+        except Exception as e:
+            logger.warning("register rejection_check 失败: %s", e)
+
+    if "response_check" not in _TOOL_REGISTRY:
+        try:
+            from src.tools.response_checker import check_response
+
+            def _response(p: dict):
+                tender = p.get("tender_text") or _fetch_doc(
+                    p.get("tender_db_id") or p.get("db_id"))
+                bid = p.get("bid_text") or _fetch_doc(p.get("bid_db_id"))
+                if not tender:
+                    raise ValueError("缺少招标文件: 需 tender_text 或 tender_db_id")
+                if not bid:
+                    raise ValueError("缺少投标内容: 需 bid_text 或 bid_db_id")
+                return check_response(tender, bid, p.get("clause") or None, llm_client=llm)
+
+            register_tool("response_check", _response)
+        except Exception as e:
+            logger.warning("register response_check 失败: %s", e)
+
+    if "scoring_table" not in _TOOL_REGISTRY:
+        try:
+            from src.tools.scoring_table import generate_scoring_table
+
+            def _scoring(p: dict):
+                text = p.get("scoring_text") or ""
+                if not text:
+                    doc = _fetch_doc(p.get("db_id") or p.get("tender_db_id"))
+                    if doc:
+                        text = doc.get("scoring_criteria") or ""
+                if not text:
+                    raise ValueError("缺少评分办法: 需 scoring_text 或 db_id")
+                return generate_scoring_table(text, llm_client=llm)
+
+            register_tool("scoring_table", _scoring)
+        except Exception as e:
+            logger.warning("register scoring_table 失败: %s", e)
+
+    if "bid_compare" not in _TOOL_REGISTRY:
+        try:
+            from src.tools.bid_comparator import compare_bids
+            register_tool("bid_compare", lambda p: compare_bids(
+                p.get("bids") or [], llm_client=llm))
+        except Exception as e:
+            logger.warning("register bid_compare 失败: %s", e)
 
 
 _llm_cached = None
@@ -146,7 +210,8 @@ PRESETS: dict[str, dict[str, Any]] = {
              "params": {"tender_db_id": "<ctx.db_id>"},
              "fail_mode": "degrade"},
             {"id": "qualification", "tool": "qualification_check",
-             "params": {"criteria_text": "<ctx.qualification_requirements>",
+             "params": {"db_id": "<ctx.db_id>",
+                        "criteria_text": "<ctx.qualification_requirements>",
                         "qualification_text": "<ctx.qualification_text>"},
              "fail_mode": "degrade"},
             {"id": "rejection", "tool": "rejection_check",
@@ -160,7 +225,8 @@ PRESETS: dict[str, dict[str, Any]] = {
         "description": "评分辅助表 + 投标响应性检查 + 多家投标对比 (可选)",
         "nodes": [
             {"id": "scoring", "tool": "scoring_table",
-             "params": {"scoring_text": "<ctx.scoring_criteria>"},
+             "params": {"db_id": "<ctx.db_id>",
+                        "scoring_text": "<ctx.scoring_criteria>"},
              "fail_mode": "degrade"},
             {"id": "response", "tool": "response_check",
              "params": {"tender_db_id": "<ctx.db_id>",

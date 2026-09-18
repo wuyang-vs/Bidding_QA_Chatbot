@@ -334,18 +334,19 @@ class PostgreSQLClient:
         return rows[0]["id"] if rows else -1
 
     def list_documents(self, q: str = "") -> list[dict]:
+        cols = ("id, source_file, project_name, purchaser, budget, deadline, "
+                "parse_status, text_length, qualification_requirements, "
+                "scoring_criteria, created_at")
         if q:
             kw = _escape_like(q)
             return self._run(
-                "SELECT id, source_file, project_name, purchaser, budget, "
-                "deadline, created_at FROM bidding_documents "
+                f"SELECT {cols} FROM bidding_documents "
                 "WHERE project_name ILIKE '%' || :q || '%' ESCAPE '\\' "
                 "OR source_file ILIKE '%' || :q || '%' ESCAPE '\\' "
                 "ORDER BY created_at DESC",
                 {"q": kw})
         return self._run(
-            "SELECT id, source_file, project_name, purchaser, budget, "
-            "deadline, created_at FROM bidding_documents ORDER BY created_at DESC")
+            f"SELECT {cols} FROM bidding_documents ORDER BY created_at DESC")
 
     # ---------- 人工复核 (审计留痕) ----------
 
@@ -387,7 +388,7 @@ class PostgreSQLClient:
         params["lim"] = limit
         return self._run(
             f"SELECT id, document_id, review_type, verdict, comment, reviewer, "
-            f"created_at FROM document_reviews {where} "
+            f"user_id, created_at FROM document_reviews {where} "
             f"ORDER BY created_at DESC LIMIT :lim", params)
 
 

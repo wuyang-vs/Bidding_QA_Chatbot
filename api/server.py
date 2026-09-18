@@ -503,9 +503,23 @@ def document_upload(file: UploadFile, save_to_db: bool = True):
         parsed["source_path"] = ""
 
         db_id = None
+        raw_text = parsed.get("raw_text") or ""
         if save_to_db and postgresql_client.ready:
             db_id = postgresql_client.save_document(parsed)
             parsed["db_id"] = db_id
+
+        # 招标文件全文分片向量化 → Qdrant, 供混合检索问答引用
+        indexed_chunks = 0
+        if db_id and raw_text:
+            try:
+                from src.rag.ingest import ingest_tender_document
+                indexed_chunks = ingest_tender_document(
+                    db_id, raw_text,
+                    source_file=parsed.get("source_file", ""),
+                    project_name=parsed.get("project_name", ""))
+            except Exception as ie:
+                logger.warning("招标文件向量化失败 (不影响解析入库): %s", ie)
+        parsed["vector_indexed_chunks"] = indexed_chunks
 
         # 脱敏: 原始文本前 2000 字已在 raw_text_preview, 不返回更多
         parsed.pop("raw_text", None)
