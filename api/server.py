@@ -5,7 +5,7 @@ import time
 from contextlib import asynccontextmanager
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Depends
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Depends, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
@@ -13,7 +13,25 @@ from pydantic import BaseModel, Field
 from src.config import settings
 from src.logging_config import setup_logging
 from src.rate_limiter import rate_limiter
-from src.auth import get_current_user_required, get_current_user_optional
+from src.auth import (
+    get_current_user_required, get_current_user_optional, require_roles,
+    ROLE_ADMIN, ROLE_AUDITOR, ROLE_PURCHASER, ROLE_BIDDER, SELF_REGISTER_ROLES,
+)
+
+# 评标内部角色 (非投标人)
+_INTERNAL_ROLES = (ROLE_ADMIN, ROLE_AUDITOR, ROLE_PURCHASER)
+
+
+def _assert_doc_readable(user: dict | None, db_id: int | None) -> None:
+    """按角色校验能否访问指定文档; db_id 为空时不拦截.
+
+    匿名同样受行级限制 (仅 public); 业务端点的匿名兼容性由 public 文档保证.
+    """
+    if db_id is None:
+        return
+    from src.database.postgresql_client import postgresql_client
+    if postgresql_client.ready and not postgresql_client.can_read_document(user, db_id):
+        raise HTTPException(403, "无权访问该文档（内部文档需对应角色登录后访问）")
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -49,6 +67,12 @@ async def lifespan(app: FastAPI):
         logger.warning("默认 admin 初始化失败: %s", e)
     start_auto_ingest()
     system_monitor.start()
+    # 存量向量分片回填 visibility/owner_id (幂等; 需 Qdrant+PG 均就绪)
+    try:
+        from src.rag.ingest import backfill_access_metadata
+        backfill_access_metadata()
+    except Exception as e:
+        logger.warning("向量分片权限回填跳过: %s", e)
     logger.info("API 服务启动完成")
     yield
     system_monitor.stop()
@@ -80,6 +104,7 @@ class RegisterRequest(BaseModel):
     username: str
     password: str
     display_name: str = ""
+    role: str = ROLE_BIDDER  # 自助注册: bidder/purchaser; admin/auditor 由管理员分配
 
 
 class LoginRequest(BaseModel):
@@ -99,10 +124,12 @@ def register(req: RegisterRequest):
         "SELECT id FROM users WHERE username=:u", {"u": req.username})
     if existing:
         raise HTTPException(409, "用户名已存在")
+    role = req.role if req.role in SELF_REGISTER_ROLES else ROLE_BIDDER
     postgresql_client._run(
-        "INSERT INTO users (username, password_hash, role, display_name) VALUES (:u,:h,'auditor',:d)",
-        {"u": req.username, "h": hash_password(req.password), "d": req.display_name or req.username})
-    return {"status": "ok", "username": req.username}
+        "INSERT INTO users (username, password_hash, role, display_name) VALUES (:u,:h,:r,:d)",
+        {"u": req.username, "h": hash_password(req.password),
+         "r": role, "d": req.display_name or req.username})
+    return {"status": "ok", "username": req.username, "role": role}
 
 
 @app.post("/auth/login")
@@ -140,6 +167,38 @@ def auth_me(user: dict = Depends(get_current_user_required)):
     return {"user": user}
 
 
+class AdminCreateUserRequest(BaseModel):
+    username: str
+    password: str
+    display_name: str = ""
+    role: str = ROLE_AUDITOR
+
+
+@app.post("/auth/admin/users")
+def admin_create_user(
+    req: AdminCreateUserRequest,
+    admin: dict = Depends(require_roles(ROLE_ADMIN, allow_anonymous=False)),
+):
+    """管理员创建用户 (可分配 admin/auditor/purchaser/bidder); 禁止自助注册的角色由此发放."""
+    from src.auth import hash_password
+    from src.database.postgresql_client import postgresql_client
+    if not postgresql_client.ready:
+        raise HTTPException(503, "PostgreSQL 未连接")
+    valid_roles = {ROLE_ADMIN, ROLE_AUDITOR, ROLE_PURCHASER, ROLE_BIDDER}
+    if req.role not in valid_roles:
+        raise HTTPException(400, f"非法角色: {req.role}")
+    existing = postgresql_client._run(
+        "SELECT id FROM users WHERE username=:u", {"u": req.username})
+    if existing:
+        raise HTTPException(409, "用户名已存在")
+    postgresql_client._run(
+        "INSERT INTO users (username, password_hash, role, display_name) VALUES (:u,:h,:r,:d)",
+        {"u": req.username, "h": hash_password(req.password),
+         "r": req.role, "d": req.display_name or req.username})
+    logger.info("管理员 %s 创建用户 %s (role=%s)", admin.get("username"), req.username, req.role)
+    return {"status": "ok", "username": req.username, "role": req.role}
+
+
 # ==================== 业务端点 ====================
 
 class ChatRequest(BaseModel):
@@ -174,7 +233,8 @@ class FeedbackRequest(BaseModel):
 
 
 @app.post("/api/chat/stream")
-def chat_stream(req: ChatRequest):
+def chat_stream(req: ChatRequest,
+                user: dict | None = Depends(get_current_user_optional)):
     if not req.question.strip():
         raise HTTPException(400, "问题不能为空")
     from src.agent.core import bidding_agent
@@ -182,9 +242,12 @@ def chat_stream(req: ChatRequest):
         raise HTTPException(503, "知识库未就绪")
 
     def _gen():
-        yield from bidding_agent.chat_stream(
-            req.question, req.history, req.web_search_enabled,
-            req.provider, req.deep_thinking_enabled)
+        # 行级隔离: 整个流式生成期间按当前用户身份过滤 RAG 召回
+        from src.auth.access_scope import use_access_scope
+        with use_access_scope(user):
+            yield from bidding_agent.chat_stream(
+                req.question, req.history, req.web_search_enabled,
+                req.provider, req.deep_thinking_enabled)
 
     return StreamingResponse(_gen(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache",
@@ -192,21 +255,27 @@ def chat_stream(req: ChatRequest):
 
 
 @app.post("/api/chat")
-def chat(req: ChatRequest):
+def chat(req: ChatRequest,
+         user: dict | None = Depends(get_current_user_optional)):
     from src.agent.core import bidding_agent
     if not bidding_agent.ready:
         raise HTTPException(503, "知识库未就绪")
-    return bidding_agent.chat(req.question, req.history,
-                              req.web_search_enabled, req.provider,
-                              req.deep_thinking_enabled)
+    from src.auth.access_scope import use_access_scope
+    with use_access_scope(user):
+        return bidding_agent.chat(req.question, req.history,
+                                  req.web_search_enabled, req.provider,
+                                  req.deep_thinking_enabled)
 
 
 @app.post("/api/ask")
-def ask(req: AskRequest):
+def ask(req: AskRequest,
+        user: dict | None = Depends(get_current_user_optional)):
     from src.rag.pipeline import rag_pipeline
     if not rag_pipeline.ready:
         raise HTTPException(503, "知识库未就绪")
-    return rag_pipeline.ask(req.question, req.top_k)
+    from src.auth.access_scope import use_access_scope
+    with use_access_scope(user):
+        return rag_pipeline.ask(req.question, req.top_k)
 
 
 MAX_IMAGE_BASE64_CHARS = 4_000_000
@@ -318,8 +387,9 @@ def system_metrics():
 
 
 @app.get("/api/agent/executions")
-def agent_executions(limit: int = 20, status: str = "", trace_id: str = ""):
-    """查询 Agent 执行记录 (结构化日志)."""
+def agent_executions(limit: int = 20, status: str = "", trace_id: str = "",
+                     user: dict | None = Depends(require_roles(*_INTERNAL_ROLES))):
+    """查询 Agent 执行记录 (结构化日志). 投标人不可见."""
     from src.agent.execution_log import query_executions
     return {"executions": query_executions(limit=limit, status=status, trace_id=trace_id)}
 
@@ -334,8 +404,8 @@ def agent_execution_stats():
 # ===================== Dashboard / Graph =====================
 
 @app.get("/api/dashboard")
-def dashboard():
-    """数据看板聚合: 系统健康 + Agent 统计 + 知识库 + 图谱 + 数据库."""
+def dashboard(user: dict | None = Depends(require_roles(*_INTERNAL_ROLES))):
+    """数据看板聚合: 系统健康 + Agent 统计 + 知识库 + 图谱 + 数据库 (投标人不可见)."""
     from src.agent.execution_log import get_stats as exec_stats
     from src.rag.pipeline import rag_pipeline
 
@@ -477,20 +547,34 @@ def knowledge_status():
 
 
 @app.post("/api/document/upload")
-def document_upload(file: UploadFile, save_to_db: bool = True):
-    """上传招标文件 → 自动解析 → 返回结构化字段.
+def document_upload(file: UploadFile, save_to_db: bool = True,
+                    package: str = Form(""), bidder_name: str = Form(""),
+                    visibility: str = Form("auto"),
+                    user: dict | None = Depends(get_current_user_optional)):
+    """上传招标/投标文件 → 自动解析 → 返回结构化字段.
 
-    支持: .pdf, .docx, .txt, .md
+    支持: .pdf, .docx, .txt, .md, .xlsx/.xls (Excel 招标文件); 扫描件 PDF 自动 OCR.
     save_to_db=false 时只解析不入库 (调试用).
+    package/bidder_name 为可选元数据 (包件号、投标文件归属投标人).
+    visibility: auto(默认) = 投标人→internal, 其余→public;
+                投标人不允许显式 public; 显式 internal 需登录.
     """
     import tempfile, os
     from src.tools.document_parser import parse_file
     from src.database.postgresql_client import postgresql_client  # noqa: F401
 
-    allowed = {".pdf", ".docx", ".txt", ".md"}
+    allowed = {".pdf", ".docx", ".txt", ".md", ".xlsx", ".xls"}
     ext = os.path.splitext(file.filename or "")[1].lower()
     if ext not in allowed:
         raise HTTPException(400, f"不支持的格式 {ext}, 允许: {sorted(allowed)}")
+
+    role = user.get("role") if user else None
+    if visibility == "auto" or visibility not in ("public", "internal"):
+        visibility = "internal" if role == ROLE_BIDDER else "public"
+    elif visibility == "public" and role == ROLE_BIDDER:
+        raise HTTPException(403, "投标人上传的投标文件不得设为公开 (public)")
+    elif visibility == "internal" and user is None:
+        raise HTTPException(401, "上传内部文件需要先登录")
 
     try:
         with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
@@ -504,9 +588,14 @@ def document_upload(file: UploadFile, save_to_db: bool = True):
 
         db_id = None
         raw_text = parsed.get("raw_text") or ""
+        owner_id = user.get("id") if user else None
         if save_to_db and postgresql_client.ready:
-            db_id = postgresql_client.save_document(parsed)
+            db_id = postgresql_client.save_document(
+                parsed, owner_id=owner_id, visibility=visibility,
+                package=(package or "").strip(),
+                bidder_name=(bidder_name or "").strip())
             parsed["db_id"] = db_id
+            parsed["visibility"] = visibility
 
         # 招标文件全文分片向量化 → Qdrant, 供混合检索问答引用
         indexed_chunks = 0
@@ -516,13 +605,20 @@ def document_upload(file: UploadFile, save_to_db: bool = True):
                 indexed_chunks = ingest_tender_document(
                     db_id, raw_text,
                     source_file=parsed.get("source_file", ""),
-                    project_name=parsed.get("project_name", ""))
+                    project_name=parsed.get("project_name", ""),
+                    pages=parsed.get("pages"),
+                    package=(package or "").strip(),
+                    bidder_name=(bidder_name or "").strip(),
+                    visibility=visibility,
+                    owner_id=owner_id)
             except Exception as ie:
                 logger.warning("招标文件向量化失败 (不影响解析入库): %s", ie)
         parsed["vector_indexed_chunks"] = indexed_chunks
 
-        # 脱敏: 原始文本前 2000 字已在 raw_text_preview, 不返回更多
+        # 脱敏: 原始文本前 2000 字已在 raw_text_preview, 不返回更多;
+        # pages 含全文同样移除, 仅保留 page_count/ocr_pages 摘要
         parsed.pop("raw_text", None)
+        parsed.pop("pages", None)
         return parsed
     except Exception as e:
         logger.exception("文档解析失败")
@@ -530,12 +626,13 @@ def document_upload(file: UploadFile, save_to_db: bool = True):
 
 
 @app.get("/api/documents")
-def list_documents(q: str = ""):
-    """已解析文档列表 (支持关键词搜索)."""
+def list_documents(q: str = "",
+                   user: dict | None = Depends(get_current_user_optional)):
+    """已解析文档列表 (支持关键词搜索); 投标人仅见 public, 招标人见自己的+public."""
     from src.database.postgresql_client import postgresql_client
     if not postgresql_client.ready:
         return {"items": [], "warning": "PostgreSQL 未连接"}
-    return {"items": postgresql_client.list_documents(q)}
+    return {"items": postgresql_client.list_documents(q, user=user)}
 
 
 class BidGenerateRequest(BaseModel):
@@ -550,8 +647,9 @@ class BidGenerateRequest(BaseModel):
 
 
 @app.post("/api/bid/generate")
-def bid_generate(req: BidGenerateRequest):
-    """根据招标要求生成投标书草稿."""
+def bid_generate(req: BidGenerateRequest,
+                 user: dict | None = Depends(get_current_user_optional)):
+    """根据招标要求生成投标书草稿 (投标人编标, 仅可基于公开招标文件)."""
     from src.tools.bid_generator import (
         generate_full_bid, suggest_sections, SECTIONS, _summarize_tender_info,
     )
@@ -560,6 +658,7 @@ def bid_generate(req: BidGenerateRequest):
 
     # 1. 组装招标信息 (优先从 DB 取, 否则用请求体)
     tender = {}
+    _assert_doc_readable(user, req.db_id)
     if req.db_id is not None:
         from src.database.postgresql_client import postgresql_client
         if postgresql_client.ready:
@@ -586,12 +685,14 @@ def bid_generate(req: BidGenerateRequest):
             "qualification_requirements": req.qualification_requirements,
         }
 
-    # 2. RAG 检索相似案例
+    # 2. RAG 检索相似案例 (按当前用户行级过滤, 不召回他人 internal 文档)
     cases = []
     if req.include_similar_cases and rag_pipeline.ready and tender.get("subject_matter"):
         try:
-            results = rag_pipeline.search(
-                f"{tender.get('subject_matter', '')} 采购 投标 技术方案", top_k=3)
+            from src.auth.access_scope import use_access_scope
+            with use_access_scope(user):
+                results = rag_pipeline.search(
+                    f"{tender.get('subject_matter', '')} 采购 投标 技术方案", top_k=3)
             cases = results[:3]
         except Exception as e:
             logger.warning("相似案例检索失败: %s", e)
@@ -621,11 +722,13 @@ class ComplianceCheckRequest(BaseModel):
 
 
 @app.post("/api/compliance/check")
-def compliance_check(req: ComplianceCheckRequest):
+def compliance_check(req: ComplianceCheckRequest,
+                     user: dict | None = Depends(get_current_user_optional)):
     """合规性检查 — 扫描招标文件是否存在排他性/不合理条款."""
     from src.tools.compliance_checker import check_compliance
     from src.clients.llm_factory import get_llm_client
 
+    _assert_doc_readable(user, req.db_id)
     content = req.text
     if req.db_id is not None:
         from src.database.postgresql_client import postgresql_client
@@ -650,7 +753,8 @@ class QualificationCheckRequest(BaseModel):
 
 
 @app.post("/api/qualification/check")
-def qualification_check(req: QualificationCheckRequest):
+def qualification_check(req: QualificationCheckRequest,
+                        user: dict | None = Depends(get_current_user_optional)):
     """资格审查 — 招标文件资质要求 vs 企业资质清单.
 
     三种模式:
@@ -662,6 +766,7 @@ def qualification_check(req: QualificationCheckRequest):
     from src.tools.qualification_checker import check_qualification
     from src.clients.llm_factory import get_llm_client
 
+    _assert_doc_readable(user, req.db_id)
     tender_reqs = list(req.tender_requirements)
     if req.db_id is not None:
         from src.database.postgresql_client import postgresql_client
@@ -688,11 +793,13 @@ class RejectionCheckRequest(BaseModel):
 
 
 @app.post("/api/rejection/check")
-def rejection_check(req: RejectionCheckRequest):
+def rejection_check(req: RejectionCheckRequest,
+                    user: dict | None = Depends(get_current_user_optional)):
     """废标(否决投标)条款检查 — 提取废标条款清单, 可选结合投标人情况自查."""
     from src.tools.bid_rejection_checker import check_bid_rejection
     from src.clients.llm_factory import get_llm_client
 
+    _assert_doc_readable(user, req.db_id)
     content: str | dict = req.text
     if req.db_id is not None:
         from src.database.postgresql_client import postgresql_client
@@ -724,7 +831,8 @@ class ResponseCheckRequest(BaseModel):
 
 
 @app.post("/api/scoring/table")
-def scoring_table(req: dict):
+def scoring_table(req: dict,
+                  user: dict | None = Depends(get_current_user_optional)):
     """评分辅助表 — 根据招标文件评分办法生成结构化打分表模板.
 
     Body: {"db_id": int}  取该招标文件的 scoring_criteria
@@ -734,6 +842,7 @@ def scoring_table(req: dict):
     from src.database.postgresql_client import postgresql_client
 
     db_id = req.get("db_id")
+    _assert_doc_readable(user, db_id)
     scoring_text = req.get("scoring_text", "")
     if db_id is not None and postgresql_client.ready:
         rows = postgresql_client._run(
@@ -749,12 +858,14 @@ def scoring_table(req: dict):
 
 
 @app.post("/api/response/check")
-def response_check(req: ResponseCheckRequest):
+def response_check(req: ResponseCheckRequest,
+                   user: dict | None = Depends(get_current_user_optional)):
     """投标响应性检查 — 对照招标实质性条款, 判定投标逐条响应情况."""
     from src.tools.response_checker import check_response
     from src.clients.llm_factory import get_llm_client
     from src.database.postgresql_client import postgresql_client
 
+    _assert_doc_readable(user, req.tender_db_id)
     tender: str | dict = req.tender_text
     if req.tender_db_id is not None and postgresql_client.ready:
         rows = postgresql_client._run(
@@ -846,12 +957,14 @@ class BidParseRequest(BaseModel):
 
 
 @app.post("/api/bid/parse")
-def bid_parse(req: BidParseRequest):
+def bid_parse(req: BidParseRequest,
+              user: dict | None = Depends(get_current_user_optional)):
     """单份投标文件解析 → 商务响应/技术方案/资格业绩 三维度结构化 JSON."""
     from src.tools.bid_parser import parse_bid
     from src.clients.llm_factory import get_llm_client
     from src.database.postgresql_client import postgresql_client
 
+    _assert_doc_readable(user, req.db_id)
     text = req.text
     if req.db_id is not None and postgresql_client.ready:
         rows = postgresql_client._run(
@@ -874,10 +987,13 @@ class CollusionDetectRequest(BaseModel):
 
 
 @app.post("/api/collusion/detect")
-def collusion_detect(req: CollusionDetectRequest):
+def collusion_detect(
+    req: CollusionDetectRequest,
+    user: dict | None = Depends(require_roles(*_INTERNAL_ROLES)),
+):
     """围串标线索检测 (文本模式) — 雷同度/报价规律/正文IP·MAC/手工传入元数据.
 
-    仅输出线索与证据, 不自动定性。
+    仅招标人/专家/管理员可用；仅输出线索, 不自动定性。
     """
     from src.tools.collusion_detector import detect_collusion
 
@@ -887,7 +1003,10 @@ def collusion_detect(req: CollusionDetectRequest):
 
 
 @app.post("/api/collusion/upload")
-def collusion_upload(files: list[UploadFile]):
+def collusion_upload(
+    files: list[UploadFile],
+    user: dict | None = Depends(require_roles(*_INTERNAL_ROLES)),
+):
     """围串标线索检测 (原件模式) — 上传 2+ 份 Word/PDF 投标文件.
 
     自动提取全文与文件属性元数据 (作者/最后保存者/生成程序/公司)。
@@ -945,12 +1064,16 @@ class WorkflowRunRequest(BaseModel):
 
 
 @app.post("/api/workflow/run")
-def workflow_run(req: WorkflowRunRequest):
+def workflow_run(
+    req: WorkflowRunRequest,
+    user: dict | None = Depends(require_roles(*_INTERNAL_ROLES)),
+):
     """执行一个工作流 (预置 id 或完整 JSON 配置).
 
     body:
       config: "compliance_review" 或 {... 完整配置 ...}
       ctx: {db_id, bid_text, clause, qualification_text, ...}
+    投标人角色禁用; 招标人仅可运行自己拥有的 internal 文档之外的文档。
     """
     from src.workflow.engine import run_workflow, PRESETS
     from src.database.postgresql_client import postgresql_client
@@ -958,6 +1081,8 @@ def workflow_run(req: WorkflowRunRequest):
     config = req.config
     # 自动从 db_id 补上下文
     ctx = dict(req.ctx)
+    if ctx.get("db_id"):
+        _assert_doc_readable(user, int(ctx["db_id"]))
     if ctx.get("db_id") and postgresql_client.ready:
         rows = postgresql_client._run(
             "SELECT scoring_criteria, qualification_requirements FROM bidding_documents WHERE id=:id",
@@ -977,9 +1102,9 @@ def workflow_run(req: WorkflowRunRequest):
 @app.post("/api/reviews")
 def submit_review(
     req: ReviewSubmitRequest,
-    user: dict | None = Depends(get_current_user_optional),
+    user: dict | None = Depends(require_roles(*_INTERNAL_ROLES)),
 ):
-    """提交人工复核结论 (确认通过/驳回 + 备注), 留痕入库."""
+    """提交人工复核结论 (确认通过/驳回 + 备注), 留痕入库. 投标人角色禁用."""
     from src.database.postgresql_client import postgresql_client
 
     if not postgresql_client.ready:
@@ -1004,12 +1129,99 @@ def submit_review(
 
 
 @app.get("/api/reviews")
-def list_reviews(document_id: int | None = None, review_type: str | None = None):
-    """查询人工复核历史 (可按文档/类型过滤)."""
+def list_reviews(
+    document_id: int | None = None,
+    review_type: str | None = None,
+    user: dict | None = Depends(require_roles(*_INTERNAL_ROLES)),
+):
+    """查询人工复核历史 (可按文档/类型过滤). 投标人角色禁用."""
     from src.database.postgresql_client import postgresql_client
     if not postgresql_client.ready:
         return {"items": [], "warning": "PostgreSQL 未连接"}
     return {"items": postgresql_client.list_reviews(document_id, review_type)}
+
+
+# ---------- ⑥ 评审业务状态机 ----------
+# none(未开始) → initial(初评) → challenge(质疑) → recheck(复审) → closed(结案)
+_STAGE_LABELS = {
+    "none": "未开始", "initial": "初评", "challenge": "质疑",
+    "recheck": "复审", "closed": "结案",
+}
+_ACTION_LABELS = {
+    "start": "提交评审", "challenge": "提出质疑", "start_recheck": "受理质疑/启动复审",
+    "reject_challenge": "驳回质疑并结案", "close": "复审结案",
+    "close_initial": "初评直接结案",
+}
+
+
+class ReviewStageTransitionRequest(BaseModel):
+    document_id: int
+    action: str  # start | challenge | start_recheck | reject_challenge | close | close_initial
+    comment: str = ""
+
+
+@app.post("/api/review-stage/transition")
+def review_stage_transition(
+    req: ReviewStageTransitionRequest,
+    user: dict = Depends(require_roles(*_INTERNAL_ROLES, allow_anonymous=False)),
+):
+    """评审阶段流转 (初评→质疑→复审→结案), 全程历史留痕. 仅内部角色."""
+    from src.database.postgresql_client import postgresql_client
+
+    if not postgresql_client.ready:
+        raise HTTPException(503, "PostgreSQL 未连接")
+    if postgresql_client.get_doc_access(req.document_id) is None:
+        raise HTTPException(404, "文档不存在")
+    _assert_doc_readable(user, req.document_id)
+    try:
+        state = postgresql_client.transition_review_stage(
+            document_id=req.document_id,
+            action=req.action,
+            comment=req.comment,
+            operator=user.get("display_name") or user.get("username") or "",
+            user_id=user.get("id"),
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {
+        "document_id": req.document_id,
+        "stage": state["stage"],
+        "stage_label": _STAGE_LABELS.get(state["stage"], state["stage"]),
+        "action": req.action,
+        "action_label": _ACTION_LABELS.get(req.action, req.action),
+    }
+
+
+@app.get("/api/review-stage/{document_id}")
+def review_stage_status(
+    document_id: int,
+    user: dict = Depends(require_roles(*_INTERNAL_ROLES, allow_anonymous=False)),
+):
+    """查询文档当前评审阶段 + 完整流转历史. 仅内部角色."""
+    from src.database.postgresql_client import postgresql_client
+
+    if not postgresql_client.ready:
+        raise HTTPException(503, "PostgreSQL 未连接")
+    if postgresql_client.get_doc_access(document_id) is None:
+        raise HTTPException(404, "文档不存在")
+    _assert_doc_readable(user, document_id)
+    state = postgresql_client.get_review_stage(document_id)
+    stage = state["stage"] if state else "none"
+    history = [
+        {**h,
+         "from_stage_label": _STAGE_LABELS.get(h.get("from_stage") or "none",
+                                               h.get("from_stage") or ""),
+         "to_stage_label": _STAGE_LABELS.get(h.get("to_stage"), h.get("to_stage") or ""),
+         "action_label": _ACTION_LABELS.get(h.get("action"), h.get("action") or "")}
+        for h in postgresql_client.list_stage_history(document_id)
+    ]
+    return {
+        "document_id": document_id,
+        "stage": stage,
+        "stage_label": _STAGE_LABELS.get(stage, stage),
+        "state": state,
+        "history": history,
+    }
 
 
 class PriceAnalyzeRequest(BaseModel):
@@ -1041,21 +1253,25 @@ def competitor_analyze(req: CompetitorAnalyzeRequest):
 
 
 @app.get("/api/deadlines")
-def deadlines(within_days: int = 7, include_expired: bool = True):
-    """截止日期监控 — 临近截止的投标项目预警."""
+def deadlines(within_days: int = 7, include_expired: bool = True,
+              user: dict | None = Depends(require_roles(*_INTERNAL_ROLES))):
+    """截止日期监控 — 临近截止的投标项目预警 (投标人不可见)."""
     from src.tools.deadline_monitor import monitor
     return {"alerts": monitor.check(within_days=within_days, include_expired=include_expired)}
 
 
 @app.get("/api/deadlines/summary")
-def deadlines_summary():
-    """截止日期汇总统计."""
+def deadlines_summary(
+    user: dict | None = Depends(require_roles(*_INTERNAL_ROLES)),
+):
+    """截止日期汇总统计 (投标人不可见)."""
     from src.tools.deadline_monitor import monitor
     return monitor.summary()
 
 
 @app.post("/api/export/docx")
-def export_docx(req: BidGenerateRequest):
+def export_docx(req: BidGenerateRequest,
+                user: dict | None = Depends(get_current_user_optional)):
     """导出投标书为 Word 文件.
 
     如果请求体里没有 markdown, 则先调用 bid_generate 生成再导出.
@@ -1069,6 +1285,7 @@ def export_docx(req: BidGenerateRequest):
 
     # 组装 tender 信息 (复用 bid_generate 逻辑)
     tender = {}
+    _assert_doc_readable(user, req.db_id)
     if req.db_id is not None:
         from src.database.postgresql_client import postgresql_client
         if postgresql_client.ready:
@@ -1094,12 +1311,14 @@ def export_docx(req: BidGenerateRequest):
             "qualification_requirements": req.qualification_requirements,
         }
 
-    # RAG 案例
+    # RAG 案例 (按当前用户行级过滤)
     cases = []
     if req.include_similar_cases and rag_pipeline.ready and tender.get("subject_matter"):
         try:
-            results = rag_pipeline.search(
-                f"{tender.get('subject_matter', '')} 采购 投标 技术方案", top_k=3)
+            from src.auth.access_scope import use_access_scope
+            with use_access_scope(user):
+                results = rag_pipeline.search(
+                    f"{tender.get('subject_matter', '')} 采购 投标 技术方案", top_k=3)
             cases = results[:3]
         except Exception:
             pass

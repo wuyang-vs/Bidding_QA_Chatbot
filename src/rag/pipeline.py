@@ -34,12 +34,16 @@ def _rrf_merge_multi(results_list: list[list[dict]], k: int = 60) -> list[dict]:
     return merged_list
 
 
-@lru_cache(maxsize=128)
-def _cached_search(question: str, top_k: int) -> tuple:
+@lru_cache(maxsize=256)
+def _cached_search(question: str, top_k: int, scope_key: str = "all",
+                   access_scope: tuple | None = None) -> tuple:
     dense = embedder.encode_query_dense(question)
     sparse = embedder.encode_query_sparse(question)
     recall_limit = max(top_k * 6, 30)
-    docs = vector_store.hybrid_search(dense, sparse, limit=recall_limit, question=question)
+    # access_scope 由调用方按当前请求身份显式传入, scope_key 保证缓存不跨身份串用
+    docs = vector_store.hybrid_search(
+        dense, sparse, limit=recall_limit, question=question,
+        access_scope=access_scope)
     docs = reranker.rerank(question, docs, top_k)
     # 保留完整 dict (含 source_file/doc_type/db_id 等引用元数据)
     return tuple(docs)
@@ -66,14 +70,23 @@ class RAGPipeline:
 
     def search(self, question: str, top_k: int = 5,
                history: list[dict] | None = None) -> list[dict]:
-        """增强版检索: Query 规划 → 多路 RRF 融合 → 精排 → 来源多样性."""
+        """增强版检索: Query 规划 → 多路 RRF 融合 → 精排 → 来源多样性.
+
+        行级隔离: 从请求级 ContextVar 读取访问范围 (匿名仅 public,
+        purchaser/bidder 为 public+本人, admin/auditor 不限制).
+        """
+        from src.auth.access_scope import get_current_scope, scope_cache_key
+        scope = get_current_scope()
+        scope_key = scope_cache_key(scope)
+
         # 1. Query 规划: 会话补全 + 受控变体
         variants = plan_query(question, history, max_variants=settings.query_variants_max)
         logger.info("Query 规划: %d 个变体", len(variants))
 
         if len(variants) == 1:
-            # 单路, 走缓存 (返回完整 dict, 保留引用元数据)
-            return [dict(d) for d in _cached_search(variants[0], top_k)]
+            # 单路, 走缓存 (缓存键含身份范围, 返回完整 dict 保留引用元数据)
+            return [dict(d) for d in _cached_search(variants[0], top_k,
+                                                    scope_key, scope)]
 
         # 2. 多路并行检索
         recall_limit = max(top_k * 6, 30)
@@ -82,7 +95,8 @@ class RAGPipeline:
             dense = embedder.encode_query_dense(v)
             sparse = embedder.encode_query_sparse(v)
             results = vector_store.hybrid_search(
-                dense, sparse, limit=recall_limit, question=v)
+                dense, sparse, limit=recall_limit, question=v,
+                access_scope=scope)
             all_results.append(results)
             logger.info("  变体 '%s': %d 条", v[:30], len(results))
 

@@ -1,18 +1,30 @@
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, FileText } from "lucide-react";
 
 interface Source {
   question: string;
   answer: string;
   score: number;
   url?: string;
+  source_file?: string;
+  page_no?: number | null;
 }
 
 export function SourceCard({ source }: { source: Source }) {
   const isWeb = Boolean(source.url);
   const pct = Math.round((source.score || 0) * 100);
+  const fileName = source.source_file
+    ? source.source_file.split(/[\\/]/).pop()
+    : "";
 
   return (
     <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-2 text-xs bg-gray-50 dark:bg-gray-800">
+      {(fileName || source.page_no) && (
+        <div className="flex items-center gap-1 text-[10px] text-blue-600 dark:text-blue-400 mb-1">
+          <FileText size={10} className="shrink-0" />
+          {fileName && <span className="truncate max-w-[200px]">{fileName}</span>}
+          {source.page_no != null && <span className="shrink-0">第 {source.page_no} 页</span>}
+        </div>
+      )}
       <div className="flex items-start justify-between gap-2">
         <div className="font-medium text-gray-700 dark:text-gray-200 truncate flex-1">
           {source.question || (isWeb ? "网页来源" : "知识库来源")}

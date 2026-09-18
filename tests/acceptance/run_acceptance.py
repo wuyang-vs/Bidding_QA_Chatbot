@@ -21,10 +21,12 @@ import traceback
 import urllib.error
 import urllib.request
 from datetime import datetime
+from pathlib import Path
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
 BASE = "http://localhost:8001"
+HERE = Path(__file__).resolve().parent
 DB_ID = 6  # 已解析的 test_bid.txt 招标文件
 
 results: list[dict] = []
@@ -393,12 +395,14 @@ def t():
 
 # ================= Auth =================
 
-def t_auth_common(username: str, password: str, display: str = ""):
+def t_auth_common(username: str, password: str, display: str = "", role: str = "bidder"):
     ts = int(time.time())
     uname = f"acpt_{username}_{ts}"
     s, d = http("POST", "/auth/register",
-                {"username": uname, "password": password, "display_name": display}, timeout=15)
+                {"username": uname, "password": password,
+                 "display_name": display, "role": role}, timeout=15)
     assert s == 200, f"注册失败 {s} {d}"
+    assert d.get("role") == role, f"注册返回角色不符: {d.get('role')} != {role}"
     s, d = http("POST", "/auth/login", {"username": uname, "password": password}, timeout=15)
     assert s == 200 and d.get("access_token"), f"登录失败 {s} {d}"
     return uname, d["access_token"], d["user"]
@@ -438,9 +442,24 @@ def t():
 
 # ================= MVP-5 人工复核留痕 =================
 
-@case("MVP5复核留痕", "M5-01", "登录态提交复核→user_id自动关联")
+@case("MVP5复核留痕", "M5-01", "管理员建专家号→登录提交复核→user_id自动关联")
 def t():
-    uname, token, user = t_auth_common("reviewer", "accept123", "复核员甲")
+    # auditor 不允许自助注册, 由 admin 账号创建
+    ts = int(time.time())
+    uname = f"acpt_reviewer_{ts}"
+    s, d = http("POST", "/auth/login",
+                {"username": "admin", "password": "admin123"}, timeout=15)
+    assert s == 200, f"admin 登录失败 {s}"
+    admin_tok = d["access_token"]
+    s, d = http("POST", "/auth/admin/users",
+                {"username": uname, "password": "accept123",
+                 "display_name": "复核员甲", "role": "auditor"},
+                token=admin_tok, timeout=15)
+    assert s == 200 and d.get("role") == "auditor", f"管理员创建 auditor 失败 {s} {d}"
+    s, d = http("POST", "/auth/login",
+                {"username": uname, "password": "accept123"}, timeout=15)
+    assert s == 200 and d.get("access_token"), f"专家登录失败 {s} {d}"
+    token, user = d["access_token"], d["user"]
     s, d = http("POST", "/api/reviews", {
         "document_id": DB_ID, "review_type": "compliance",
         "verdict": "approved", "comment": "验收测试自动复核",
@@ -448,14 +467,15 @@ def t():
     assert s == 200 and d.get("id"), f"保存失败 {s} {d}"
     rid = d["id"]
     # 查列表验证留痕
-    s2, d2 = http("GET", f"/api/reviews?document_id={DB_ID}&review_type=compliance", timeout=15)
+    s2, d2 = http("GET", f"/api/reviews?document_id={DB_ID}&review_type=compliance",
+                  token=token, timeout=15)
     assert s2 == 200
     recs = d2.get("items") or d2.get("reviews") or (d2 if isinstance(d2, list) else [])
     mine = [r for r in recs if r.get("id") == rid]
     assert mine, f"未查到复核记录 id={rid}"
     assert mine[0].get("user_id") == user["id"], \
         f"user_id 未关联: 期望 {user['id']}, 实际 {mine[0].get('user_id')}"
-    return {"note": f"review id={rid}, reviewer={mine[0].get('reviewer')}, user_id={mine[0].get('user_id')} 已关联"}
+    return {"note": f"admin建 auditor {uname}; review id={rid}, user_id={mine[0].get('user_id')} 已关联"}
 
 
 @case("MVP5复核留痕", "M5-02", "非法review_type被拒(400)")
@@ -464,6 +484,240 @@ def t():
         "document_id": DB_ID, "review_type": "hack", "verdict": "approved"}, timeout=15)
     assert s == 400, f"应400, 实际{s}"
     return {"note": "400 非法类型已拦截"}
+
+
+# ================= RBAC 角色权限隔离 =================
+
+RBAC_STATE = {}
+
+
+def upload_multipart(filename: str, content: bytes, content_type: str = "text/plain",
+                     token: str | None = None, fields: dict | None = None,
+                     timeout: int = 180):
+    boundary = "----acptrbacBoundary7MA4YWxk"
+    body = b""
+    for k, v in (fields or {}).items():
+        body += (f"--{boundary}\r\nContent-Disposition: form-data; name=\"{k}\"\r\n\r\n"
+                 f"{v}\r\n").encode("utf-8")
+    body += (
+        f"--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; "
+        f"filename=\"{filename}\"\r\nContent-Type: {content_type}\r\n\r\n"
+    ).encode("utf-8") + content + f"\r\n--{boundary}--\r\n".encode("utf-8")
+    headers = {"Content-Type": f"multipart/form-data; boundary={boundary}"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(
+        f"{BASE}/api/document/upload?save_to_db=true", data=body,
+        method="POST", headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return r.status, json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        raw = e.read()
+        try:
+            return e.code, json.loads(raw)
+        except Exception:
+            return e.code, {"raw": raw.decode("utf-8", "ignore")[:300]}
+
+
+def list_ids(token: str | None = None):
+    s, d = http("GET", "/api/documents", token=token, timeout=20)
+    assert s == 200, f"文档列表失败 {s}"
+    return {x["id"]: x for x in d.get("items", [])}
+
+
+@case("RBAC权限隔离", "RBAC-01", "投标人自助注册; 冒充admin注册被强制降级")
+def t():
+    _uname, token, user = t_auth_common("rbac_bidder", "accept123", role="bidder")
+    assert user["role"] == "bidder", user
+    ts = int(time.time())
+    s, d = http("POST", "/auth/register",
+                {"username": f"acpt_fakeadmin_{ts}", "password": "accept123",
+                 "role": "admin"}, timeout=15)
+    assert s == 200 and d.get("role") == "bidder", f"提权注册未被降级: {d}"
+    RBAC_STATE["bidder_token"] = token
+    return {"note": f"bidder={user['username']}; role=admin 自助注册已降级为 bidder"}
+
+
+@case("RBAC权限隔离", "RBAC-02", "投标人被禁: 写复核/查复核/围串标检测 均403")
+def t():
+    _u, token, _user = t_auth_common("rbac_forbidden", "accept123", role="bidder")
+    s1, _ = http("POST", "/api/reviews",
+                 {"document_id": DB_ID, "review_type": "compliance", "verdict": "approved"},
+                 token=token, timeout=15)
+    s2, _ = http("GET", "/api/reviews", token=token, timeout=15)
+    s3, _ = http("POST", "/api/collusion/detect", {"bids": []}, token=token, timeout=15)
+    assert (s1, s2, s3) == (403, 403, 403), f"应全403, 实际 {s1},{s2},{s3}"
+    return {"note": f"reviews POST/GET={s1}/{s2}, collusion={s3}"}
+
+
+@case("RBAC权限隔离", "RBAC-02B", "管理员建号端点: 匿名401/投标人403")
+def t():
+    ts = int(time.time())
+    s1, _ = http("POST", "/auth/admin/users",
+                 {"username": f"acpt_x_{ts}", "password": "accept123", "role": "auditor"},
+                 timeout=15)
+    _u, token, _ = t_auth_common("rbac_notadmin", "accept123", role="bidder")
+    s2, _ = http("POST", "/auth/admin/users",
+                 {"username": f"acpt_y_{ts}", "password": "accept123", "role": "auditor"},
+                 token=token, timeout=15)
+    assert s1 == 401 and s2 == 403, f"应 401/403, 实际 {s1}/{s2}"
+    return {"note": f"anonymous={s1}, bidder={s2}"}
+
+
+@case("RBAC权限隔离", "RBAC-03", "招标人上传内部文档→按角色行级可见性隔离")
+def t():
+    _ua, tok_a, _ua_info = t_auth_common("rbac_purchaser_a", "accept123", role="purchaser")
+    _ub, tok_b, _ = t_auth_common("rbac_purchaser_b", "accept123", role="purchaser")
+    _uc, tok_c, _ = t_auth_common("rbac_bidder_c", "accept123", role="bidder")
+    _ad, d_ad = http("POST", "/auth/login",
+                     {"username": "admin", "password": "admin123"}, timeout=15)
+    tok_admin = d_ad["access_token"]
+
+    content = (
+        "XX市权限隔离内部项目(评标内部文件)\n项目名称：XX市权限隔离内部项目\n"
+        "预算金额：人民币 880 万元\n投标截止时间：2026年9月1日 10:00\n"
+        "本文件含评标基准价计算过程, 属评标内部资料, 不对外公开。\n"
+    ).encode("utf-8")
+    s, d = upload_multipart("rbac_internal.txt", content, token=tok_a,
+                            fields={"visibility": "internal", "package": "PKG-A"})
+    assert s == 200, f"招标人上传 internal 失败 {s} {d}"
+    assert d.get("visibility") == "internal", d
+    doc_id = d["db_id"]
+    RBAC_STATE["internal_doc"] = doc_id
+
+    ids_a = list_ids(tok_a); ids_b = list_ids(tok_b)
+    ids_c = list_ids(tok_c); ids_admin = list_ids(tok_admin)
+    assert doc_id in ids_a, "owner 招标人 A 应可见自己的 internal 文档"
+    assert doc_id not in ids_b, "招标人 B 不应看到他人 internal 文档"
+    assert doc_id not in ids_c, "投标人不应看到 internal 文档"
+    assert doc_id in ids_admin, "管理员应可见全部文档"
+    assert ids_a[doc_id].get("package") == "PKG-A", "包件号未持久化"
+    return {"note": f"internal doc_id={doc_id}: A可见/B不可见/bidder不可见/admin可见, package=PKG-A"}
+
+
+@case("RBAC权限隔离", "RBAC-04", "投标人/匿名访问内部文档检查端点均403")
+def t():
+    doc_id = RBAC_STATE.get("internal_doc")
+    assert doc_id, "前置 RBAC-03 未产生 internal_doc"
+    _u, token, _ = t_auth_common("rbac_reader", "accept123", role="bidder")
+    s1, _ = http("POST", "/api/compliance/check", {"db_id": doc_id}, token=token, timeout=15)
+    s2, _ = http("POST", "/api/compliance/check", {"db_id": doc_id}, timeout=15)
+    assert s1 == 403, f"投标人应 403, 实际 {s1}"
+    assert s2 == 403, f"匿名应 403, 实际 {s2}"
+    return {"note": f"doc {doc_id}: bidder={s1}, anonymous={s2}"}
+
+
+@case("RBAC权限隔离", "RBAC-05", "投标人不得公开上传; 默认为internal且本人可见他人不可见")
+def t():
+    _u1, tok1, _ = t_auth_common("rbac_bid_self", "accept123", role="bidder")
+    _u2, tok2, _ = t_auth_common("rbac_bid_other", "accept123", role="bidder")
+    content = ("XX市投标文件(投标人上传)\n投标人：测试有限公司\n投标报价：799万元\n").encode("utf-8")
+    # 显式 public 必须被拒
+    s, d = upload_multipart("bid_public.txt", content, token=tok1,
+                            fields={"visibility": "public"}, timeout=30)
+    assert s == 403, f"投标人显式 public 应 403, 实际 {s} {d}"
+    # 默认 auto → internal
+    s, d = upload_multipart("bid_auto.txt", content, token=tok1, timeout=180)
+    assert s == 200 and d.get("visibility") == "internal", f"默认应 internal: {s} {d}"
+    bid_doc = d["db_id"]
+    ids1, ids2 = list_ids(tok1), list_ids(tok2)
+    assert bid_doc in ids1, "投标人应能看到本人上传的投标文件"
+    assert bid_doc not in ids2, "其他投标人不应看到该投标文件"
+    return {"note": f"public 上传 403; auto→internal doc={bid_doc}, 本人可见/他人不可见"}
+
+
+@case("RBAC权限隔离", "META-01", "PDF按页解析页数回传 + 包件元数据持久化")
+def t():
+    _u, tok, _ = t_auth_common("rbac_pdf_owner", "accept123", role="purchaser")
+    pdf_path = HERE / "sample_multipage.pdf"
+    content = pdf_path.read_bytes()
+    s, d = upload_multipart("sample_multipage.pdf", content,
+                            content_type="application/pdf", token=tok,
+                            fields={"visibility": "internal", "package": "PKG-PDF"},
+                            timeout=240)
+    assert s == 200, f"PDF 上传失败 {s} {str(d)[:200]}"
+    assert d.get("page_count") == 2, f"页数应为2, 实际 {d.get('page_count')}"
+    doc_id = d["db_id"]
+    item = list_ids(tok)[doc_id]
+    assert item.get("page_count") == 2, f"列表页数未持久化: {item.get('page_count')}"
+    assert item.get("package") == "PKG-PDF", "包件号未持久化"
+    return {"note": f"pdf doc={doc_id} page_count=2, package=PKG-PDF, chunks={d.get('vector_indexed_chunks')}"}
+
+
+# ================= ⑥ 评审业务状态机 =================
+
+def _stage_upload_doc(token: str, name: str, visibility: str = "public") -> int:
+    ts = int(time.time())
+    s, d = upload_multipart(
+        f"{name}_{ts}.txt",
+        f"评审状态机测试文档 {ts}\n评分办法: 价格60分 技术40分\n废标条款: 逾期拒收".encode("utf-8"),
+        content_type="text/plain", token=token,
+        fields={"visibility": visibility}, timeout=120)
+    assert s == 200, f"状态机用例文档上传失败 {s} {str(d)[:200]}"
+    return d["db_id"]
+
+
+@case("评审状态机", "STAGE-01", "初评→质疑→复审→结案 合法流转+历史留痕+非法流转拦截")
+def t():
+    _u, tok, _ = t_auth_common("stage_owner", "accept123", role="purchaser")
+    doc_id = _stage_upload_doc(tok, "stage_doc", visibility="public")
+    path = "/api/review-stage/transition"
+
+    def trans(action, comment=""):
+        return http("POST", path, {"document_id": doc_id, "action": action, "comment": comment},
+                    token=tok, timeout=30)
+
+    # 初始为 none
+    s, d = http("GET", f"/api/review-stage/{doc_id}", token=tok, timeout=15)
+    assert s == 200 and d["stage"] == "none" and d["history"] == [], d
+
+    for action, expect in (("start", "initial"), ("challenge", "challenge"),
+                           ("start_recheck", "recheck"), ("close", "closed")):
+        s, d = trans(action, f"备注-{action}")
+        assert s == 200 and d["stage"] == expect, f"{action} 应→{expect}, 实际 {s} {d}"
+
+    # 历史完整 4 条且顺序正确
+    s, d = http("GET", f"/api/review-stage/{doc_id}", token=tok, timeout=15)
+    acts = [h["action"] for h in d["history"]]
+    assert acts == ["start", "challenge", "start_recheck", "close"], acts
+    assert d["history"][0]["operator"], "操作人未留痕"
+    assert d["stage_label"] == "结案" and d["history"][0]["to_stage_label"] == "初评", d
+
+    # 结案后再流转 → 400; 未知动作 → 400
+    s1, _ = trans("challenge")
+    s2, _ = trans("not_an_action")
+    assert s1 == 400 and s2 == 400, f"非法流转应400, 实际 {s1}/{s2}"
+    return {"note": f"doc={doc_id} 全链路4步, history={acts}, 非法流转均400"}
+
+
+@case("评审状态机", "STAGE-02", "状态机端点权限: 匿名401/投标人403/跨租户internal 403")
+def t():
+    _u, tok_a, _ = t_auth_common("stage_owner_a", "accept123", role="purchaser")
+    internal_id = _stage_upload_doc(tok_a, "stage_internal", visibility="internal")
+    public_id = _stage_upload_doc(tok_a, "stage_public", visibility="public")
+
+    # 匿名: POST/GET 均 401
+    s1, _ = http("POST", "/api/review-stage/transition",
+                 {"document_id": public_id, "action": "start"}, timeout=15)
+    s2, _ = http("GET", f"/api/review-stage/{public_id}", timeout=15)
+    # bidder: public 文档可读但角色不足 → 403
+    _u2, tok_b, _ = t_auth_common("stage_bidder", "accept123", role="bidder")
+    s3, _ = http("POST", "/api/review-stage/transition",
+                 {"document_id": public_id, "action": "start"}, token=tok_b, timeout=15)
+    # 另一个 purchaser 对 A 的 internal 文档行级 403
+    _u3, tok_c, _ = t_auth_common("stage_owner_c", "accept123", role="purchaser")
+    s4, _ = http("POST", "/api/review-stage/transition",
+                 {"document_id": internal_id, "action": "start"}, token=tok_c, timeout=15)
+    # 文档不存在 → 404
+    s5, _ = http("GET", "/api/review-stage/99999999", token=tok_a, timeout=15)
+    assert (s1, s2, s3, s4, s5) == (401, 401, 403, 403, 404), \
+        f"期望 401/401/403/403/404, 实际 {s1}/{s2}/{s3}/{s4}/{s5}"
+    # owner 本人对 internal 文档可正常流转
+    s6, d6 = http("POST", "/api/review-stage/transition",
+                  {"document_id": internal_id, "action": "start"}, token=tok_a, timeout=15)
+    assert s6 == 200 and d6["stage"] == "initial", d6
+    return {"note": f"anon=401/401 bidder=403 cross-tenant=403 missing=404 owner=200"}
 
 
 # ================= Workflow =================

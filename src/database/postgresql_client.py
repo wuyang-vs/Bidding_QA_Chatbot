@@ -129,8 +129,51 @@ class PostgreSQLClient:
                 """))
                 conn.execute(text(
                     "ALTER TABLE document_reviews ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL"))
+                # 权限隔离: 文档归属 + 可见性 (public=投标人可见的招标公告类; internal=评标内部文件)
+                conn.execute(text(
+                    "ALTER TABLE bidding_documents ADD COLUMN IF NOT EXISTS owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL"))
+                conn.execute(text(
+                    "ALTER TABLE bidding_documents ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'public'"))
         except PostgreSQLQueryError:
             pass
+        # 页码/包件/投标人元数据: 独立事务逐条执行, 避免单条失败导致整批回滚
+        for _ddl in (
+            "ALTER TABLE bidding_documents ADD COLUMN IF NOT EXISTS page_count INTEGER",
+            "ALTER TABLE bidding_documents ADD COLUMN IF NOT EXISTS package TEXT DEFAULT ''",
+            "ALTER TABLE bidding_documents ADD COLUMN IF NOT EXISTS bidder_name TEXT DEFAULT ''",
+        ):
+            try:
+                with self._engine.begin() as conn:
+                    conn.execute(text(_ddl))
+            except PostgreSQLQueryError as e:
+                logger.warning("迁移 DDL 未执行: %s | %s", _ddl[:60], e)
+        # ⑥ 评审业务状态机: 当前阶段表 + 流转历史表
+        for _ddl in (
+            """CREATE TABLE IF NOT EXISTS review_stage_state (
+                document_id INTEGER PRIMARY KEY
+                    REFERENCES bidding_documents(id) ON DELETE CASCADE,
+                stage TEXT NOT NULL,
+                comment TEXT DEFAULT '',
+                updated_by TEXT DEFAULT '',
+                user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                updated_at TIMESTAMP DEFAULT NOW())""",
+            """CREATE TABLE IF NOT EXISTS review_stage_history (
+                id SERIAL PRIMARY KEY,
+                document_id INTEGER REFERENCES bidding_documents(id) ON DELETE CASCADE,
+                from_stage TEXT DEFAULT '',
+                to_stage TEXT NOT NULL,
+                action TEXT NOT NULL,
+                comment TEXT DEFAULT '',
+                operator TEXT DEFAULT '',
+                user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                created_at TIMESTAMP DEFAULT NOW())""",
+            "CREATE INDEX IF NOT EXISTS idx_rsh_doc ON review_stage_history (document_id, created_at)",
+        ):
+            try:
+                with self._engine.begin() as conn:
+                    conn.execute(text(_ddl))
+            except PostgreSQLQueryError as e:
+                logger.warning("状态机 DDL 未执行: %s | %s", _ddl[:60], e)
 
     def _run(self, sql: str, params: dict | None = None) -> list[dict]:
         if not self._ready:
@@ -296,7 +339,9 @@ class PostgreSQLClient:
                   "VALUES (:s, :q, :a, :r)",
                   {"s": session_id, "q": question, "a": answer, "r": rating})
 
-    def save_document(self, parsed: dict) -> int:
+    def save_document(self, parsed: dict, owner_id: int | None = None,
+                      visibility: str = "public",
+                      package: str = "", bidder_name: str = "") -> int:
         """保存解析后的招标文件到 bidding_documents, 返回 id."""
         import json as _json
         qr = parsed.get("qualification_requirements") or []
@@ -307,10 +352,12 @@ class PostgreSQLClient:
             (source_file, source_path, project_name, project_code, purchaser, agency,
              subject_matter, budget, qualification_requirements, scoring_criteria,
              deadline, opening_time, location, raw_text_preview, raw_text,
-             parse_status, text_length)
+             parse_status, text_length, owner_id, visibility,
+             page_count, package, bidder_name)
             VALUES
             (:sf, :sp, :pn, :pc, :pu, :ag, :sm, :bg, CAST(:qr AS jsonb), :sc,
-             :dl, :ot, :lo, :rp, :rt, :ps, :tl)
+             :dl, :ot, :lo, :rp, :rt, :ps, :tl, :oid, :vis,
+             :pcnt, :pkg, :bn)
             RETURNING id
         """, {
             "sf": parsed.get("source_file", ""),
@@ -330,23 +377,68 @@ class PostgreSQLClient:
             "rt": parsed.get("raw_text"),
             "ps": parsed.get("parse_status", "unknown"),
             "tl": parsed.get("text_length", 0),
+            "oid": owner_id,
+            "vis": visibility if visibility in ("public", "internal") else "public",
+            "pcnt": parsed.get("page_count"),
+            "pkg": (package or parsed.get("package") or "")[:100],
+            "bn": (bidder_name or parsed.get("bidder_name") or "")[:100],
         })
         return rows[0]["id"] if rows else -1
 
-    def list_documents(self, q: str = "") -> list[dict]:
+    def list_documents(self, q: str = "", user: dict | None = None) -> list[dict]:
+        """文档列表. 按登录角色做行级过滤:
+
+        - 匿名 / admin / auditor: 全部
+        - purchaser / bidder: public 或自己拥有的 (投标人可见本人上传的投标文件)
+        """
         cols = ("id, source_file, project_name, purchaser, budget, deadline, "
                 "parse_status, text_length, qualification_requirements, "
-                "scoring_criteria, created_at")
+                "scoring_criteria, created_at, owner_id, visibility, "
+                "page_count, package, bidder_name")
+        where_extra, params = "", {"q": q} if q else {}
+        if user:
+            role = user.get("role")
+            if role in ("bidder", "purchaser"):
+                where_extra = "(visibility = 'public' OR owner_id = :uid)"
+                params["uid"] = user.get("id")
+        conds = []
         if q:
             kw = _escape_like(q)
-            return self._run(
-                f"SELECT {cols} FROM bidding_documents "
-                "WHERE project_name ILIKE '%' || :q || '%' ESCAPE '\\' "
-                "OR source_file ILIKE '%' || :q || '%' ESCAPE '\\' "
-                "ORDER BY created_at DESC",
-                {"q": kw})
+            conds.append("(project_name ILIKE '%' || :q || '%' ESCAPE '\\' "
+                         "OR source_file ILIKE '%' || :q || '%' ESCAPE '\\')")
+        if where_extra:
+            conds.append(where_extra)
+        where = ("WHERE " + " AND ".join(conds)) if conds else ""
         return self._run(
-            f"SELECT {cols} FROM bidding_documents ORDER BY created_at DESC")
+            f"SELECT {cols} FROM bidding_documents {where} ORDER BY created_at DESC",
+            params)
+
+    def get_doc_access(self, doc_id: int) -> dict | None:
+        """返回文档的可见性/归属信息 {id, owner_id, visibility}, 不存在返回 None."""
+        rows = self._run(
+            "SELECT id, owner_id, visibility FROM bidding_documents WHERE id=:id",
+            {"id": doc_id})
+        return dict(rows[0]) if rows else None
+
+    def can_read_document(self, user: dict | None, doc_id: int) -> bool:
+        """角色行级权限: 用户能否读该文档.
+
+        - admin/auditor: 全部
+        - purchaser: public + 自己拥有的 internal
+        - bidder/匿名: 仅 public
+        文档不存在时放行, 交由业务层 400/404 处理.
+        """
+        info = self.get_doc_access(doc_id)
+        if not info:
+            return True
+        role = user.get("role") if user else None
+        if role in ("admin", "auditor"):
+            return True
+        if info.get("visibility") == "public":
+            return True
+        if role == "purchaser":
+            return info.get("owner_id") == user.get("id")
+        return False
 
     # ---------- 人工复核 (审计留痕) ----------
 
@@ -390,6 +482,65 @@ class PostgreSQLClient:
             f"SELECT id, document_id, review_type, verdict, comment, reviewer, "
             f"user_id, created_at FROM document_reviews {where} "
             f"ORDER BY created_at DESC LIMIT :lim", params)
+
+    # ---------- ⑥ 评审业务状态机 ----------
+    # 阶段: none(未开始) → initial(初评) → challenge(质疑) → recheck(复审) → closed(结案)
+    REVIEW_STAGE_TRANSITIONS: dict[str, tuple[str, str]] = {
+        "start": ("none", "initial"),             # 提交评审
+        "challenge": ("initial", "challenge"),    # 对初评提出质疑
+        "start_recheck": ("challenge", "recheck"),  # 受理质疑, 启动复审
+        "reject_challenge": ("challenge", "closed"),  # 质疑不成立, 直接结案
+        "close": ("recheck", "closed"),           # 复审结案
+        "close_initial": ("initial", "closed"),   # 初评无质疑直接结案
+    }
+
+    def get_review_stage(self, document_id: int) -> dict | None:
+        rows = self._run(
+            "SELECT document_id, stage, comment, updated_by, user_id, updated_at "
+            "FROM review_stage_state WHERE document_id = :did",
+            {"did": document_id})
+        return rows[0] if rows else None
+
+    def list_stage_history(self, document_id: int) -> list[dict]:
+        return self._run(
+            "SELECT id, document_id, from_stage, to_stage, action, comment, "
+            "operator, user_id, created_at FROM review_stage_history "
+            "WHERE document_id = :did ORDER BY created_at ASC, id ASC",
+            {"did": document_id})
+
+    def transition_review_stage(self, document_id: int, action: str,
+                                comment: str, operator: str = "",
+                                user_id: int | None = None) -> dict:
+        """执行一次合法阶段流转; 非法动作/当前态不符抛 ValueError."""
+        rule = self.REVIEW_STAGE_TRANSITIONS.get(action)
+        if rule is None:
+            raise ValueError(f"未知流转动作: {action}")
+        expect_from, to_stage = rule
+        cur = self.get_review_stage(document_id)
+        cur_stage = cur["stage"] if cur else "none"
+        if cur_stage != expect_from:
+            raise ValueError(
+                f"非法流转: 动作 {action} 要求阶段 {expect_from}, 当前为 {cur_stage}")
+        params = {
+            "did": document_id, "to": to_stage, "c": comment or "",
+            "op": operator or "", "uid": user_id, "frm": cur_stage if cur else "",
+        }
+        with self._engine.begin() as conn:
+            conn.execute(text("""
+                INSERT INTO review_stage_state
+                    (document_id, stage, comment, updated_by, user_id, updated_at)
+                VALUES (:did, :to, :c, :op, :uid, NOW())
+                ON CONFLICT (document_id) DO UPDATE SET
+                    stage = EXCLUDED.stage, comment = EXCLUDED.comment,
+                    updated_by = EXCLUDED.updated_by, user_id = EXCLUDED.user_id,
+                    updated_at = NOW()
+            """), {k: params[k] for k in ("did", "to", "c", "op", "uid")})
+            conn.execute(text("""
+                INSERT INTO review_stage_history
+                    (document_id, from_stage, to_stage, action, comment, operator, user_id, created_at)
+                VALUES (:did, :frm, :to, :act, :c, :op, :uid, NOW())
+            """), {**params, "act": action})
+        return self.get_review_stage(document_id)  # type: ignore[return-value]
 
 
 postgresql_client = PostgreSQLClient()

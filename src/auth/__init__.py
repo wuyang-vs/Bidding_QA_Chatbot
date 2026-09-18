@@ -1,4 +1,4 @@
-"""鉴权模块 — JWT 签发/校验 + 密码哈希 + FastAPI Depends."""
+"""鉴权模块 — JWT 签发/校验 + 密码哈希 + FastAPI Depends + 角色控制."""
 from .jwt import (
     hash_password,
     verify_password,
@@ -7,6 +7,12 @@ from .jwt import (
     get_current_user,
     get_current_user_optional,
     get_current_user_required,
+    require_roles,
+    ROLE_ADMIN,
+    ROLE_AUDITOR,
+    ROLE_PURCHASER,
+    ROLE_BIDDER,
+    SELF_REGISTER_ROLES,
 )
 
 __all__ = [
@@ -17,4 +23,10 @@ __all__ = [
     "get_current_user",
     "get_current_user_optional",
     "get_current_user_required",
+    "require_roles",
+    "ROLE_ADMIN",
+    "ROLE_AUDITOR",
+    "ROLE_PURCHASER",
+    "ROLE_BIDDER",
+    "SELF_REGISTER_ROLES",
 ]

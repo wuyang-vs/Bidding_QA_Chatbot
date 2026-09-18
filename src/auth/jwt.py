@@ -91,3 +91,36 @@ async def get_current_user_optional(
 ) -> dict[str, Any] | None:
     """可选登录, 有 token 就返回用户, 没有返回 None."""
     return user
+
+
+# 角色常量
+ROLE_ADMIN = "admin"          # 管理员: 全部
+ROLE_AUDITOR = "auditor"      # 评标专家/审计员: 审查与评审意见
+ROLE_PURCHASER = "purchaser"  # 招标人: 自己的项目 + 公开文档
+ROLE_BIDDER = "bidder"        # 投标人: 仅公开文档 + 自查工具, 禁评审意见/围串标
+
+# 自助注册允许选择的角色 (不允许自封 admin/auditor)
+SELF_REGISTER_ROLES = {ROLE_BIDDER, ROLE_PURCHASER}
+
+
+def require_roles(*roles: str, allow_anonymous: bool = True):
+    """生成一个 FastAPI 依赖, 做角色访问控制.
+
+    - 匿名(无 token): allow_anonymous=True 时放行并返回 None (保持免登录兼容);
+      False 时 401。
+    - 已登录但角色不在 roles 中: 403。
+    - 通过则返回当前用户 dict。
+    """
+    async def _dep(
+        user: dict[str, Any] | None = Depends(get_current_user),
+    ) -> dict[str, Any] | None:
+        if user is None:
+            if allow_anonymous:
+                return None
+            raise HTTPException(status_code=401, detail="未登录或登录已过期")
+        if roles and user.get("role") not in roles:
+            raise HTTPException(
+                status_code=403,
+                detail=f"当前角色「{user.get('role')}」无权访问该功能")
+        return user
+    return _dep

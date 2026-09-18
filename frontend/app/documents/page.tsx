@@ -959,6 +959,16 @@ export default function DocumentsPage() {
     return localStorage.getItem("qa_auth_token") || "";
   });
 
+  // 上传元数据 (包件号/投标人/可见性)
+  const [upPackage, setUpPackage] = useState("");
+  const [upBidder, setUpBidder] = useState("");
+  const [upInternal, setUpInternal] = useState(false);
+
+  // ⑥ 评审阶段状态机
+  const [stageInfo, setStageInfo] = useState<any>(null);
+  const [stageLoading, setStageLoading] = useState(false);
+  const [stageComment, setStageComment] = useState("");
+
   // 工作流
   const [wfOpen, setWfOpen] = useState(false);
   const [wfPresets, setWfPresets] = useState<{ id: string; name: string; description: string }[]>([]);
@@ -1022,6 +1032,51 @@ export default function DocumentsPage() {
 
   useEffect(() => { loadDocs(); }, []);
 
+  const isInternalRole = ["admin", "auditor", "purchaser"].includes(authUser?.role || "");
+
+  const loadStage = async (docId: number) => {
+    setStageInfo(null);
+    setStageComment("");
+    if (!isInternalRole || !authToken) return;
+    try {
+      const r = await fetch(`${API}/api/review-stage/${docId}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (r.ok) setStageInfo(await r.json());
+    } catch { /* 静默: 无权限或服务不可用 */ }
+  };
+
+  const transitionStage = async (docId: number, action: string) => {
+    setStageLoading(true);
+    try {
+      const r = await fetch(`${API}/api/review-stage/transition`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ document_id: docId, action, comment: stageComment }),
+      });
+      if (!r.ok) {
+        const e = await r.json().catch(() => ({}));
+        setError(e.detail || `流转失败 HTTP ${r.status}`);
+      } else {
+        setStageComment("");
+        await loadStage(docId);
+      }
+    } catch (e: any) {
+      setError(e?.message || "流转失败");
+    } finally {
+      setStageLoading(false);
+    }
+  };
+
+  // 各阶段可用动作
+  const STAGE_ACTIONS: Record<string, [string, string][]> = {
+    none: [["start", "提交评审"]],
+    initial: [["challenge", "提出质疑"], ["close_initial", "初评结案"]],
+    challenge: [["start_recheck", "受理质疑→复审"], ["reject_challenge", "驳回质疑结案"]],
+    recheck: [["close", "复审结案"]],
+    closed: [],
+  };
+
   const handleFile = async (file: File) => {
     setError(null);
     setParsed(null);
@@ -1036,7 +1091,16 @@ export default function DocumentsPage() {
       const fd = new FormData();
       fd.append("file", file);
       fd.append("save_to_db", "true");
-      const r = await fetch(`${API}/api/document/upload`, { method: "POST", body: fd });
+      if (upPackage.trim()) fd.append("package", upPackage.trim());
+      if (upBidder.trim()) fd.append("bidder_name", upBidder.trim());
+      // 投标人的文件按规则强制 internal; 招标人/专家可勾选 internal
+      fd.append("visibility",
+        authUser?.role === "bidder" || upInternal ? "internal" : "auto");
+      const r = await fetch(`${API}/api/document/upload`, {
+        method: "POST",
+        body: fd,
+        headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+      });
       if (!r.ok) {
         const msg = await r.text();
         throw new Error(msg || `HTTP ${r.status}`);
@@ -1304,6 +1368,7 @@ export default function DocumentsPage() {
           >
             <ClipboardCheck size={14} /> 多家投标对比
           </button>
+          {authUser?.role !== "bidder" && (
           <button
             onClick={async () => {
               setWfResult(null);
@@ -1318,6 +1383,7 @@ export default function DocumentsPage() {
           >
             <Shield size={14} /> 智能工作流
           </button>
+          )}
           <button
             onClick={() => { setPriceResult(null); setPriceOpen(true); }}
             className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition"
@@ -1330,12 +1396,14 @@ export default function DocumentsPage() {
           >
             <FileSearch size={14} /> 投标解析
           </button>
+          {authUser?.role !== "bidder" && (
           <button
             onClick={() => { setColResult(null); setColOpen(true); }}
             className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition"
           >
             <Radar size={14} /> 围串标线索
           </button>
+          )}
         </div>
         {authUser ? (
           <div className="flex items-center gap-2 text-sm">
@@ -1343,7 +1411,7 @@ export default function DocumentsPage() {
               <User size={14} />
               {authUser.display_name || authUser.username}
               <span className="px-1.5 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 ml-1">
-                {authUser.role === "admin" ? "管理员" : authUser.role === "auditor" ? "审计员" : "投标人"}
+                {authUser.role === "admin" ? "管理员" : authUser.role === "auditor" ? "审计员" : authUser.role === "purchaser" ? "招标人" : "投标人"}
               </span>
             </span>
             <button
@@ -1361,6 +1429,22 @@ export default function DocumentsPage() {
         )}
       </div>
 
+      {/* 上传元数据 (包件/投标人/可见性) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" onClick={(e) => e.stopPropagation()}>
+        <input value={upPackage} onChange={(e) => setUpPackage(e.target.value)} placeholder="包件号/包件名 (可选)"
+          className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <input value={upBidder} onChange={(e) => setUpBidder(e.target.value)} placeholder="投标人名称 (投标文件可选)"
+          className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <label className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border cursor-pointer ${upInternal || authUser?.role === "bidder"
+          ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300"
+          : "border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300"}`}>
+          <input type="checkbox" checked={upInternal || authUser?.role === "bidder"}
+            disabled={authUser?.role === "bidder"}
+            onChange={(e) => setUpInternal(e.target.checked)} className="accent-amber-600" />
+          评标内部文件 (投标人不可见)
+        </label>
+      </div>
+
       {/* 上传区 */}
       <div
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -1373,7 +1457,7 @@ export default function DocumentsPage() {
         <input
           ref={fileRef}
           type="file"
-          accept=".pdf,.docx,.doc,.txt,.md"
+          accept=".pdf,.docx,.doc,.txt,.md,.xlsx,.xls"
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
@@ -1384,7 +1468,7 @@ export default function DocumentsPage() {
         <p className="text-sm text-gray-600 dark:text-gray-300">
           {uploading ? "解析中..." : "点击或拖拽文件到此处上传"}
         </p>
-        <p className="text-xs text-gray-400 mt-1">支持 .pdf / .docx / .doc / .txt / .md</p>
+        <p className="text-xs text-gray-400 mt-1">支持 .pdf / .docx / .doc / .txt / .md / .xlsx (扫描件 PDF 自动 OCR)</p>
       </div>
 
       {/* 上传中 */}
@@ -1608,7 +1692,7 @@ export default function DocumentsPage() {
                       title="评分辅助表">
                       <ClipboardCheck size={16} />
                     </button>
-                    <button onClick={() => setDetail(d)}
+                    <button onClick={() => { setDetail(d); loadStage(d.id); }}
                             className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
                             title="查看详情">
                       <Eye size={16} />
@@ -1667,6 +1751,63 @@ export default function DocumentsPage() {
                   {scoringLoading ? <Loader2 className="animate-spin" size={14} /> : <ClipboardCheck size={14} />} 评分辅助表
                 </button>
               </div>
+
+              {/* ⑥ 评审阶段状态机 (仅内部角色) */}
+              {isInternalRole && (
+                <div className="mt-5 border-t border-gray-200 dark:border-gray-800 pt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">评审阶段</span>
+                    {stageInfo && (
+                      <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+                        stageInfo.stage === "closed"
+                          ? "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+                          : "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"}`}>
+                        {stageInfo.stage_label}
+                      </span>
+                    )}
+                  </div>
+                  {!stageInfo ? (
+                    <p className="text-xs text-gray-400">加载中…</p>
+                  ) : (
+                    <>
+                      {stageInfo.stage !== "closed" && (
+                        <div className="space-y-2 mb-3">
+                          <input
+                            value={stageComment}
+                            onChange={(e) => setStageComment(e.target.value)}
+                            placeholder="流转备注 (可选, 如质疑事项/复审结论)"
+                            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                          <div className="flex flex-wrap gap-2">
+                            {(STAGE_ACTIONS[stageInfo.stage] || []).map(([act, label]) => (
+                              <button key={act} onClick={() => transitionStage(detail.id, act)}
+                                disabled={stageLoading}
+                                className="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg transition">
+                                {stageLoading ? <Loader2 className="animate-spin inline" size={12} /> : label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {stageInfo.history.length > 0 && (
+                        <div className="space-y-1.5">
+                          {stageInfo.history.map((h: any) => (
+                            <div key={h.id} className="text-xs text-gray-600 dark:text-gray-300 flex items-start gap-2">
+                              <span className="shrink-0 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[10px]">
+                                {h.from_stage_label || "未开始"} → {h.to_stage_label}
+                              </span>
+                              <span className="flex-1">
+                                <span className="text-gray-500">{h.action_label}</span>
+                                {h.comment && <span className="text-gray-500"> · {h.comment}</span>}
+                                <span className="text-gray-400 ml-1">— {h.operator}</span>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -2130,6 +2271,7 @@ function AuthFormInline({ mode, API, onSuccess, onError }: {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [role, setRole] = useState<"bidder" | "purchaser">("bidder");
   const [loading, setLoading] = useState(false);
 
   const submit = async () => {
@@ -2140,7 +2282,7 @@ function AuthFormInline({ mode, API, onSuccess, onError }: {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(mode === "login"
           ? { username, password }
-          : { username, password, display_name: displayName }),
+          : { username, password, display_name: displayName, role }),
       });
       if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.detail || `HTTP ${r.status}`); }
       const data = await r.json();
@@ -2174,6 +2316,22 @@ function AuthFormInline({ mode, API, onSuccess, onError }: {
           <label className="block text-xs text-gray-500 mb-1">显示名 (可选)</label>
           <input value={displayName} onChange={(e) => setDisplayName(e.target.value)}
             className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+      )}
+      {mode === "register" && (
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">注册身份</label>
+          <div className="grid grid-cols-2 gap-2">
+            {([["bidder", "投标人（编标自查）"], ["purchaser", "招标人（上传招标）"]] as const).map(([v, label]) => (
+              <button key={v} type="button" onClick={() => setRole(v)}
+                className={`text-xs px-2 py-2 rounded-lg border transition ${role === v
+                  ? "border-blue-500 bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300"
+                  : "border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300"}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-gray-400 mt-1">专家/管理员账号由系统管理员分配，不在此注册</p>
         </div>
       )}
       <button onClick={submit} disabled={loading}

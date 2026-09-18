@@ -184,10 +184,20 @@ def _heading_of(chunk: str) -> str:
 
 
 def ingest_tender_document(db_id: int, raw_text: str,
-                           source_file: str = "", project_name: str = "") -> int:
-    """把一份上传的招标文件全文分片 → dense+sparse 向量 → upsert 到 Qdrant.
+                           source_file: str = "", project_name: str = "",
+                           pages: list[dict] | None = None,
+                           package: str = "", bidder_name: str = "",
+                           visibility: str = "public",
+                           owner_id: int | None = None) -> int:
+    """把一份上传的招标/投标文件全文分片 → dense+sparse 向量 → upsert 到 Qdrant.
 
     重传同 db_id 时先删旧分片. 返回写入分片数.
+
+    元数据:
+      pages: [{"page_no": 1 起或 None, "text": ...}] — PDF 按页保留真实页码,
+             扫描 OCR 页同样带页码; 其他格式 page_no=None (不伪造页码).
+      package: 包件号/包件名 (多包件项目人工或抽取后传入).
+      bidder_name: 投标文件归属的投标人 (招标文件留空).
     """
     if not vector_store.collection_exists():
         vector_store.create_collection(force=False)
@@ -197,7 +207,15 @@ def ingest_tender_document(db_id: int, raw_text: str,
     if deleted:
         logger.info("招标文件 #%s 清理旧分片 %d 个", db_id, deleted)
 
-    chunks = _chunk_tender_text(raw_text)
+    # 页感知分片: (chunk_text, page_no); 无 pages 时退回全文滑窗 (页码未知)
+    if pages:
+        page_chunks: list[tuple[str, int | None]] = []
+        for pg in pages:
+            for ch in _chunk_tender_text(pg.get("text") or ""):
+                page_chunks.append((ch, pg.get("page_no")))
+    else:
+        page_chunks = [(ch, None) for ch in _chunk_tender_text(raw_text)]
+    chunks = [c for c, _ in page_chunks]
     if not chunks:
         logger.warning("招标文件 #%s 无有效文本, 跳过向量化", db_id)
         return 0
@@ -207,10 +225,10 @@ def ingest_tender_document(db_id: int, raw_text: str,
 
     title = project_name or source_file or f"tender_doc_{db_id}"
     points = []
-    for i, ch in enumerate(chunks):
+    for i, (ch, page_no) in enumerate(page_chunks):
         heading = _heading_of(ch)
         combined = f"{heading}\n{ch}"
-        points.append({
+        point = {
             "id": _TENDER_ID_BASE + int(db_id) * _TENDER_ID_SLOTS + i,
             "dense": embedder.encode_document_dense(combined),
             "sparse": embedder.encode_document_sparse(combined),
@@ -219,16 +237,98 @@ def ingest_tender_document(db_id: int, raw_text: str,
             "source_file": source_file or f"tender_doc_{db_id}",
             "section_title": heading,
             "doc_type": "tender_document",
-            "chunk_id": f"tender-{db_id}-{i}",
+            "chunk_id": f"tender-{db_id}-p{page_no if page_no is not None else 'x'}-{i}",
             "business_line": "tender",
             "db_id": int(db_id),
-        })
+        }
+        if page_no is not None:
+            point["page_no"] = int(page_no)
+        if package:
+            point["package"] = package[:100]
+        if bidder_name:
+            point["bidder_name"] = bidder_name[:100]
+        # 行级访问控制: visibility=public/internal + owner_id
+        point["visibility"] = visibility if visibility == "internal" else "public"
+        if owner_id is not None:
+            point["owner_id"] = int(owner_id)
+        points.append(point)
     vector_store.upsert_points(points)
-    logger.info("招标文件 #%s《%s》写入 %d 个分片, Qdrant 总点数=%d",
-                db_id, title[:30], len(points), vector_store.count())
+    logger.info("招标文件 #%s《%s》写入 %d 个分片 (有页码分片 %d 个%s%s), Qdrant 总点数=%d",
+                db_id, title[:30], len(points),
+                sum(1 for _, pn in page_chunks if pn is not None),
+                f", 包件={package}" if package else "",
+                f", 投标人={bidder_name}" if bidder_name else "",
+                vector_store.count())
     return len(points)
 
 
 def delete_tender_document(db_id: int) -> int:
     """删除某份招标文件的全部分片."""
     return vector_store.delete_by_payload("db_id", int(db_id))
+
+
+def backfill_access_metadata() -> dict:
+    """一次性回填存量分片的 visibility/owner_id (幂等).
+
+    - FAQ 等无 db_id 的分片 → public
+    - 招标分片按 PG bidding_documents 的 owner_id/visibility 对齐
+    新分片在 ingest 时已自带字段, 本函数随服务启动执行, 收敛后为空操作.
+    """
+    stats = {"faq_public": 0, "tender_aligned": 0, "tender_public_fallback": 0}
+    try:
+        c = vector_store._get_client()
+        from src.config import settings as _s
+        pending: list = []
+        offset = None
+        while True:
+            pts, offset = c.scroll(
+                _s.qdrant_collection, limit=512, offset=offset,
+                with_payload=True, with_vectors=False)
+            pending.extend(pts)
+            if offset is None:
+                break
+        missing = [p for p in pending if "visibility" not in (p.payload or {})]
+        if not missing:
+            return stats
+
+        # PG 文档权限映射 (表小, 一次取全)
+        doc_map: dict[int, dict] = {}
+        try:
+            from src.database.postgresql_client import postgresql_client
+            if postgresql_client.ready:
+                for r in postgresql_client._run(
+                        "SELECT id, owner_id, visibility FROM bidding_documents", {}):
+                    doc_map[int(r["id"])] = r
+        except Exception as e:
+            logger.warning("回填: 读取文档权限失败, 招标分片按 public 兜底: %s", e)
+
+        # FAQ 类 → public
+        faq_ids = [p.id for p in missing if (p.payload or {}).get("db_id") is None]
+        for i in range(0, len(faq_ids), 256):
+            c.set_payload(_s.qdrant_collection, {"visibility": "public"},
+                          points=faq_ids[i:i + 256])
+        stats["faq_public"] = len(faq_ids)
+
+        # 招标分片 → 按 DB 对齐
+        for p in missing:
+            pl = p.payload or {}
+            db_id = pl.get("db_id")
+            if db_id is None:
+                continue
+            doc = doc_map.get(int(db_id))
+            if doc:
+                payload = {
+                    "visibility": doc.get("visibility") or "public",
+                }
+                if doc.get("owner_id") is not None:
+                    payload["owner_id"] = int(doc["owner_id"])
+                stats["tender_aligned"] += 1
+            else:
+                payload = {"visibility": "public"}
+                stats["tender_public_fallback"] += 1
+            c.set_payload(_s.qdrant_collection, payload, points=[p.id])
+        if any(stats.values()):
+            logger.info("分片访问权限回填完成: %s", stats)
+    except Exception as e:
+        logger.warning("backfill_access_metadata 失败 (不阻断启动): %s", e)
+    return stats

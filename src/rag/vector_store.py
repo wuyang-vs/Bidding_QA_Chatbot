@@ -72,7 +72,9 @@ class VectorStore:
                 }
                 # 元数据: 有则存, 无则忽略
                 for meta_key in ("source_file", "section_title", "doc_type",
-                                 "chunk_id", "business_line", "db_id"):
+                                 "chunk_id", "business_line", "db_id",
+                                 "page_no", "package", "bidder_name",
+                                 "visibility", "owner_id"):
                     if meta_key in p and p[meta_key] not in (None, ""):
                         payload[meta_key] = p[meta_key]
                 qdrant_points.append(PointStruct(
@@ -124,18 +126,29 @@ class VectorStore:
 
     def hybrid_search(self, query_dense, query_sparse, limit: int,
                       dense_limit: int = 30, sparse_limit: int = 30,
-                      question: str = "") -> list[dict]:
+                      question: str = "", access_scope=None) -> list[dict]:
+        """混合检索. access_scope 为 None 时读取请求级 ContextVar,
+        在 Qdrant 召回前按 visibility/owner_id 预过滤 (行级隔离)."""
+        from src.auth.access_scope import get_current_scope, build_qdrant_filter
+
         k = _rrf_k_for(question)
         c = self._get_client()
+        if access_scope is None:
+            access_scope = get_current_scope()
+        qdrant_filter = build_qdrant_filter(access_scope)
 
         def _call():
-            return c.query_points(
+            kwargs = dict(
                 collection_name=settings.qdrant_collection,
                 prefetch=[
                     Prefetch(query=query_dense, using="dense", limit=dense_limit),
                     Prefetch(query=query_sparse, using="sparse", limit=sparse_limit),
                 ],
                 query=RrfQuery(rrf=Rrf(k=k)), limit=limit, with_payload=True)
+            # 根级 filter 由 Qdrant 下推到每个 prefetch 召回阶段 (非后置截断)
+            if qdrant_filter is not None:
+                kwargs["query_filter"] = qdrant_filter
+            return c.query_points(**kwargs)
 
         resp = self._retry_call(_call)
         if resp is None:
@@ -150,7 +163,8 @@ class VectorStore:
             }
             # 透传元数据
             for meta_key in ("source_file", "section_title", "doc_type",
-                             "chunk_id", "business_line", "db_id"):
+                             "chunk_id", "business_line", "db_id",
+                             "page_no", "package", "bidder_name"):
                 val = h.payload.get(meta_key)
                 if val not in (None, ""):
                     item[meta_key] = val
