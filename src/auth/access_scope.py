@@ -21,6 +21,8 @@ logger = logging.getLogger(__name__)
 
 _current_scope: ContextVar[tuple | None] = ContextVar(
     "rag_access_scope", default=None)
+_current_user: ContextVar[dict | None] = ContextVar(
+    "current_user", default=None)
 
 # 内部分片可见的角色 (本人文件); 其余角色一律仅见 public
 _OWNER_ROLES = {"purchaser", "bidder"}
@@ -44,6 +46,11 @@ def get_current_scope() -> tuple | None:
     return _current_scope.get()
 
 
+def get_current_user() -> dict | None:
+    """当前请求的 JWT 用户 (Agent 工具内做行级校验用), 匿名为 None."""
+    return _current_user.get()
+
+
 def scope_cache_key(scope: tuple | None) -> str:
     """lru_cache 键: 不同身份绝不共享检索缓存."""
     if scope is None:
@@ -55,12 +62,14 @@ def scope_cache_key(scope: tuple | None) -> str:
 
 @contextmanager
 def use_access_scope(user: dict | None) -> Iterator[None]:
-    """在 HTTP 请求处理期间设置该用户的检索范围, 退出时恢复."""
-    token = _current_scope.set(scope_for_user(user))
+    """在 HTTP 请求处理期间设置该用户的检索范围与身份, 退出时恢复."""
+    tok_scope = _current_scope.set(scope_for_user(user))
+    tok_user = _current_user.set(user)
     try:
         yield
     finally:
-        _current_scope.reset(token)
+        _current_user.reset(tok_user)
+        _current_scope.reset(tok_scope)
 
 
 def build_qdrant_filter(scope: tuple | None) -> Any:

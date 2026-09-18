@@ -766,6 +766,67 @@ def t():
     return {"note": f"verdict={sm.get('verdict')} 成功{sm.get('success')}/2"}
 
 
+# ================= 标书生成闭环 =================
+
+@case("标书生成闭环", "BID-01", "对话内触发 generate_bid_draft 工具生成标书章节")
+def t():
+    s, d = http("POST", "/api/chat",
+                {"question": f"请根据{DB_ID}号招标文件帮我生成投标技术方案章节草稿",
+                 "history": []}, timeout=300)
+    assert s == 200, f"status={s} {str(d)[:200]}"
+    names = [x.get("name") for x in d.get("exec_log", {}).get("tool_calls", [])]
+    assert "generate_bid_draft" in names, f"LLM 未调用标书工具: {names}"
+    assert d.get("gated") is not True, "有本地证据的生成不应被闸门拦截"
+    ans = d.get("answer") or ""
+    assert len(ans) > 300, f"章节答案过短: {len(ans)}"
+    return {"note": f"工具={names}, 答案{len(ans)}字, gated={d.get('gated')}"}
+
+
+@case("标书生成闭环", "BID-02", "/api/bid/section 单章同步生成(公开招标文件)")
+def t():
+    s, d = http("POST", "/api/bid/section",
+                {"db_id": DB_ID, "section": "technical"}, timeout=300)
+    assert s == 200, f"status={s} {str(d)[:200]}"
+    md = d.get("markdown") or ""
+    assert d.get("section_key") == "technical" and d.get("title"), d
+    assert len(md) > 300, f"章节内容过短: {len(md)}"
+    assert d["title"] in md, "Markdown 应含章节标题"
+    # 非法章节 400
+    s2, _ = http("POST", "/api/bid/section",
+                 {"db_id": DB_ID, "section": "not_exist"}, timeout=30)
+    assert s2 == 400, f"非法章节应400, 实际 {s2}"
+    return {"note": f"title={d['title']}, {len(md)}字, 案例={d.get('similar_cases_found')}, 非法章节={s2}"}
+
+
+@case("标书生成闭环", "BID-03", "单章生成行级权限: 投标人对internal 403/owner 200")
+def t():
+    _u, tok_owner, _ = t_auth_common("bid_owner", "accept123", role="purchaser")
+    _u2, tok_bidder, _ = t_auth_common("bid_reader", "accept123", role="bidder")
+    content = (
+        "XX市标书闭环内部项目招标文件\n项目名称：XX市标书闭环内部项目\n"
+        "预算金额：人民币 660 万元\n投标截止时间：2026年10月1日 09:30\n"
+        "采购标的: 智慧园区管理平台软件开发与集成服务, 含三年运维。\n"
+        "资质要求: 软件企业证书; 近三年同类项目业绩2个。\n"
+    ).encode("utf-8")
+    s, d = upload_multipart("bid_internal_tender.txt", content, token=tok_owner,
+                            fields={"visibility": "internal"}, timeout=180)
+    assert s == 200 and d.get("visibility") == "internal", f"internal 上传失败 {s} {d}"
+    doc_id = d["db_id"]
+
+    s1, _ = http("POST", "/api/bid/section",
+                 {"db_id": doc_id, "section": "technical"}, token=tok_bidder, timeout=30)
+    s2, _ = http("POST", "/api/bid/section",
+                 {"db_id": doc_id, "section": "technical"}, timeout=30)
+    assert s1 == 403, f"投标人对 internal 应 403, 实际 {s1}"
+    assert s2 == 403, f"匿名对 internal 应 403, 实际 {s2}"
+    # owner 本人可基于 internal 招标文件生成 (证明不是一刀切拒绝)
+    s3, d3 = http("POST", "/api/bid/section",
+                  {"db_id": doc_id, "section": "commercial"}, token=tok_owner, timeout=300)
+    assert s3 == 200 and len(d3.get("markdown") or "") > 300, \
+        f"owner 应能生成, 实际 {s3} {str(d3)[:200]}"
+    return {"note": f"doc={doc_id} bidder={s1}/anon={s2}/owner={s3}({len(d3['markdown'])}字)"}
+
+
 # ================= main =================
 
 def main():

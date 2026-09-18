@@ -67,7 +67,7 @@ class BiddingAgent(ReActMixin, GenerationMixin):
             yield ("token", {"content": ans})
             yield ("done", {"sources": [], "web_sources": [],
                             "tool_called": False, "tool_name": "",
-                            "phase_times": [("前置检测", 0)]})
+                            "phase_times": [("前置检测", 0)], "gated": False})
             exec_log.set_status("out_of_scope")
             exec_log.add_phase("前置检测", 0)
             exec_log.set_result(ans, 0, 0, None)
@@ -79,7 +79,7 @@ class BiddingAgent(ReActMixin, GenerationMixin):
             yield ("token", {"content": ans})
             yield ("done", {"sources": [], "web_sources": [],
                             "tool_called": False, "tool_name": "",
-                            "phase_times": [("前置检测", 0)]})
+                            "phase_times": [("前置检测", 0)], "gated": False})
             exec_log.set_status("vague")
             exec_log.add_phase("前置检测", 0)
             exec_log.set_result(ans, 0, 0, None)
@@ -108,6 +108,8 @@ class BiddingAgent(ReActMixin, GenerationMixin):
                     )
                     exec_log.elapsed_ms = kwargs["elapsed_ms"]
                     exec_log.finish()
+                    # 供非流式 /api/chat 返回完整工具调用轨迹 (含多轮工具)
+                    kwargs["exec_log"] = exec_log.to_dict()
                 yield (evt_type, kwargs)
         except Exception as e:
             logger.exception("Agent 处理异常")
@@ -125,14 +127,16 @@ class BiddingAgent(ReActMixin, GenerationMixin):
     def chat(self, question, history=None, web_search_enabled=False,
              provider="", deep_thinking_enabled=False) -> dict:
         result = {"answer": "", "sources": [], "web_sources": [],
-                  "tool_called": False, "tool_name": ""}
+                  "tool_called": False, "tool_name": "", "gated": False,
+                  "exec_log": {"tool_calls": []}}
         for evt_type, kwargs in self._chat_events(
                 question, history, web_search_enabled, provider, deep_thinking_enabled):
             if evt_type == "token":
                 result["answer"] += kwargs.get("content", "")
             elif evt_type == "done":
                 result.update({k: kwargs.get(k) for k in
-                               ("sources", "web_sources", "tool_called", "tool_name")})
+                               ("sources", "web_sources", "tool_called",
+                                "tool_name", "gated", "exec_log")})
             elif evt_type == "error":
                 result["answer"] = kwargs.get("content", "")
         return result

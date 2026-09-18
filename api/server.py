@@ -655,6 +655,8 @@ class BidGenerateRequest(BaseModel):
     db_id: int | None = None        # 已解析文档的 id (优先)
     sections: list[str] | None = None  # 指定章节, 空=自动推荐
     include_similar_cases: bool = True
+    markdown: str = ""               # 直接导出已有草稿 (如单章流式生成结果), 给了就不再重新生成
+    export_title: str = ""           # 导出文件名/文档标题 (可选)
 
 
 @app.post("/api/bid/generate")
@@ -725,6 +727,74 @@ def bid_generate(req: BidGenerateRequest,
         "similar_cases_found": len(cases),
         "markdown": md,
     }
+
+
+class BidSectionRequest(BaseModel):
+    db_id: int | None = None
+    section: str = "technical"  # technical/commercial/qualification/project_management/after_sales
+    # db_id 缺失时的手填招标信息
+    project_name: str = ""
+    purchaser: str = ""
+    subject_matter: str = ""
+    budget: str = ""
+    qualification_requirements: list[str] = Field(default_factory=list)
+    include_similar_cases: bool = True
+
+
+def _prepare_bid_section(req: "BidSectionRequest", user: dict | None):
+    """单章生成公共前置: 章节校验 + 行级权限 + 招标信息 + 同类案例。"""
+    from src.tools.bid_generator import SECTIONS
+    from src.tools.bid_service import resolve_tender, fetch_similar_cases
+    if req.section not in SECTIONS:
+        raise HTTPException(400, f"非法章节: {req.section}, 可选 {list(SECTIONS.keys())}")
+    _assert_doc_readable(user, req.db_id)
+    tender = resolve_tender(req.db_id, req.model_dump())
+    cases = fetch_similar_cases(tender, user) if req.include_similar_cases else []
+    return tender, cases
+
+
+@app.post("/api/bid/section")
+def bid_section(req: BidSectionRequest,
+                user: dict | None = Depends(get_current_user_optional)):
+    """生成投标文件单个章节 (同步), 行级权限与 /api/bid/generate 一致。"""
+    from src.tools.bid_generator import SECTIONS, generate_section
+    from src.clients.llm_factory import get_llm_client
+    tender, cases = _prepare_bid_section(req, user)
+    llm = get_llm_client()
+    md = generate_section(tender, req.section, cases, llm_client=llm)
+    return {
+        "db_id": req.db_id,
+        "section_key": req.section,
+        "title": SECTIONS[req.section]["title"],
+        "similar_cases_found": len(cases),
+        "markdown": md,
+    }
+
+
+@app.post("/api/bid/section/stream")
+def bid_section_stream(req: BidSectionRequest,
+                       user: dict | None = Depends(get_current_user_optional)):
+    """生成投标文件单个章节 (SSE 流式: meta → token* → done)。"""
+    from src.tools.bid_generator import SECTIONS, stream_section
+    from src.clients.llm_factory import get_llm_client
+    from src.agent.utils import _sse
+
+    tender, cases = _prepare_bid_section(req, user)
+    title = SECTIONS[req.section]["title"]
+
+    def gen():
+        yield _sse("meta", section_key=req.section, title=title,
+                   db_id=req.db_id, similar_cases_found=len(cases))
+        try:
+            llm = get_llm_client()
+            for chunk in stream_section(tender, req.section, cases, llm_client=llm):
+                yield _sse("token", content=chunk)
+            yield _sse("done", section_key=req.section, title=title)
+        except Exception as e:
+            logger.exception("单章流式生成失败")
+            yield _sse("error", content=f"章节生成失败: {e}")
+
+    return StreamingResponse(gen(), media_type="text/event-stream")
 
 
 class ComplianceCheckRequest(BaseModel):
@@ -1337,16 +1407,24 @@ def export_docx(req: BidGenerateRequest,
     section_keys = req.sections or suggest_sections(tender)
     section_keys = [k for k in section_keys if k in SECTIONS] or list(SECTIONS.keys())
 
-    llm = get_llm_client()
-    md = generate_full_bid(tender, cases, llm_client=llm, sections=section_keys)
+    # 已有草稿 (如单章流式生成结果) → 直接导出, 不再调 LLM 重新生成
+    if req.markdown.strip():
+        md = req.markdown
+    else:
+        llm = get_llm_client()
+        md = generate_full_bid(tender, cases, llm_client=llm, sections=section_keys)
 
-    data = markdown_to_docx(md, title=tender.get("project_name") or "投标书草稿")
-    filename = f"投标书_{tender.get('project_name', '草稿')}.docx".replace("/", "_")
+    doc_title = req.export_title or tender.get("project_name") or "投标书草稿"
+    data = markdown_to_docx(md, title=doc_title)
+    safe_name = f"投标书_{doc_title}.docx".replace("/", "_")
+    from urllib.parse import quote
+    encoded = quote(safe_name)
 
     return Response(
         content=data,
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition":
+                 f"attachment; filename=bid_draft.docx; filename*=UTF-8''{encoded}"},
     )
 
 

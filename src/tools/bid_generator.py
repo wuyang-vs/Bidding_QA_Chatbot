@@ -129,6 +129,29 @@ def _summarize_cases(cases: list[dict]) -> str:
     return "\n\n".join(parts)
 
 
+def build_section_messages(
+    parsed_tender: dict,
+    section_key: str,
+    similar_cases: list[dict] | None = None,
+    budget_hint: str = "",
+) -> tuple[str, str]:
+    """构造单章生成所需的 (system, user) 消息, 供同步/流式两条路径复用."""
+    if section_key not in SECTIONS:
+        raise ValueError(f"未知章节: {section_key}, 可选: {list(SECTIONS)}")
+    section = SECTIONS[section_key]
+    tender_text = _summarize_tender_info(parsed_tender)
+    cases_text = _summarize_cases(similar_cases or [])
+    budget = budget_hint or parsed_tender.get("budget") or "(未提供)"
+    user_msg = section["prompt"].format(
+        tender_info=tender_text, cases=cases_text, budget=budget)
+    system_msg = (
+        "你是资深投标文件撰稿人. 根据招标要求和参考案例, "
+        "撰写专业、可落地的投标章节草稿. "
+        "严格遵守所有禁止事项: 不编造具体资质编号/财务数据."
+    )
+    return system_msg, user_msg
+
+
 def generate_section(
     parsed_tender: dict,
     section_key: str,
@@ -152,25 +175,33 @@ def generate_section(
         from src.clients.llm_factory import get_llm_client
         llm_client = get_llm_client()
 
-    section = SECTIONS[section_key]
-    tender_text = _summarize_tender_info(parsed_tender)
-    cases_text = _summarize_cases(similar_cases or [])
-    budget = budget_hint or parsed_tender.get("budget") or "(未提供)"
-
-    user_msg = section["prompt"].format(
-        tender_info=tender_text, cases=cases_text, budget=budget,
-    )
-    system_msg = (
-        "你是资深投标文件撰稿人. 根据招标要求和参考案例, "
-        "撰写专业、可落地的投标章节草稿. "
-        "严格遵守所有禁止事项: 不编造具体资质编号/财务数据."
-    )
+    system_msg, user_msg = build_section_messages(
+        parsed_tender, section_key, similar_cases, budget_hint)
     content = llm_client.chat([
         {"role": "system", "content": system_msg},
         {"role": "user", "content": user_msg},
     ], temperature=0.4)
 
-    return f"## {section['title']}\n\n{content.strip()}"
+    return f"## {SECTIONS[section_key]['title']}\n\n{content.strip()}"
+
+
+def stream_section(
+    parsed_tender: dict,
+    section_key: str,
+    similar_cases: list[dict] | None = None,
+    llm_client=None,
+    budget_hint: str = "",
+):
+    """流式生成单章正文 (不含标题, 标题由调用方用 SECTIONS[key]['title'] 拼接)."""
+    if llm_client is None:
+        from src.clients.llm_factory import get_llm_client
+        llm_client = get_llm_client()
+    system_msg, user_msg = build_section_messages(
+        parsed_tender, section_key, similar_cases, budget_hint)
+    yield from llm_client.chat_stream([
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": user_msg},
+    ], temperature=0.4)
 
 
 def generate_full_bid(

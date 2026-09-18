@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { FileText, Upload, Loader2, CheckCircle, AlertCircle, Eye, X, Shield, ClipboardCheck, AlertTriangle, CheckSquare, FileWarning, UserCheck, History, FileCheck, User, LogOut, Calculator, FileSearch, Radar } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import { FileText, Upload, Loader2, CheckCircle, AlertCircle, Eye, X, Shield, ClipboardCheck, AlertTriangle, CheckSquare, FileWarning, UserCheck, History, FileCheck, User, LogOut, Calculator, FileSearch, Radar, PenLine, Download, Copy } from "lucide-react";
 
 interface ParsedDoc {
   db_id?: number;
@@ -1002,6 +1003,26 @@ export default function DocumentsPage() {
   const [colResult, setColResult] = useState<any>(null);
   const colInputRef = useRef<HTMLInputElement>(null);
 
+  // 标书一键生成 (单章流式)
+  const BID_SECTIONS: { key: string; label: string }[] = [
+    { key: "technical", label: "技术方案" },
+    { key: "commercial", label: "商务方案" },
+    { key: "qualification", label: "资格响应" },
+    { key: "project_management", label: "项目管理" },
+    { key: "after_sales", label: "售后服务" },
+  ];
+  const [bidOpen, setBidOpen] = useState(false);
+  const [bidDbId, setBidDbId] = useState<number | null>(null);
+  const [bidFileName, setBidFileName] = useState("");
+  const [bidSection, setBidSection] = useState("technical");
+  const [bidStreaming, setBidStreaming] = useState(false);
+  const [bidTitle, setBidTitle] = useState("");
+  const [bidMarkdown, setBidMarkdown] = useState("");
+  const [bidCases, setBidCases] = useState(0);
+  const [bidErr, setBidErr] = useState("");
+  const [bidCopied, setBidCopied] = useState(false);
+  const [bidExporting, setBidExporting] = useState(false);
+
   useEffect(() => {
     if (authToken) localStorage.setItem("qa_auth_token", authToken);
     else localStorage.removeItem("qa_auth_token");
@@ -1346,6 +1367,106 @@ export default function DocumentsPage() {
     }
   };
 
+  // ── 标书一键生成 (单章流式) ─────────────────────────────
+  const openBidWriter = (id: number, fileName: string) => {
+    setBidDbId(id);
+    setBidFileName(fileName);
+    setBidSection("technical");
+    setBidTitle("");
+    setBidMarkdown("");
+    setBidCases(0);
+    setBidErr("");
+    setBidCopied(false);
+    setBidOpen(true);
+  };
+
+  const runBidSection = async () => {
+    if (bidDbId == null || bidStreaming) return;
+    setBidStreaming(true);
+    setBidErr("");
+    setBidMarkdown("");
+    setBidTitle("");
+    setBidCases(0);
+    setBidCopied(false);
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (authToken) headers.Authorization = `Bearer ${authToken}`;
+      const resp = await fetch(`${API}/api/bid/section/stream`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ db_id: bidDbId, section: bidSection }),
+      });
+      if (!resp.ok || !resp.body) {
+        const detail = await resp.json().catch(() => ({}));
+        throw new Error(detail.detail || `生成失败 (${resp.status})`);
+      }
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          const t = line.trim();
+          if (!t.startsWith("data: ")) continue;
+          const ev = JSON.parse(t.slice(6));
+          if (ev.type === "meta") { setBidTitle(ev.title || ""); setBidCases(ev.similar_cases_found || 0); }
+          else if (ev.type === "token") setBidMarkdown((m) => m + (ev.content || ""));
+          else if (ev.type === "error") throw new Error(ev.content || "章节生成失败");
+        }
+      }
+    } catch (e: any) {
+      setBidErr(e?.message || "章节生成失败");
+    } finally {
+      setBidStreaming(false);
+    }
+  };
+
+  const exportBidDocx = async () => {
+    if (!bidMarkdown.trim() || bidExporting) return;
+    setBidExporting(true);
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (authToken) headers.Authorization = `Bearer ${authToken}`;
+      const r = await fetch(`${API}/api/export/docx`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          db_id: bidDbId,
+          markdown: bidMarkdown,
+          export_title: `${bidFileName || "投标书"}_${bidTitle || bidSection}`,
+        }),
+      });
+      if (!r.ok) {
+        const detail = await r.json().catch(() => ({}));
+        throw new Error(detail.detail || `导出失败 (${r.status})`);
+      }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `投标书_${bidTitle || bidSection}.docx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      setBidErr(e?.message || "导出 Word 失败");
+    } finally {
+      setBidExporting(false);
+    }
+  };
+
+  const copyBidMd = async () => {
+    if (!bidMarkdown.trim()) return;
+    try {
+      await navigator.clipboard.writeText(bidMarkdown);
+      setBidCopied(true);
+      setTimeout(() => setBidCopied(false), 1500);
+    } catch { /* 剪贴板不可用时静默 */ }
+  };
+
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
       <div className="flex items-start justify-between">
@@ -1589,6 +1710,13 @@ export default function DocumentsPage() {
                   {scoringLoading ? <Loader2 className="animate-spin" size={14} /> : <ClipboardCheck size={14} />}
                   评分辅助表
                 </button>
+                <button
+                  onClick={() => openBidWriter(parsed.db_id!, parsed.source_file || "")}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition"
+                >
+                  <PenLine size={14} />
+                  一键生成标书
+                </button>
               </div>
             )}
           </div>
@@ -1692,6 +1820,12 @@ export default function DocumentsPage() {
                       title="评分辅助表">
                       <ClipboardCheck size={16} />
                     </button>
+                    <button
+                      onClick={() => openBidWriter(d.id, d.source_file)}
+                      className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950 rounded-lg transition"
+                      title="一键生成标书章节">
+                      <PenLine size={16} />
+                    </button>
                     <button onClick={() => { setDetail(d); loadStage(d.id); }}
                             className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
                             title="查看详情">
@@ -1749,6 +1883,11 @@ export default function DocumentsPage() {
                   disabled={scoringLoading}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg transition">
                   {scoringLoading ? <Loader2 className="animate-spin" size={14} /> : <ClipboardCheck size={14} />} 评分辅助表
+                </button>
+                <button
+                  onClick={() => { setDetail(null); openBidWriter(detail.id, detail.source_file); }}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition">
+                  <PenLine size={14} /> 一键生成标书
                 </button>
               </div>
 
@@ -1809,6 +1948,103 @@ export default function DocumentsPage() {
                 </div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 一键生成标书弹窗 (单章流式) */}
+      {bidOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => !bidStreaming && setBidOpen(false)}>
+          <div className="bg-white dark:bg-gray-900 rounded-xl max-w-3xl w-full max-h-[85vh] flex flex-col"
+               onClick={(e) => e.stopPropagation()}>
+            <div className="border-b border-gray-200 dark:border-gray-800 px-5 py-3 flex items-center justify-between">
+              <div className="min-w-0">
+                <div className="font-medium text-sm flex items-center gap-2">
+                  <PenLine size={15} className="text-emerald-600" /> 一键生成标书章节
+                </div>
+                <div className="text-xs text-gray-500 truncate">招标文件 #{bidDbId} · {bidFileName}</div>
+              </div>
+              <button onClick={() => !bidStreaming && setBidOpen(false)}
+                      disabled={bidStreaming}
+                      className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded disabled:opacity-40">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-800">
+              <div className="flex flex-wrap gap-2">
+                {BID_SECTIONS.map((s) => (
+                  <button key={s.key}
+                    onClick={() => !bidStreaming && setBidSection(s.key)}
+                    disabled={bidStreaming}
+                    className={`px-3 py-1.5 text-xs rounded-lg border transition disabled:opacity-50 ${
+                      bidSection === s.key
+                        ? "bg-emerald-600 text-white border-emerald-600"
+                        : "border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-emerald-500"}`}>
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex items-center gap-3">
+                <button onClick={runBidSection} disabled={bidStreaming}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg transition">
+                  {bidStreaming ? <Loader2 className="animate-spin" size={14} /> : <PenLine size={14} />}
+                  {bidStreaming ? "正在生成…" : (bidMarkdown ? "重新生成本章" : "生成本章草稿")}
+                </button>
+                <button onClick={copyBidMd} disabled={!bidMarkdown || bidStreaming}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition">
+                  {bidCopied ? <CheckCircle size={14} className="text-green-600" /> : <Copy size={14} />}
+                  {bidCopied ? "已复制" : "复制"}
+                </button>
+                <button onClick={exportBidDocx} disabled={!bidMarkdown || bidExporting}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition">
+                  {bidExporting ? <Loader2 className="animate-spin" size={14} /> : <Download size={14} />}
+                  导出 Word
+                </button>
+                {bidCases > 0 && (
+                  <span className="text-xs text-gray-400">已参考 {bidCases} 条同类案例</span>
+                )}
+              </div>
+              <p className="text-[11px] text-gray-400 mt-2">
+                草稿中的 [公司全称]/[资质证书编号] 等占位符需人工替换，具体数值以企业实际材料为准。
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-auto px-5 py-4">
+              {bidErr && (
+                <div className="text-sm text-red-600 bg-red-50 dark:bg-red-950/40 rounded-lg p-3 mb-3">
+                  {bidErr}
+                </div>
+              )}
+              {!bidMarkdown && !bidErr && !bidStreaming && (
+                <div className="text-sm text-gray-400 text-center py-12">
+                  选择章节后点击「生成本章草稿」，将基于本招标文件与同类案例流式产出
+                </div>
+              )}
+              {bidStreaming && !bidMarkdown && (
+                <div className="text-sm text-gray-400 text-center py-12">
+                  <Loader2 className="animate-spin inline mr-2" size={14} />正在组织内容…
+                </div>
+              )}
+              {bidMarkdown && (
+                <div className="bid-md text-sm text-gray-800 dark:text-gray-200">
+                  <ReactMarkdown>{`## ${bidTitle || "章节草稿"}\n\n${bidMarkdown.replace(/^\s*#{1,3}\s*[^\n]*\n+/, (m) => (bidTitle && m.includes(bidTitle) ? "" : m))}`}</ReactMarkdown>
+                </div>
+              )}
+            </div>
+            <style>{`
+              .bid-md h2 { font-size: 1.05rem; font-weight: 600; margin: 1rem 0 .5rem; }
+              .bid-md h3 { font-size: .95rem; font-weight: 600; margin: .8rem 0 .4rem; }
+              .bid-md p { margin: .4rem 0; line-height: 1.7; }
+              .bid-md ul { list-style: disc; padding-left: 1.4rem; margin: .4rem 0; }
+              .bid-md ol { list-style: decimal; padding-left: 1.4rem; margin: .4rem 0; }
+              .bid-md li { margin: .2rem 0; line-height: 1.6; }
+              .bid-md table { border-collapse: collapse; width: 100%; margin: .6rem 0; font-size: .8rem; }
+              .bid-md th, .bid-md td { border: 1px solid #d1d5db; padding: .3rem .5rem; text-align: left; }
+              .bid-md th { background: #f3f4f6; }
+              .dark .bid-md th { background: #1f2937; }
+              .dark .bid-md th, .dark .bid-md td { border-color: #374151; }
+            `}</style>
           </div>
         </div>
       )}

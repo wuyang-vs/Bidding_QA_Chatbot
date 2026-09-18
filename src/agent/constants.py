@@ -7,5 +7,6 @@ STREAM_FLUSH_CHARS = 80
 STREAM_CHUNK_CHARS = 40
 STREAM_CHUNK_DELAY = 0.02
 
-BASE_TOOL_NAMES = ["search_bidding_knowledge", "search_knowledge_graph", "search_postgresql"]
+BASE_TOOL_NAMES = ["search_bidding_knowledge", "search_knowledge_graph",
+                   "search_postgresql", "list_bid_documents", "generate_bid_draft"]
 WEB_TOOL_NAMES = ["search_web", "search_exa"]

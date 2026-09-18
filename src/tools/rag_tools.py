@@ -183,3 +183,9 @@ TOOL_EXECUTORS = {
     "search_web": _exec_web,
     "search_exa": _exec_exa,
 }
+
+# 标书生成 Agent 工具 (对话内"帮我写标书"闭环); 延迟导入避免循环依赖
+from src.tools.bid_agent_tools import BID_AGENT_TOOLS, BID_AGENT_EXECUTORS  # noqa: E402
+
+ALL_TOOLS.extend(BID_AGENT_TOOLS)
+TOOL_EXECUTORS.update(BID_AGENT_EXECUTORS)
