@@ -67,6 +67,17 @@ async def lifespan(app: FastAPI):
         logger.warning("默认 admin 初始化失败: %s", e)
     start_auto_ingest()
     system_monitor.start()
+
+    # RAG 首次查询需懒加载 reranker/稀疏检索(实测冷启 >120s), 后台预热避免首个用户请求超时
+    def _prewarm_rag():
+        try:
+            rag_pipeline.search("招投标 预热", top_k=1)
+            logger.info("RAG 检索预热完成")
+        except Exception as e:
+            logger.warning("RAG 预热失败(不影响服务): %s", e)
+
+    import threading
+    threading.Thread(target=_prewarm_rag, daemon=True, name="rag-prewarm").start()
     # 存量向量分片回填 visibility/owner_id (幂等; 需 Qdrant+PG 均就绪)
     try:
         from src.rag.ingest import backfill_access_metadata

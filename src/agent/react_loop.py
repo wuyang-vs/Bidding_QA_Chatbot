@@ -5,6 +5,9 @@ import time
 
 from src.agent.audit import audit_answer, build_citation_prompt_suffix
 from src.agent.constants import MAX_TOOL_ROUNDS
+from src.agent.evidence_gate import (
+    NO_EVIDENCE_NOTICE, gate_decision, tool_provided_evidence,
+)
 from src.agent.tool_defense import (
     _looks_like_tool_call, _normalize_tool_content,
     _parse_text_tool_calls, to_fake_tool_calls,
@@ -17,6 +20,14 @@ logger = logging.getLogger(__name__)
 _CAP_CONSTRAINT_TEXT = ("已达到工具调用轮次上限。必须立即基于以上所有工具结果直接回答，"
                         "禁止再调用任何工具。")
 
+# 硬闸门: LLM 未取证直接作答时, 服务端强制其补一次检索
+_FORCE_RETRIEVAL_TEXT = (
+    "【服务端强制要求】你尚未调用任何检索工具，不得凭记忆或常识回答上述问题。"
+    "请立即调用 search_bidding_knowledge 检索（必要时再用 search_postgresql / "
+    "search_knowledge_graph 核实），拿到工具结果后再作答；若所有工具均返回空，"
+    "再明确告知用户未检索到相关内容。"
+)
+
 
 class ReActMixin:
     def _chat_stream_tools(self, messages, question, llm, active_tools, web_search_enabled, exec_log=None):
@@ -27,6 +38,13 @@ class ReActMixin:
         t0 = time.time()
         t_first = None
         t_tools = None
+        # ---- 硬闸门证据跟踪 ----
+        from src.config import settings
+        gate_enabled = settings.evidence_gate_enabled
+        tool_attempted = False       # 是否真实执行过任一证据工具
+        evidence_found = False       # 是否拿到过实质证据(分片/来源/结构化数据)
+        evidence_texts: list[str] = []  # 证据原文(用于问题特征词覆盖校验)
+        forced_retry_used = False    # 已强制补检索一次
 
         for round_idx in range(1, MAX_TOOL_ROUNDS + 1):
             if exec_log:
@@ -71,6 +89,11 @@ class ReActMixin:
                     else:
                         all_sources.extend(r.sources)
                     last_tool = r.name
+                    if gate_enabled and r.name in TOOL_EXECUTORS:
+                        tool_attempted = True
+                        if tool_provided_evidence(r.name, r.sources, r.text):
+                            evidence_found = True
+                            evidence_texts.append(r.text or "")
                     if exec_log:
                         exec_log.add_tool_call(
                             round_idx, r.name, len(r.sources), text[:60],
@@ -93,9 +116,32 @@ class ReActMixin:
                         else:
                             all_sources.extend(r.sources)
                         last_tool = r.name
+                        if gate_enabled and r.name in TOOL_EXECUTORS:
+                            tool_attempted = True
+                            if tool_provided_evidence(r.name, r.sources, r.text):
+                                evidence_found = True
+                                evidence_texts.append(r.text or "")
                     continue
 
             if raw and not _looks_like_tool_call(raw):
+                if gate_enabled:
+                    decision = gate_decision(
+                        question, tool_attempted, evidence_found, forced_retry_used,
+                        evidence_texts=evidence_texts)
+                    if decision == "force_retrieval":
+                        # M2-01 类波动: LLM 未取证就作答 → 丢弃答案, 强制补检索一次
+                        forced_retry_used = True
+                        logger.info("硬闸门: LLM 未调用检索工具直接作答, 强制补检索")
+                        yield ("status", {"content": "正在强制调用知识库核实..."})
+                        messages.append({"role": "assistant",
+                                         "content": _normalize_tool_content(raw) or "我需要先核实资料。"})
+                        messages.append({"role": "user", "content": _FORCE_RETRIEVAL_TEXT})
+                        continue
+                    if decision == "refuse":
+                        # 无权威证据 → 丢弃无据答案, 走固定话术硬拒
+                        logger.info("硬闸门: 无证据作答被拦截, 返回固定话术")
+                        answer = ""
+                        break
                 answer = raw
                 break
             messages.append({"role": "user", "content": _CAP_CONSTRAINT_TEXT})
@@ -110,8 +156,9 @@ class ReActMixin:
 
         if answer:
             from src.agent.utils import _pace_stream_chunks
-            # LLM 直接给了答案, 但如果调过工具且工具全空, 追加诚实约束
-            if last_tool and not all_sources and not web_sources:
+            # 硬闸门开启时, 能走到这里说明有证据或属寒暄, 不再加"缺乏依据"软警告;
+            # 闸门关闭时保留旧的软约束行为
+            if (not gate_enabled) and last_tool and not all_sources and not web_sources:
                 answer = ("【注意: 所有检索工具均未返回有效结果, "
                           "以下回答可能缺乏依据, 请谨慎参考】\n\n") + answer
             # 审计
@@ -123,14 +170,37 @@ class ReActMixin:
                             "web_sources": self._merge_sources(web_sources),
                             "tool_called": bool(last_tool), "tool_name": last_tool,
                             "phase_times": phase_times,
-                            "audit": audit,
+                            "audit": audit, "gated": False,
                             "answer": answer})
+            return
+
+        # ---- 硬闸门: answer 为空且仍无权威证据 → 固定话术, 不调用 LLM 生成 ----
+        if gate_enabled and gate_decision(
+                question, tool_attempted, evidence_found,
+                forced_retry_used, evidence_texts=evidence_texts) == "refuse":
+            from src.agent.utils import _pace_stream_chunks
+            if exec_log:
+                exec_log.set_status("no_evidence")
+            logger.info("硬闸门: 检索无证据, 返回固定拒答话术 (tool_attempted=%s)",
+                        tool_attempted)
+            yield ("status", {"content": "知识库未命中，按受控原则不予自由作答"})
+            notice = NO_EVIDENCE_NOTICE
+            phase_times.append(("硬闸门拦截", 0))
+            if exec_log:
+                exec_log.add_phase("硬闸门拦截", 0)
+            audit = audit_answer(notice, [])
+            for chunk in _pace_stream_chunks(notice):
+                yield ("token", {"content": chunk})
+            yield ("done", {"sources": [], "web_sources": [],
+                            "tool_called": tool_attempted, "tool_name": last_tool,
+                            "phase_times": phase_times, "audit": audit,
+                            "gated": True, "answer": notice})
             return
 
         final_messages = self._clean_for_final(messages, question, tool_msgs_start)
 
-        # 所有工具返回空 → 注入诚实约束, 禁止编造
-        if last_tool and not all_sources and not web_sources:
+        # 闸门关闭时的旧软约束: 工具全空 → 注入提示词要求 LLM 说未找到
+        if (not gate_enabled) and last_tool and not all_sources and not web_sources:
             final_messages.append({
                 "role": "system",
                 "content": ("所有检索工具均未返回有效结果。"
@@ -163,7 +233,7 @@ class ReActMixin:
                         "web_sources": self._merge_sources(web_sources),
                         "tool_called": bool(last_tool), "tool_name": last_tool,
                         "phase_times": phase_times,
-                        "audit": audit,
+                        "audit": audit, "gated": False,
                         "answer": full_answer})
 
     @staticmethod

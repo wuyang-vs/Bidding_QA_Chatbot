@@ -54,6 +54,8 @@ class Settings:
     auth_secret: str = field(default_factory=lambda: os.getenv("AUTH_SECRET", "dev-change-me-in-prod-secret-key"))
     auth_expire_minutes: int = field(default_factory=lambda: int(os.getenv("AUTH_EXPIRE_MINUTES", "120")))
     auth_enabled: bool = field(default_factory=lambda: os.getenv("AUTH_ENABLED", "false").lower() in ("true", "1", "yes"))
+    # 受控问答硬闸门: 知识类问题无权威证据时禁止LLM自由生成; LLM未调工具时强制补检索1次
+    evidence_gate_enabled: bool = field(default_factory=lambda: os.getenv("EVIDENCE_GATE_ENABLED", "true").lower() in ("true", "1", "yes"))
 
     @property
     def cors_origin_list(self):

@@ -171,6 +171,20 @@ def t():
             "answer_head": ans[:80]}
 
 
+@case("MVP2检索", "GATE-01", "硬闸门: 知识库无证据的问题禁止LLM自由生成")
+def t():
+    q = "月球表面氦3开采基地绿化景观工程的投标保证金缴纳比例和开标时间是怎么规定的？"
+    s, d = http("POST", "/api/chat", {"question": q, "history": []}, timeout=280)
+    assert s == 200, f"status={s} {str(d)[:200]}"
+    assert d.get("gated") is True, f"应被硬闸门标记 gated=True, 实际 {d.get('gated')}"
+    assert not (d.get("sources") or []), "无证据问题不应返回任何引用来源"
+    ans = d.get("answer") or ""
+    assert "未在本地权威知识库中检索到" in ans, f"固定话术不符: {ans[:120]}"
+    # 不得编造具体数字(保证金比例/金额/日期)
+    assert "%" not in ans and "万元" not in ans, f"固定话术中混入编造事实: {ans[:150]}"
+    return {"note": f"gated=True, sources=0, 返回受控拒答话术({len(ans)}字)"}
+
+
 # ================= MVP-3 条款提取 =================
 
 @case("MVP3条款提取", "M3-01", "评分办法已结构化提取")
