@@ -807,6 +807,132 @@ def bids_compare(req: BidCompareRequest):
     return compare_bids(req.bids, llm_client=llm)
 
 
+# ---------- 报价计算 (纯规则) ----------
+
+class PriceCalculateRequest(BaseModel):
+    items: list[dict] = Field(default_factory=list)
+    declared_total: float | str | None = None
+    declared_total_cn: str | None = None
+    control_price: float | str | None = None
+    base_price: float | str | None = None
+    score_full: float = 100.0
+    all_bid_prices: list[float] | None = None
+
+
+@app.post("/api/price/calculate")
+def price_calculate(req: PriceCalculateRequest):
+    """报价计算 — 行内算术/分项汇总/大小写金额/最高限价校验 + 低价优先价格分."""
+    from src.tools.price_calculator import calculate_price
+
+    if not req.items:
+        raise HTTPException(400, "请提供分项报价 items")
+    return calculate_price(
+        items=req.items,
+        declared_total=req.declared_total,
+        declared_total_cn=req.declared_total_cn,
+        control_price=req.control_price,
+        base_price=req.base_price,
+        score_full=req.score_full,
+        all_bid_prices=req.all_bid_prices,
+    )
+
+
+# ---------- 投标文件解析器 ----------
+
+class BidParseRequest(BaseModel):
+    bidder_name: str = ""
+    text: str = ""
+    db_id: int | None = None
+
+
+@app.post("/api/bid/parse")
+def bid_parse(req: BidParseRequest):
+    """单份投标文件解析 → 商务响应/技术方案/资格业绩 三维度结构化 JSON."""
+    from src.tools.bid_parser import parse_bid
+    from src.clients.llm_factory import get_llm_client
+    from src.database.postgresql_client import postgresql_client
+
+    text = req.text
+    if req.db_id is not None and postgresql_client.ready:
+        rows = postgresql_client._run(
+            "SELECT raw_text, source_file FROM bidding_documents WHERE id=:id",
+            {"id": req.db_id})
+        if rows:
+            text = rows[0].get("raw_text") or text
+            if not req.bidder_name:
+                req.bidder_name = rows[0].get("source_file") or ""
+    if not text.strip():
+        raise HTTPException(400, "请提供 text 或 db_id")
+    return parse_bid(text, bidder_name=req.bidder_name,
+                     llm_client=get_llm_client())
+
+
+# ---------- 围串标线索检测 ----------
+
+class CollusionDetectRequest(BaseModel):
+    bids: list[dict]  # [{bidder_name, text, price?, price_items?, metadata?}]
+
+
+@app.post("/api/collusion/detect")
+def collusion_detect(req: CollusionDetectRequest):
+    """围串标线索检测 (文本模式) — 雷同度/报价规律/正文IP·MAC/手工传入元数据.
+
+    仅输出线索与证据, 不自动定性。
+    """
+    from src.tools.collusion_detector import detect_collusion
+
+    if len(req.bids) < 2:
+        raise HTTPException(400, "围串标检测至少需要 2 份投标文件")
+    return detect_collusion(req.bids)
+
+
+@app.post("/api/collusion/upload")
+def collusion_upload(files: list[UploadFile]):
+    """围串标线索检测 (原件模式) — 上传 2+ 份 Word/PDF 投标文件.
+
+    自动提取全文与文件属性元数据 (作者/最后保存者/生成程序/公司)。
+    """
+    import tempfile, os
+    from src.tools.collusion_detector import (
+        detect_collusion, extract_file_metadata)
+    from src.tools.document_parser import extract_text
+
+    allowed = {".pdf", ".docx", ".txt", ".md"}
+    if len(files) < 2:
+        raise HTTPException(400, "围串标检测至少需要上传 2 份投标文件")
+
+    bids = []
+    tmp_paths = []
+    try:
+        for f in files:
+            ext = os.path.splitext(f.filename or "")[1].lower()
+            if ext not in allowed:
+                raise HTTPException(400, f"不支持的格式 {ext}, 允许: {sorted(allowed)}")
+            with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+                tmp.write(f.file.read())
+                tmp_paths.append(tmp.name)
+            text = ""
+            metadata = {}
+            try:
+                text = extract_text(tmp_paths[-1])
+            except Exception as e:
+                logger.warning("围串标文本提取失败 %s: %s", f.filename, e)
+            if ext in (".pdf", ".docx"):
+                metadata = extract_file_metadata(tmp_paths[-1])
+            bids.append({
+                "bidder_name": os.path.splitext(f.filename or "未命名")[0],
+                "text": text,
+                "metadata": metadata,
+            })
+    finally:
+        for p in tmp_paths:
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
+    return detect_collusion(bids)
+
+
 @app.get("/api/workflow/presets")
 def workflow_presets():
     from src.workflow.engine import list_presets

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { FileText, Upload, Loader2, CheckCircle, AlertCircle, Eye, X, Shield, ClipboardCheck, AlertTriangle, CheckSquare, FileWarning, UserCheck, History, FileCheck, User, LogOut } from "lucide-react";
+import { FileText, Upload, Loader2, CheckCircle, AlertCircle, Eye, X, Shield, ClipboardCheck, AlertTriangle, CheckSquare, FileWarning, UserCheck, History, FileCheck, User, LogOut, Calculator, FileSearch, Radar } from "lucide-react";
 
 interface ParsedDoc {
   db_id?: number;
@@ -968,6 +968,30 @@ export default function DocumentsPage() {
   const [wfLoading, setWfLoading] = useState(false);
   const [wfResult, setWfResult] = useState<any>(null);
 
+  // 报价计算
+  const [priceOpen, setPriceOpen] = useState(false);
+  const [priceLoading, setPriceLoading] = useState(false);
+  const [priceResult, setPriceResult] = useState<any>(null);
+  const [priceItemsText, setPriceItemsText] = useState(
+    "服务器,10,50000,500000\n交换机,5,8000,40000\n实施服务,1,200000,200000");
+  const [priceTotal, setPriceTotal] = useState("740000");
+  const [priceCn, setPriceCn] = useState("柒拾肆万元整");
+  const [priceControl, setPriceControl] = useState("1000000");
+  const [priceOthers, setPriceOthers] = useState("740000,800000");
+
+  // 投标文件解析
+  const [bpOpen, setBpOpen] = useState(false);
+  const [bpLoading, setBpLoading] = useState(false);
+  const [bpResult, setBpResult] = useState<any>(null);
+  const [bpName, setBpName] = useState("");
+  const [bpText, setBpText] = useState("");
+
+  // 围串标线索
+  const [colOpen, setColOpen] = useState(false);
+  const [colLoading, setColLoading] = useState(false);
+  const [colResult, setColResult] = useState<any>(null);
+  const colInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (authToken) localStorage.setItem("qa_auth_token", authToken);
     else localStorage.removeItem("qa_auth_token");
@@ -1191,6 +1215,73 @@ export default function DocumentsPage() {
     }
   };
 
+  const runPriceCalc = async () => {
+    const items = priceItemsText.split("\n").map((l) => l.trim()).filter(Boolean).map((line) => {
+      const [name, qty, unit_price, amount] = line.split(",").map((x) => x.trim());
+      return { name, qty: qty || "", unit_price: unit_price || "", amount: amount || "" };
+    });
+    if (!items.length) { setError("请填写分项报价"); return; }
+    setPriceLoading(true);
+    setPriceResult(null);
+    try {
+      const r = await fetch(`${API}/api/price/calculate`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items,
+          declared_total: priceTotal || null,
+          declared_total_cn: priceCn || null,
+          control_price: priceControl || null,
+          all_bid_prices: priceOthers ? priceOthers.split(",").map((x) => Number(x.trim())).filter((x) => !isNaN(x)) : null,
+        }),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      setPriceResult(await r.json());
+      setPriceOpen(false);
+    } catch (e: any) {
+      setError(`报价计算失败: ${e?.message}`);
+    } finally {
+      setPriceLoading(false);
+    }
+  };
+
+  const runBidParse = async () => {
+    if (!bpText.trim()) { setError("请粘贴投标文件内容"); return; }
+    setBpLoading(true);
+    setBpResult(null);
+    try {
+      const r = await fetch(`${API}/api/bid/parse`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bidder_name: bpName, text: bpText }),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      setBpResult(await r.json());
+      setBpOpen(false);
+    } catch (e: any) {
+      setError(`投标解析失败: ${e?.message}`);
+    } finally {
+      setBpLoading(false);
+    }
+  };
+
+  const runCollusion = async () => {
+    const files = colInputRef.current?.files;
+    if (!files || files.length < 2) { setError("请至少选择 2 份投标文件"); return; }
+    setColLoading(true);
+    setColResult(null);
+    try {
+      const fd = new FormData();
+      Array.from(files).forEach((f) => fd.append("files", f));
+      const r = await fetch(`${API}/api/collusion/upload`, { method: "POST", body: fd });
+      if (!r.ok) throw new Error(await r.text());
+      setColResult(await r.json());
+      setColOpen(false);
+    } catch (e: any) {
+      setError(`围串标检测失败: ${e?.message}`);
+    } finally {
+      setColLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
       <div className="flex items-start justify-between">
@@ -1226,6 +1317,24 @@ export default function DocumentsPage() {
             className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition"
           >
             <Shield size={14} /> 智能工作流
+          </button>
+          <button
+            onClick={() => { setPriceResult(null); setPriceOpen(true); }}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition"
+          >
+            <Calculator size={14} /> 报价计算
+          </button>
+          <button
+            onClick={() => { setBpResult(null); setBpOpen(true); }}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-sky-600 hover:bg-sky-700 text-white rounded-lg transition"
+          >
+            <FileSearch size={14} /> 投标解析
+          </button>
+          <button
+            onClick={() => { setColResult(null); setColOpen(true); }}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition"
+          >
+            <Radar size={14} /> 围串标线索
           </button>
         </div>
         {authUser ? (
@@ -1430,6 +1539,15 @@ export default function DocumentsPage() {
 
       {/* 工作流结果 (独立) */}
       {wfResult && <WorkflowPanel result={wfResult} onClose={() => setWfResult(null)} />}
+
+      {/* 报价计算结果 (独立) */}
+      {priceResult && <PricePanel result={priceResult} onClose={() => setPriceResult(null)} />}
+
+      {/* 投标解析结果 (独立) */}
+      {bpResult && <BidParsePanel result={bpResult} onClose={() => setBpResult(null)} />}
+
+      {/* 围串标线索结果 (独立) */}
+      {colResult && <CollusionPanel result={colResult} onClose={() => setColResult(null)} />}
 
       {/* 已解析列表 */}
       <div>
@@ -1813,6 +1931,114 @@ ISO 9001 质量管理体系认证
         </div>
       )}
 
+      {/* 报价计算弹窗 */}
+      {priceOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setPriceOpen(false)}>
+          <div className="bg-white dark:bg-gray-900 rounded-xl max-w-2xl w-full p-5 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-medium flex items-center gap-2">
+                <Calculator size={18} className="text-amber-600" /> 报价计算（算术校验 + 价格分）
+              </h3>
+              <button onClick={() => setPriceOpen(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"><X size={18} /></button>
+            </div>
+            <div className="space-y-3 text-sm">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">分项报价（每行：名称,数量,单价,填报金额；金额可留空自动计算）</label>
+                <textarea value={priceItemsText} onChange={(e) => setPriceItemsText(e.target.value)} rows={5}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-2 font-mono text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">投标总价（数字）</label>
+                  <input value={priceTotal} onChange={(e) => setPriceTotal(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">总价大写</label>
+                  <input value={priceCn} onChange={(e) => setPriceCn(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">最高限价（可空）</label>
+                  <input value={priceControl} onChange={(e) => setPriceControl(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">全部投标报价（逗号分隔，算基准价）</label>
+                  <input value={priceOthers} onChange={(e) => setPriceOthers(e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setPriceOpen(false)}
+                className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">取消</button>
+              <button disabled={priceLoading} onClick={runPriceCalc}
+                className="px-4 py-2 text-sm bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg transition">
+                {priceLoading ? <Loader2 className="animate-spin inline" size={14} /> : "开始计算"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 投标解析弹窗 */}
+      {bpOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setBpOpen(false)}>
+          <div className="bg-white dark:bg-gray-900 rounded-xl max-w-2xl w-full p-5 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-medium flex items-center gap-2">
+                <FileSearch size={18} className="text-sky-600" /> 投标文件解析（商务 / 技术 / 资格）
+              </h3>
+              <button onClick={() => setBpOpen(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"><X size={18} /></button>
+            </div>
+            <div className="space-y-3 text-sm">
+              <input value={bpName} onChange={(e) => setBpName(e.target.value)} placeholder="投标人名称（可空，自动从正文提取）"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-500" />
+              <textarea value={bpText} onChange={(e) => setBpText(e.target.value)} rows={10}
+                placeholder="粘贴投标文件全文（投标函/报价/工期/质保/技术方案/资质业绩...）"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-2 font-mono text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-sky-500" />
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setBpOpen(false)}
+                className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">取消</button>
+              <button disabled={bpLoading} onClick={runBidParse}
+                className="px-4 py-2 text-sm bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white rounded-lg transition">
+                {bpLoading ? <Loader2 className="animate-spin inline" size={14} /> : "开始解析"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 围串标线索弹窗 */}
+      {colOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setColOpen(false)}>
+          <div className="bg-white dark:bg-gray-900 rounded-xl max-w-xl w-full p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-medium flex items-center gap-2">
+                <Radar size={18} className="text-rose-600" /> 围串标线索扫描
+              </h3>
+              <button onClick={() => setColOpen(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"><X size={18} /></button>
+            </div>
+            <div className="space-y-3 text-sm">
+              <p className="text-xs text-gray-500">上传 2 份以上投标文件原件（.pdf/.docx/.txt），系统比对文本雷同、文件属性元数据与报价规律。<b>仅输出线索，不自动定性。</b></p>
+              <input ref={colInputRef} type="file" multiple accept=".pdf,.docx,.txt,.md"
+                className="block w-full text-xs text-gray-600 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-rose-50 file:text-rose-700 hover:file:bg-rose-100" />
+              <p className="text-xs text-gray-400">提示：.docx/.pdf 原件可读取作者/最后保存者/生成程序等属性；IP/MAC 非标准元数据，仅识别正文暴露地址。</p>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setColOpen(false)}
+                className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">取消</button>
+              <button disabled={colLoading} onClick={runCollusion}
+                className="px-4 py-2 text-sm bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-lg transition">
+                {colLoading ? <Loader2 className="animate-spin inline" size={14} /> : "开始扫描"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 智能工作流弹窗 */}
       {wfOpen && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setWfOpen(false)}>
@@ -2010,6 +2236,183 @@ function WorkflowPanel({ result, onClose }: { result: any; onClose?: () => void 
             );
           })}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ================== 报价计算结果 ==================
+
+function PricePanel({ result, onClose }: { result: any; onClose?: () => void }) {
+  const verdictMap: Record<string, { text: string; cls: string }> = {
+    pass: { text: "✅ 校验通过", cls: "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200" },
+    attention: { text: "⚠️ 存在警告", cls: "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200" },
+    fail: { text: "❌ 存在错误", cls: "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200" },
+  };
+  const v = verdictMap[result.verdict] || verdictMap.attention;
+  const fmt = (x: any) => (x == null ? "—" : Number(x).toLocaleString("zh-CN", { maximumFractionDigits: 2 }));
+  return (
+    <div className="mt-4 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+      <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 p-3 flex items-center justify-between">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Calculator className="text-amber-600" size={18} />
+          <span className="text-sm font-medium text-amber-900 dark:text-amber-100">报价计算表</span>
+          <span className={`text-xs px-2 py-0.5 rounded font-medium ${v.cls}`}>{v.text}</span>
+          {result.price_score != null && (
+            <span className="text-xs px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200">
+              价格分 {result.price_score}
+            </span>
+          )}
+        </div>
+        {onClose && <button onClick={onClose} className="text-amber-600 hover:text-amber-800 text-xs">关闭</button>}
+      </div>
+      <div className="p-5 space-y-4">
+        <div className="flex flex-wrap gap-4 text-sm text-gray-700 dark:text-gray-200">
+          <span>分项合计：<b>{fmt(result.subtotal)}</b></span>
+          <span>投标总价：<b>{fmt(result.declared_total)}</b></span>
+          <span>差额：<b className={result.total_diff ? "text-red-600" : "text-green-600"}>{fmt(result.total_diff)}</b></span>
+          <span>大写解析：<b>{fmt(result.cn_amount)}</b></span>
+          {result.base_price != null && <span>评标基准价：<b>{fmt(result.base_price)}</b></span>}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs border-collapse">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-gray-800 text-gray-500">
+                {["#", "分项", "数量", "单价", "填报金额", "计算金额", "异常"].map((h) => (
+                  <th key={h} className="border border-gray-200 dark:border-gray-700 px-2 py-1 text-left font-medium">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {result.table?.map((r: any) => (
+                <tr key={r.row} className={r.row_anomalies?.length ? "bg-red-50/60 dark:bg-red-950/20" : ""}>
+                  <td className="border border-gray-200 dark:border-gray-700 px-2 py-1">{r.row}</td>
+                  <td className="border border-gray-200 dark:border-gray-700 px-2 py-1">{r.name}</td>
+                  <td className="border border-gray-200 dark:border-gray-700 px-2 py-1">{fmt(r.qty)}</td>
+                  <td className="border border-gray-200 dark:border-gray-700 px-2 py-1">{fmt(r.unit_price)}</td>
+                  <td className="border border-gray-200 dark:border-gray-700 px-2 py-1">{fmt(r.filled_amount)}</td>
+                  <td className="border border-gray-200 dark:border-gray-700 px-2 py-1">{fmt(r.calc_amount)}</td>
+                  <td className="border border-gray-200 dark:border-gray-700 px-2 py-1 text-red-600 dark:text-red-400">{(r.row_anomalies || []).join("；")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {result.anomalies?.length > 0 && (
+          <ul className="space-y-1">
+            {result.anomalies.map((a: any, i: number) => (
+              <li key={i} className={`text-xs flex gap-2 ${a.level === "error" ? "text-red-600 dark:text-red-400" : "text-yellow-700 dark:text-yellow-400"}`}>
+                <span>{a.level === "error" ? "❌" : "⚠️"}</span>
+                <span><b>[{a.code}]</b> {a.message}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ================== 投标文件解析结果 ==================
+
+function BidParsePanel({ result, onClose }: { result: any; onClose?: () => void }) {
+  const commercial = result.commercial || {};
+  const technical = result.technical || {};
+  const card = "border border-gray-200 dark:border-gray-700 rounded-lg p-3";
+  const kv = (d: Record<string, any>) => Object.entries(d).map(([k, v]) => (
+    <div key={k} className="flex gap-2 text-xs py-1 border-b border-gray-100 dark:border-gray-800 last:border-0">
+      <span className="text-gray-500 w-20 shrink-0">{k}</span>
+      <span className="text-gray-800 dark:text-gray-200">{v || <span className="text-gray-400">未提及</span>}</span>
+    </div>
+  ));
+  return (
+    <div className="mt-4 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+      <div className="bg-sky-50 dark:bg-sky-950/30 border-b border-sky-200 dark:border-sky-800 p-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <FileSearch className="text-sky-600" size={18} />
+          <span className="text-sm font-medium text-sky-900 dark:text-sky-100">投标文件解析</span>
+          <span className="text-xs text-gray-600 dark:text-gray-300">{result.bidder_name || "未知投标人"}</span>
+        </div>
+        {onClose && <button onClick={onClose} className="text-sky-600 hover:text-sky-800 text-xs">关闭</button>}
+      </div>
+      <div className="p-5 grid md:grid-cols-2 gap-3">
+        <div className={card}>
+          <div className="text-xs font-medium text-sky-700 dark:text-sky-300 mb-1">商务响应</div>
+          {kv(commercial)}
+        </div>
+        <div className={card}>
+          <div className="text-xs font-medium text-sky-700 dark:text-sky-300 mb-1">技术方案</div>
+          {kv(technical)}
+        </div>
+        <div className={card}>
+          <div className="text-xs font-medium text-sky-700 dark:text-sky-300 mb-1">资格资质（{result.qualifications?.length || 0}）</div>
+          {result.qualifications?.length ? (
+            <ul className="text-xs text-gray-800 dark:text-gray-200 list-disc pl-4 space-y-0.5">
+              {result.qualifications.map((q: string, i: number) => <li key={i}>{q}</li>)}
+            </ul>
+          ) : <span className="text-xs text-gray-400">未抽出</span>}
+        </div>
+        <div className={card}>
+          <div className="text-xs font-medium text-sky-700 dark:text-sky-300 mb-1">同类业绩（{result.performances?.length || 0}）</div>
+          {result.performances?.length ? (
+            <ul className="text-xs text-gray-800 dark:text-gray-200 list-disc pl-4 space-y-0.5">
+              {result.performances.map((p: string, i: number) => <li key={i}>{p}</li>)}
+            </ul>
+          ) : <span className="text-xs text-gray-400">未抽出</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ================== 围串标线索结果 ==================
+
+function CollusionPanel({ result, onClose }: { result: any; onClose?: () => void }) {
+  const lvCls: Record<string, string> = {
+    high: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+    medium: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
+    low: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300",
+  };
+  const lvText: Record<string, string> = { high: "高", medium: "中", low: "低" };
+  const s = result.summary || {};
+  return (
+    <div className="mt-4 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+      <div className="bg-rose-50 dark:bg-rose-950/30 border-b border-rose-200 dark:border-rose-800 p-3 flex items-center justify-between">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Radar className="text-rose-600" size={18} />
+          <span className="text-sm font-medium text-rose-900 dark:text-rose-100">围串标线索扫描</span>
+          <span className={`text-xs px-2 py-0.5 rounded font-medium ${result.verdict === "clean"
+            ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+            : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"}`}>
+            {result.verdict === "clean" ? "未发现明显线索" : `发现 ${s.total_clues ?? 0} 条线索（高 ${s.high ?? 0} / 中 ${s.medium ?? 0} / 低 ${s.low ?? 0}）`}
+          </span>
+        </div>
+        {onClose && <button onClick={onClose} className="text-rose-600 hover:text-rose-800 text-xs">关闭</button>}
+      </div>
+      <div className="p-5 space-y-3">
+        <p className="text-xs text-gray-500 bg-gray-50 dark:bg-gray-800/60 rounded p-2">⚠️ {result.disclaimer}</p>
+        {result.clues?.map((c: any) => (
+          <div key={c.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <span className="text-xs font-mono text-gray-400">{c.id}</span>
+              <span className="text-xs px-1.5 py-0.5 rounded font-medium">{c.pair?.join(" ⇄ ")}</span>
+              <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${lvCls[c.level]}`}>{lvText[c.level]}风险</span>
+              <span className="text-xs text-gray-500">{c.dimension} · {c.rule}</span>
+            </div>
+            <div className="text-xs text-gray-800 dark:text-gray-200">{c.reason}</div>
+            {(c.evidence?.a || c.evidence?.b) && (
+              <div className="mt-1 grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-gray-50 dark:bg-gray-800/60 rounded p-1.5 text-gray-600 dark:text-gray-300 truncate">A：{String(c.evidence.a)}</div>
+                <div className="bg-gray-50 dark:bg-gray-800/60 rounded p-1.5 text-gray-600 dark:text-gray-300 truncate">B：{String(c.evidence.b)}</div>
+              </div>
+            )}
+          </div>
+        ))}
+        {result.limitations?.length > 0 && (
+          <div className="text-xs text-gray-400 space-y-0.5">
+            {result.limitations.map((l: string, i: number) => <div key={i}>· {l}</div>)}
+          </div>
+        )}
       </div>
     </div>
   );

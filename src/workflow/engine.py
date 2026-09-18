@@ -156,6 +156,61 @@ def _ensure_tools_registered() -> None:
         except Exception as e:
             logger.warning("register bid_compare 失败: %s", e)
 
+    if "price_calculate" not in _TOOL_REGISTRY:
+        try:
+            from src.tools.price_calculator import calculate_price
+
+            def _price(p: dict):
+                if not p.get("items"):
+                    raise ValueError("缺少分项报价: 需 items")
+                return calculate_price(
+                    p["items"],
+                    declared_total=p.get("declared_total"),
+                    declared_total_cn=p.get("declared_total_cn"),
+                    control_price=p.get("control_price"),
+                    base_price=p.get("base_price"),
+                    score_full=p.get("score_full", 100.0),
+                    all_bid_prices=p.get("all_bid_prices"),
+                )
+
+            register_tool("price_calculate", _price)
+        except Exception as e:
+            logger.warning("register price_calculate 失败: %s", e)
+
+    if "bid_parse" not in _TOOL_REGISTRY:
+        try:
+            from src.tools.bid_parser import parse_bid
+
+            def _bid_parse(p: dict):
+                text = p.get("bid_text") or ""
+                name = p.get("bidder_name") or ""
+                if not text:
+                    doc = _fetch_doc(p.get("bid_db_id") or p.get("db_id"))
+                    if doc:
+                        text = doc.get("raw_text") or ""
+                        name = name or doc.get("source_file") or ""
+                if not text:
+                    raise ValueError("缺少投标内容: 需 bid_text 或 bid_db_id")
+                return parse_bid(text, bidder_name=name, llm_client=llm)
+
+            register_tool("bid_parse", _bid_parse)
+        except Exception as e:
+            logger.warning("register bid_parse 失败: %s", e)
+
+    if "collusion_check" not in _TOOL_REGISTRY:
+        try:
+            from src.tools.collusion_detector import detect_collusion
+
+            def _collusion(p: dict):
+                bids = p.get("bids") or []
+                if len(bids) < 2:
+                    raise ValueError("围串标检测至少需要 2 份投标 (bids)")
+                return detect_collusion(bids)
+
+            register_tool("collusion_check", _collusion)
+        except Exception as e:
+            logger.warning("register collusion_check 失败: %s", e)
+
 
 _llm_cached = None
 _llm_lock = threading.Lock()
