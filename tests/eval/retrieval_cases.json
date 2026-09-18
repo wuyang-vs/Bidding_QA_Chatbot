@@ -1,0 +1,23 @@
+{
+  "description": "检索质量离线评测集. 问题为对库内真实 Q&A 的口语化改写; must_any=命中任一即相关, must_all=必须全部出现. 期望词全部取自库内答案原文, 不做编造.",
+  "top_k": 5,
+  "cases": [
+    {"id": "EV-01", "domain": "tender_fact", "question": "广电总局282台那个基础设施配套改造项目，预算大概多少钱？", "must_any": ["240.43"]},
+    {"id": "EV-02", "domain": "tender_fact", "question": "国家广播电视总局282台改造项目哪天几点开标啊", "must_all": ["10月08日", "14:00"]},
+    {"id": "EV-03", "domain": "tender_fact", "question": "北京交通大学雄安校区一期智慧校园设备采购及系统集成项目的最高限价是多少", "must_any": ["9971.64"]},
+    {"id": "EV-04", "domain": "tender_fact", "question": "吉林大学中日联谊医院买双层电蒸锅的预算是多少", "must_any": ["123.9"]},
+    {"id": "EV-05", "domain": "tender_fact", "question": "大连理工大学数字化机器人手术实验平台采购项目花多少钱预算", "must_all": ["机器人手术", "150.0"]},
+    {"id": "EV-06", "domain": "tender_fact", "question": "百炼大模型管理平台升级及运维服务项目预算多少", "must_all": ["百炼", "110.0"]},
+    {"id": "EV-07", "domain": "tender_fact", "question": "高内涵成像分析仪采购项目的预算金额", "must_any": ["280.0"]},
+    {"id": "EV-08", "domain": "enterprise", "question": "吉大中日联谊医院双层电蒸锅采购这个项目，招标代理机构找的是哪家公司", "must_all": ["电蒸锅", "中资国际工程咨询"]},
+    {"id": "EV-09", "domain": "enterprise", "question": "吉林大学中日联谊医院2026到2027年度保安服务项目是什么时候开标的", "must_all": ["保安", "10月08日", "09:30"]},
+    {"id": "EV-10", "domain": "enterprise", "question": "复旦大学化学学科国家基础研究创新提升工程的招标代理服务在哪个行政区域", "must_all": ["复旦", "上海市"]},
+    {"id": "EV-11", "domain": "regulation", "question": "开标应该安排在什么时间、什么地点，法律怎么规定的", "must_all": ["第三十四条", "同一时间"]},
+    {"id": "EV-12", "domain": "regulation", "question": "什么情况下政府采购允许用询价方式", "must_all": ["第三十二条", "三家"]},
+    {"id": "EV-13", "domain": "regulation", "question": "合同签完之后，招标人和中标人还能另外再签一份背离原合同实质内容的协议吗", "must_all": ["第五十七条", "背离"]},
+    {"id": "EV-14", "domain": "regulation", "question": "招标投标活动里各方都有哪些保密义务", "must_all": ["第二十二条", "标底"]},
+    {"id": "EV-15", "domain": "regulation", "question": "政府采购合同签完要在几天内、到哪里公告", "must_all": ["两个工作日", "指定的媒体"]},
+    {"id": "EV-16", "domain": "regulation", "question": "招投标里说的诚实信用原则到底指什么", "must_all": ["诚实信用", "弄虚作假"]},
+    {"id": "EV-17", "domain": "regulation", "question": "政府采购要变更采购方式需要满足什么条件、走什么手续", "must_all": ["财政部门批准", "竞争性谈判"]}
+  ]
+}
