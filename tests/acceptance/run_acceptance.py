@@ -827,6 +827,112 @@ def t():
     return {"note": f"doc={doc_id} bidder={s1}/anon={s2}/owner={s3}({len(d3['markdown'])}字)"}
 
 
+# ================= V1.4 企业资料库+占位符回填+对照表+整本合稿 =================
+
+@case("V14企业资料库", "PROFILE-01", "企业资料库 1:1: 空档案→PUT→GET回显; 匿名401")
+def t():
+    _u, tok, _ = t_auth_common("profile", "accept123", display="资料库", role="bidder")
+    company = f"华信闭环测试有限公司{int(time.time()) % 100000}"
+    s0, _ = http("GET", "/api/profile", timeout=15)
+    assert s0 == 401, f"匿名 GET 应401, 实际 {s0}"
+    s, d = http("GET", "/api/profile", token=tok, timeout=15)
+    assert s == 200 and d["profile"].get("company_name") == "", f"空档案不符 {s} {str(d)[:200]}"
+    payload = {
+        "company_name": company, "company_short": "华信闭环", "legal_person": "李四",
+        "contact_phone": "13900001111", "registered_capital": "人民币5000万元",
+        "certs": [{"name": "软件企业证书", "level": "二级",
+                   "cert_no": "HX-2025-001", "valid_until": "2028-12-31"}],
+        "past_projects": [{"name": "某智慧园区一期", "owner": "某管委会",
+                           "amount": "500万元", "date": "2024", "role": "总集成"}],
+    }
+    s, d = http("PUT", "/api/profile", payload, token=tok, timeout=15)
+    assert s == 200, f"PUT 失败 {s} {str(d)[:200]}"
+    assert d["profile"]["company_name"] == company
+    assert d["completeness"]["certs_count"] == 1
+    assert d["completeness"]["projects_count"] == 1
+    s, d = http("GET", "/api/profile", token=tok, timeout=15)
+    assert d["profile"]["legal_person"] == "李四"
+    assert d["profile"]["certs"][0]["cert_no"] == "HX-2025-001"
+    return {"note": f"company={company}, 完整度={d['completeness']['filled_fields']}/12, 匿名={s0}"}
+
+
+@case("V14占位符回填", "BID-04", "单章生成按企业资料自动回填占位符(fill_info)")
+def t():
+    _u, tok, _ = t_auth_common("filler", "accept123", role="bidder")
+    company = f"华信回填测试有限公司{int(time.time()) % 100000}"
+    payload = {"company_name": company, "legal_person": "王五",
+               "contact_phone": "13700002222",
+               "certs": [{"name": "软件企业证书", "level": "二级",
+                          "cert_no": "FILL-001", "valid_until": "2028-06-30"}]}
+    s, _ = http("PUT", "/api/profile", payload, token=tok, timeout=15)
+    assert s == 200, f"档案保存失败 {s}"
+    s, d = http("POST", "/api/bid/section",
+                {"db_id": DB_ID, "section": "technical"}, token=tok, timeout=300)
+    assert s == 200, f"生成失败 {s} {str(d)[:200]}"
+    md = d.get("markdown") or ""
+    assert company in md, "正文未使用企业资料中的公司全称"
+    assert "[公司全称]" not in md, "仍残留 [公司全称] 占位符"
+    filled = d.get("fill_info", {}).get("filled", [])
+    # LLM 经占位符回填, 或被 prompt 直接引导写出真实名称, 两种均算回填生效
+    assert "公司全称" in filled or company in md, f"企业资料未生效: {filled}"
+    assert d.get("profile_used") is True
+    return {"note": f"{len(md)}字, 占位符回填{len(filled)}项: {','.join(filled[:5]) or 'LLM直接引用资料'}"}
+
+
+@case("V14响应对照表", "BID-05", "空投标稿对照表 verdict=fail/red>0/含🔴; 无原文400")
+def t():
+    s, d = http("POST", "/api/bid/matrix",
+                {"db_id": DB_ID, "markdown": ""}, timeout=300)
+    assert s == 200, f"matrix 失败 {s} {str(d)[:200]}"
+    assert d.get("verdict") == "fail", f"空稿应 fail, 实际 {d.get('verdict')}"
+    assert d["summary"]["red"] > 0, "空稿 red 应 >0"
+    assert "🔴" in d.get("markdown", ""), "附录 markdown 应含 🔴"
+    rows = d.get("matrix") or []
+    assert len(rows) == d["summary"]["total"], "rows 与 summary.total 不一致"
+    # 无 db_id(手填空白 tender, 无原文无资质要求) → 400
+    s2, _ = http("POST", "/api/bid/matrix", {"markdown": "# 无招标信息"}, timeout=30)
+    assert s2 == 400, f"缺原文应400, 实际 {s2}"
+    return {"note": f"要求{d['summary']['total']}条, 红{d['summary']['red']}, 非法={s2}"}
+
+
+@case("V14整本合稿", "BID-06", "/api/bid/full/stream SSE: 封面目录+fill_info+对照表")
+def t():
+    _u, tok, _ = t_auth_common("fullbid", "accept123", role="bidder")
+    company = f"华信整本测试有限公司{int(time.time()) % 100000}"
+    http("PUT", "/api/profile", {"company_name": company, "legal_person": "赵六"},
+         token=tok, timeout=15)
+    body = json.dumps({"db_id": DB_ID, "sections": ["technical", "qualification"]}).encode("utf-8")
+    req = urllib.request.Request(
+        f"{BASE}/api/bid/full/stream", data=body, method="POST",
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {tok}"})
+    counts = {"meta": 0, "section_start": 0, "section_done": 0,
+              "matrix_done": 0, "done": 0, "error": 0}
+    done = None
+    with urllib.request.urlopen(req, timeout=600) as r:
+        for raw in r:
+            line = raw.decode("utf-8").strip()
+            if not line.startswith("data: "):
+                continue
+            ev = json.loads(line[6:])
+            tp = ev.get("type")
+            if tp in counts:
+                counts[tp] += 1
+            if tp == "done":
+                done = ev
+            if tp == "error":
+                raise AssertionError(f"SSE error: {ev.get('content')}")
+    assert counts == {"meta": 1, "section_start": 2, "section_done": 2,
+                      "matrix_done": 1, "done": 1, "error": 0}, f"事件序列异常: {counts}"
+    md = done.get("markdown") or ""
+    assert "投 标 文 件" in md, "缺封面"
+    assert "目 录" in md, "缺目录"
+    assert company in md, "整本未回填公司名"
+    assert done.get("fill_info") is not None
+    total = (done.get("matrix_summary") or {}).get("total", 0)
+    assert total > 0, f"对照表要求数应>0: {done.get('matrix_summary')}"
+    return {"note": f"事件={counts}, 整本{len(md)}字, 对照{total}条, verdict={done.get('verdict')}"}
+
+
 # ================= main =================
 
 def main():

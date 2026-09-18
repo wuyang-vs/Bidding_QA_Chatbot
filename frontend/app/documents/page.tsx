@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode, type ComponentType } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
-import { FileText, Upload, Loader2, CheckCircle, AlertCircle, Eye, X, Shield, ClipboardCheck, AlertTriangle, CheckSquare, FileWarning, UserCheck, History, FileCheck, User, LogOut, Calculator, FileSearch, Radar, PenLine, Download, Copy } from "lucide-react";
+import { FileText, Upload, Loader2, CheckCircle, AlertCircle, Eye, X, Shield, ClipboardCheck, AlertTriangle, CheckSquare, FileWarning, UserCheck, History, FileCheck, User, LogOut, Calculator, FileSearch, Radar, PenLine, Download, Copy, Building2, BookOpen } from "lucide-react";
 
 interface ParsedDoc {
   db_id?: number;
@@ -50,6 +50,7 @@ interface ComplianceResult {
   clean_rules: string[];
   status: "ok" | "attention" | "warn";
   note?: string;
+  docId?: number;
 }
 
 interface QualCheckItem {
@@ -64,6 +65,7 @@ interface QualificationResult {
   checks: QualCheckItem[];
   gap_report?: string;
   verdict?: string;
+  docId?: number;
 }
 
 interface RejectionClause {
@@ -142,6 +144,40 @@ interface ReviewRecord {
 
 const API = "http://localhost:8001";
 
+// 正文中的 [占位符] 黄色高亮 (ReactMarkdown 自定义渲染)
+function splitPlaceholders(text: string): ReactNode {
+  const parts = text.split(/(\[[^\[\]\n]{1,40}\])/g);
+  return parts.map((p, i) =>
+    p.startsWith("[") && p.endsWith("]") ? (
+      <mark key={i} className="bg-amber-200 dark:bg-amber-500/40 text-amber-900 dark:text-amber-100 rounded px-0.5">{p}</mark>
+    ) : (
+      <span key={i}>{p}</span>
+    )
+  );
+}
+function hlChildren(children: ReactNode): ReactNode {
+  return Array.isArray(children)
+    ? children.map((c: ReactNode) => (typeof c === "string" ? splitPlaceholders(c) : c))
+    : (typeof children === "string" ? splitPlaceholders(children) : children);
+}
+const MD_HL: Record<string, ComponentType<any>> = {
+  p: ({ children }) => <p>{hlChildren(children)}</p>,
+  li: ({ children }) => <li>{hlChildren(children)}</li>,
+  td: ({ children }) => <td>{hlChildren(children)}</td>,
+  th: ({ children }) => <th>{hlChildren(children)}</th>,
+  h1: ({ children }) => <h1>{hlChildren(children)}</h1>,
+  h2: ({ children }) => <h2>{hlChildren(children)}</h2>,
+  h3: ({ children }) => <h3>{hlChildren(children)}</h3>,
+  h4: ({ children }) => <h4>{hlChildren(children)}</h4>,
+};
+function remainingPlaceholders(md: string): string[] {
+  const set = new Set<string>();
+  const re = /\[([^\[\]\n]{1,40})\]/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(md))) set.add(m[1]);
+  return Array.from(set);
+}
+
 function Field({ label, value }: { label: string; value?: string | null }) {
   return (
     <div className="grid grid-cols-[110px_1fr] gap-2 py-2 border-b border-gray-100 dark:border-gray-800">
@@ -168,7 +204,7 @@ function StatusBadge({ status }: { status: "ok" | "attention" | "warn" | "loadin
 
 function ReviewBox({ docId, type, accent, snapshot }: {
   docId: number;
-  type: "compliance" | "qualification" | "rejection";
+  type: "compliance" | "qualification" | "rejection" | "response" | "scoring";
   accent: "purple" | "blue" | "orange";
   snapshot: unknown;
 }) {
@@ -1022,6 +1058,17 @@ export default function DocumentsPage() {
   const [bidErr, setBidErr] = useState("");
   const [bidCopied, setBidCopied] = useState(false);
   const [bidExporting, setBidExporting] = useState(false);
+  // 整本合稿 + 响应对照
+  const [bidTab, setBidTab] = useState<"section" | "full">("section");
+  const [fullBusy, setFullBusy] = useState(false);
+  const [fullProgress, setFullProgress] = useState<{ key: string; title: string; status: "run" | "done" }[]>([]);
+  const [fullMd, setFullMd] = useState("");
+  const [fullMatrix, setFullMatrix] = useState<any[]>([]);
+  const [fullHard, setFullHard] = useState<any[]>([]);
+  const [fullVerdict, setFullVerdict] = useState("");
+  const [fullFill, setFullFill] = useState<{ filled: string[]; missing_company: string[]; pending_business: string[] } | null>(null);
+  const [fullExporting, setFullExporting] = useState(false);
+  const [fullCopied, setFullCopied] = useState(false);
 
   useEffect(() => {
     if (authToken) localStorage.setItem("qa_auth_token", authToken);
@@ -1173,7 +1220,7 @@ export default function DocumentsPage() {
       const r = await fetch(`${API}/api/qualification/check`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ db_id: dbId, company_qualifications: companyCerts }),
+        body: JSON.stringify({ db_id: dbId, company_qualifications: certs }),
       });
       if (!r.ok) throw new Error(await r.text());
       setQualResult({ ...(await r.json()), docId: dbId });
@@ -1377,6 +1424,14 @@ export default function DocumentsPage() {
     setBidCases(0);
     setBidErr("");
     setBidCopied(false);
+    setBidTab("section");
+    setFullBusy(false);
+    setFullProgress([]);
+    setFullMd("");
+    setFullMatrix([]);
+    setFullHard([]);
+    setFullVerdict("");
+    setFullFill(null);
     setBidOpen(true);
   };
 
@@ -1467,6 +1522,126 @@ export default function DocumentsPage() {
     } catch { /* 剪贴板不可用时静默 */ }
   };
 
+  // ── 整本一键合稿 (5 章 SSE + 响应对照表) ─────────────────
+  const runBidFull = async () => {
+    if (bidDbId == null || fullBusy) return;
+    if (!authToken) { setBidErr("整本合稿需要先登录（企业资料占位符自动回填）"); return; }
+    setFullBusy(true);
+    setBidErr("");
+    setFullMd("");
+    setFullMatrix([]);
+    setFullHard([]);
+    setFullVerdict("");
+    setFullFill(null);
+    setFullProgress([]);
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      headers.Authorization = `Bearer ${authToken}`;
+      const resp = await fetch(`${API}/api/bid/full/stream`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ db_id: bidDbId }),
+      });
+      if (!resp.ok || !resp.body) {
+        const detail = await resp.json().catch(() => ({}));
+        throw new Error(detail.detail || `生成失败 (${resp.status})`);
+      }
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          const t = line.trim();
+          if (!t.startsWith("data: ")) continue;
+          const ev = JSON.parse(t.slice(6));
+          if (ev.type === "meta" && Array.isArray(ev.sections)) {
+            setFullProgress(ev.sections.map((s: any) => ({ key: s.key, title: s.title, status: "run" })));
+          } else if (ev.type === "section_start") {
+            setFullProgress((ps) => ps.map((p) => p.key === ev.key ? { ...p, status: "run" } : p));
+          } else if (ev.type === "section_done") {
+            setFullProgress((ps) => ps.map((p) => p.key === ev.key ? { ...p, status: "done" } : p));
+          } else if (ev.type === "matrix_done") {
+            setFullMatrix(Array.isArray(ev.rows) ? ev.rows : []);
+            setFullHard(Array.isArray(ev.hard_failures) ? ev.hard_failures : []);
+            setFullVerdict(ev.verdict || "");
+          } else if (ev.type === "done") {
+            setFullMd(ev.markdown || "");
+            setFullFill(ev.fill_info || null);
+          } else if (ev.type === "error") {
+            throw new Error(ev.content || "整本生成失败");
+          }
+        }
+      }
+    } catch (e: any) {
+      setBidErr(e?.message || "整本生成失败");
+    } finally {
+      setFullBusy(false);
+    }
+  };
+
+  const exportFullBid = async () => {
+    if (!fullMd.trim() || fullExporting) return;
+    setFullExporting(true);
+    try {
+      const r = await fetch(`${API}/api/export/docx`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({
+          db_id: bidDbId,
+          markdown: fullMd,
+          export_title: `${bidFileName || "投标书"}_整本`,
+        }),
+      });
+      if (!r.ok) {
+        const detail = await r.json().catch(() => ({}));
+        throw new Error(detail.detail || `导出失败 (${r.status})`);
+      }
+      const blob = await r.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `投标书_整本.docx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      setBidErr(e?.message || "导出 Word 失败");
+    } finally {
+      setFullExporting(false);
+    }
+  };
+
+  const copyFullMd = async () => {
+    if (!fullMd.trim()) return;
+    try {
+      await navigator.clipboard.writeText(fullMd);
+      setFullCopied(true);
+      setTimeout(() => setFullCopied(false), 1500);
+    } catch { /* ignore */ }
+  };
+
+  const matrixRowClass = (status: string, material: boolean) => {
+    if (status === "NOT_SATISFIED" || status === "NO_RESPONSE")
+      return material ? "bg-red-50 dark:bg-red-950/40 font-medium" : "bg-red-50/60 dark:bg-red-950/20";
+    if (status === "NEGATIVE_DEVIATION") return "bg-amber-50 dark:bg-amber-950/30";
+    return "";
+  };
+  const statusBadge = (status: string) => {
+    const map: Record<string, { t: string; c: string }> = {
+      SATISFIED: { t: "🟢 满足", c: "text-green-700 dark:text-green-400" },
+      POSITIVE_DEVIATION: { t: "🔵 正偏离", c: "text-blue-700 dark:text-blue-400" },
+      NEGATIVE_DEVIATION: { t: "🟡 负偏离", c: "text-amber-700 dark:text-amber-400" },
+      NOT_SATISFIED: { t: "🔴 不满足", c: "text-red-700 dark:text-red-400 font-semibold" },
+      NO_RESPONSE: { t: "🔴 未响应", c: "text-red-700 dark:text-red-400 font-semibold" },
+    };
+    const s = map[status] || { t: status, c: "" };
+    return <span className={s.c}>{s.t}</span>;
+  };
+
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
       <div className="flex items-start justify-between">
@@ -1478,7 +1653,12 @@ export default function DocumentsPage() {
             上传 PDF / Word / TXT / Markdown，自动抽取项目信息；支持合规性检查和资格条件审查。
           </p>
         </div>
-        <Link href="/" className="text-blue-600 hover:underline text-sm whitespace-nowrap mt-2">← 返回问答</Link>
+        <div className="flex items-center gap-3 whitespace-nowrap mt-2">
+          <Link href="/profile" className="text-blue-600 hover:underline text-sm inline-flex items-center gap-1">
+            <Building2 size={13} /> 企业资料库
+          </Link>
+          <Link href="/" className="text-blue-600 hover:underline text-sm">← 返回问答</Link>
+        </div>
       </div>
 
       <div className="flex justify-between items-center">
@@ -1954,23 +2134,41 @@ export default function DocumentsPage() {
 
       {/* 一键生成标书弹窗 (单章流式) */}
       {bidOpen && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => !bidStreaming && setBidOpen(false)}>
-          <div className="bg-white dark:bg-gray-900 rounded-xl max-w-3xl w-full max-h-[85vh] flex flex-col"
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => !(bidStreaming || fullBusy) && setBidOpen(false)}>
+          <div className="bg-white dark:bg-gray-900 rounded-xl max-w-5xl w-full max-h-[88vh] flex flex-col"
                onClick={(e) => e.stopPropagation()}>
             <div className="border-b border-gray-200 dark:border-gray-800 px-5 py-3 flex items-center justify-between">
               <div className="min-w-0">
                 <div className="font-medium text-sm flex items-center gap-2">
-                  <PenLine size={15} className="text-emerald-600" /> 一键生成标书章节
+                  <PenLine size={15} className="text-emerald-600" /> 一键生成标书
                 </div>
                 <div className="text-xs text-gray-500 truncate">招标文件 #{bidDbId} · {bidFileName}</div>
               </div>
-              <button onClick={() => !bidStreaming && setBidOpen(false)}
-                      disabled={bidStreaming}
+              <button onClick={() => !(bidStreaming || fullBusy) && setBidOpen(false)}
+                      disabled={bidStreaming || fullBusy}
                       className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded disabled:opacity-40">
                 <X size={18} />
               </button>
             </div>
 
+            <div className="px-5 pt-3 flex items-center justify-between gap-3">
+              <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-700 p-0.5">
+                <button onClick={() => setBidTab("section")}
+                        className={`px-3 py-1.5 text-xs rounded-md transition ${bidTab === "section" ? "bg-emerald-600 text-white" : "text-gray-600 dark:text-gray-300"}`}>
+                  单章流式生成
+                </button>
+                <button onClick={() => setBidTab("full")}
+                        className={`px-3 py-1.5 text-xs rounded-md transition inline-flex items-center gap-1 ${bidTab === "full" ? "bg-emerald-600 text-white" : "text-gray-600 dark:text-gray-300"}`}>
+                  <BookOpen size={12} /> 整本合稿＋响应对照
+                </button>
+              </div>
+              <Link href="/profile" target="_blank"
+                    className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 whitespace-nowrap">
+                <Building2 size={12} /> 企业资料库（自动回填）
+              </Link>
+            </div>
+
+            {bidTab === "section" ? (
             <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-800">
               <div className="flex flex-wrap gap-2">
                 {BID_SECTIONS.map((s) => (
@@ -2006,9 +2204,36 @@ export default function DocumentsPage() {
                 )}
               </div>
               <p className="text-[11px] text-gray-400 mt-2">
-                草稿中的 [公司全称]/[资质证书编号] 等占位符需人工替换，具体数值以企业实际材料为准。
+                登录后企业资料库中的公司全称/法人/资质编号等会自动回填；未配置或业务测算类占位符（黄色高亮）需人工补。
               </p>
             </div>
+            ) : (
+            <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-800">
+              <div className="flex flex-wrap items-center gap-3">
+                <button onClick={runBidFull} disabled={fullBusy}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition">
+                  {fullBusy ? <Loader2 className="animate-spin" size={14} /> : <BookOpen size={14} />}
+                  {fullBusy ? "正在整本生成…" : (fullMd ? "重新生成整本" : "一键生成整本标书（5章+对照表）")}
+                </button>
+                <button onClick={copyFullMd} disabled={!fullMd || fullBusy}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition">
+                  {fullCopied ? <CheckCircle size={14} className="text-green-600" /> : <Copy size={14} />}
+                  {fullCopied ? "已复制" : "复制"}
+                </button>
+                <button onClick={exportFullBid} disabled={!fullMd || fullExporting}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition">
+                  {fullExporting ? <Loader2 className="animate-spin" size={14} /> : <Download size={14} />}
+                  导出整本 Word
+                </button>
+                {fullVerdict === "fail" && <span className="text-xs text-red-600 font-medium">存在实质性不合格项，导出前须整改</span>}
+                {fullVerdict === "warn" && <span className="text-xs text-amber-600">存在负偏离项，请人工复核</span>}
+                {fullVerdict === "pass" && fullMd && <span className="text-xs text-green-600">全部要求响应通过</span>}
+              </div>
+              <p className="text-[11px] text-gray-400 mt-2">
+                依次流式生成封面/目录/5 个章节，并自动产出招标要求逐条响应对照表（不满足项标红），全程约 3-6 分钟。
+              </p>
+            </div>
+            )}
 
             <div className="flex-1 overflow-auto px-5 py-4">
               {bidErr && (
@@ -2016,6 +2241,8 @@ export default function DocumentsPage() {
                   {bidErr}
                 </div>
               )}
+
+              {bidTab === "section" ? (<>
               {!bidMarkdown && !bidErr && !bidStreaming && (
                 <div className="text-sm text-gray-400 text-center py-12">
                   选择章节后点击「生成本章草稿」，将基于本招标文件与同类案例流式产出
@@ -2026,11 +2253,105 @@ export default function DocumentsPage() {
                   <Loader2 className="animate-spin inline mr-2" size={14} />正在组织内容…
                 </div>
               )}
-              {bidMarkdown && (
-                <div className="bid-md text-sm text-gray-800 dark:text-gray-200">
-                  <ReactMarkdown>{`## ${bidTitle || "章节草稿"}\n\n${bidMarkdown.replace(/^\s*#{1,3}\s*[^\n]*\n+/, (m) => (bidTitle && m.includes(bidTitle) ? "" : m))}`}</ReactMarkdown>
+              {bidMarkdown && (() => {
+                const pending = remainingPlaceholders(bidMarkdown);
+                return (<>
+                  {pending.length > 0 && (
+                    <div className="text-xs bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg px-3 py-2 mb-3 text-amber-800 dark:text-amber-200">
+                      待人工处理占位符 {pending.length} 项（正文黄色高亮）：{pending.slice(0, 8).map((p) => `[${p}]`).join(" ")}
+                      {pending.length > 8 ? " …" : ""}
+                    </div>
+                  )}
+                  <div className="bid-md text-sm text-gray-800 dark:text-gray-200">
+                    <ReactMarkdown components={MD_HL}>{`## ${bidTitle || "章节草稿"}\n\n${bidMarkdown.replace(/^\s*#{1,3}\s*[^\n]*\n+/, (m) => (bidTitle && m.includes(bidTitle) ? "" : m))}`}</ReactMarkdown>
+                  </div>
+                </>);
+              })()}
+              </>) : (<>
+              {fullBusy && fullProgress.length > 0 && (
+                <div className="mb-4 space-y-1.5">
+                  {fullProgress.map((p) => (
+                    <div key={p.key} className="flex items-center gap-2 text-sm">
+                      {p.status === "done"
+                        ? <CheckCircle size={14} className="text-green-600" />
+                        : <Loader2 size={14} className="animate-spin text-blue-600" />}
+                      <span className={p.status === "done" ? "text-gray-500" : "text-gray-800 dark:text-gray-200"}>{p.title}</span>
+                      <span className="text-xs text-gray-400">{p.status === "done" ? "完成" : "生成中…"}</span>
+                    </div>
+                  ))}
+                  {fullProgress.every((p) => p.status === "done") && !fullMd && (
+                    <div className="text-xs text-gray-500 flex items-center gap-2"><Loader2 size={13} className="animate-spin" />正在生成逐条响应对照表…</div>
+                  )}
                 </div>
               )}
+              {!fullBusy && !fullMd && (
+                <div className="text-sm text-gray-400 text-center py-12">
+                  点击「一键生成整本标书」，自动合稿并对招标要求逐条体检（不合格项标红）
+                </div>
+              )}
+              {fullHard.length > 0 && (
+                <div className="mb-3 rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 p-3">
+                  <div className="text-sm font-semibold text-red-700 dark:text-red-400 flex items-center gap-2 mb-1">
+                    <AlertTriangle size={14} /> {fullHard.length} 项实质性条款不合格（投标前必须整改）
+                  </div>
+                  <ul className="text-xs text-red-800 dark:text-red-300 list-disc pl-5 space-y-0.5">
+                    {fullHard.slice(0, 10).map((r, i) => (
+                      <li key={i}>第 {r.no} 条（{r.category}）：{r.requirement}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {fullFill && (fullFill.filled.length > 0 || fullFill.missing_company.length > 0 || fullFill.pending_business.length > 0) && (
+                <div className="mb-3 rounded-lg bg-gray-50 dark:bg-gray-800/60 p-3 text-xs space-y-0.5">
+                  {fullFill.filled.length > 0 && (
+                    <div className="text-green-700 dark:text-green-400">企业资料已自动回填 {fullFill.filled.length} 项：{fullFill.filled.slice(0, 8).join("、")}</div>
+                  )}
+                  {fullFill.missing_company.length > 0 && (
+                    <div className="text-amber-700 dark:text-amber-400">企业资料缺失 {fullFill.missing_company.length} 项（请在<a className="underline" href="/profile" target="_blank">企业资料库</a>补全后重生成）：{fullFill.missing_company.join("、")}</div>
+                  )}
+                  {fullFill.pending_business.length > 0 && (
+                    <div className="text-gray-500">业务测算类占位 {fullFill.pending_business.length} 项需手工填写：{fullFill.pending_business.slice(0, 8).join("、")}</div>
+                  )}
+                </div>
+              )}
+              {fullMatrix.length > 0 && (
+                <div className="mb-4">
+                  <div className="text-sm font-semibold mb-2">招标要求逐条响应对照表</div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-gray-100 dark:bg-gray-800">
+                          {["序号", "招标要求", "类别", "实质性", "投标响应内容", "状态", "章节/说明"].map((h) => (
+                            <th key={h} className="border border-gray-300 dark:border-gray-700 px-2 py-1.5 text-left">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {fullMatrix.map((r) => (
+                          <tr key={r.no} className={matrixRowClass(r.status, r.material)}>
+                            <td className="border border-gray-300 dark:border-gray-700 px-2 py-1.5">{r.no}</td>
+                            <td className="border border-gray-300 dark:border-gray-700 px-2 py-1.5 min-w-[160px]">{r.requirement}</td>
+                            <td className="border border-gray-300 dark:border-gray-700 px-2 py-1.5">{r.category}</td>
+                            <td className="border border-gray-300 dark:border-gray-700 px-2 py-1.5">{r.material ? "★是" : "否"}</td>
+                            <td className="border border-gray-300 dark:border-gray-700 px-2 py-1.5 min-w-[160px]">{r.response || "（投标稿未提及）"}</td>
+                            <td className="border border-gray-300 dark:border-gray-700 px-2 py-1.5 whitespace-nowrap">{statusBadge(r.status)}</td>
+                            <td className="border border-gray-300 dark:border-gray-700 px-2 py-1.5 text-gray-500">{r.evidence || r.note}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+              {fullMd && (
+                <details className="mb-2" open={fullMatrix.length === 0}>
+                  <summary className="text-sm text-blue-600 cursor-pointer">查看整本 Markdown（封面/目录/五章/附录/待补清单）</summary>
+                  <div className="bid-md text-sm text-gray-800 dark:text-gray-200 mt-2">
+                    <ReactMarkdown components={MD_HL}>{fullMd}</ReactMarkdown>
+                  </div>
+                </details>
+              )}
+              </>)}
             </div>
             <style>{`
               .bid-md h2 { font-size: 1.05rem; font-weight: 600; margin: 1rem 0 .5rem; }
