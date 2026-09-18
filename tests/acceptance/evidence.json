@@ -1,0 +1,251 @@
+{
+  "run_at": "2026-09-18T12:28:19",
+  "base_url": "http://localhost:8001",
+  "db_id": 6,
+  "total": 24,
+  "pass": 24,
+  "fail": 0,
+  "error": 0,
+  "pass_rate": 100.0,
+  "by_suite": {
+    "环境": {
+      "pass": 3,
+      "total": 3
+    },
+    "MVP1文档库": {
+      "pass": 3,
+      "total": 3
+    },
+    "MVP2检索": {
+      "pass": 1,
+      "total": 1
+    },
+    "MVP3条款提取": {
+      "pass": 2,
+      "total": 2
+    },
+    "MVP4条款检查": {
+      "pass": 3,
+      "total": 3
+    },
+    "P4响应性": {
+      "pass": 1,
+      "total": 1
+    },
+    "P5评分辅助表": {
+      "pass": 1,
+      "total": 1
+    },
+    "P6多家对比": {
+      "pass": 1,
+      "total": 1
+    },
+    "Auth权限": {
+      "pass": 4,
+      "total": 4
+    },
+    "MVP5复核留痕": {
+      "pass": 2,
+      "total": 2
+    },
+    "Workflow编排": {
+      "pass": 3,
+      "total": 3
+    }
+  },
+  "cases": [
+    {
+      "suite": "环境",
+      "id": "ENV-01",
+      "name": "后端服务存活 /api/health",
+      "status": "PASS",
+      "ms": 2103,
+      "note": "{'ready': True, 'agent_ready': True, 'graph_ready': True, 'pg_ready': True, 'points_count': 338, 'la"
+    },
+    {
+      "suite": "环境",
+      "id": "ENV-02",
+      "name": "PostgreSQL 已连接",
+      "status": "PASS",
+      "ms": 2074,
+      "note": "pg_ready=true"
+    },
+    {
+      "suite": "环境",
+      "id": "ENV-03",
+      "name": "Qdrant 向量库已连接且有向量",
+      "status": "PASS",
+      "ms": 2064,
+      "note": "向量点数=338, rag_ready=true"
+    },
+    {
+      "suite": "MVP1文档库",
+      "id": "M1-01",
+      "name": "文档列表可分页查询",
+      "status": "PASS",
+      "ms": 2037,
+      "note": "共 7 份文档"
+    },
+    {
+      "suite": "MVP1文档库",
+      "id": "M1-02",
+      "name": "文档含结构化字段+全文",
+      "status": "PASS",
+      "ms": 2055,
+      "note": "#6 test_bid.txt 全文1736字"
+    },
+    {
+      "suite": "MVP1文档库",
+      "id": "M1-03",
+      "name": "上传招标文件→解析入库+自动向量化",
+      "status": "PASS",
+      "ms": 4611,
+      "note": "db_id=8, 解析状态=ok, 向量化分片=1"
+    },
+    {
+      "suite": "MVP2检索",
+      "id": "M2-01",
+      "name": "问答接口返回带引用来源的答案(命中文档库)",
+      "status": "PASS",
+      "ms": 4098,
+      "note": "答案316字, 引用2条(招标分片2), 事实命中: 截止=True 预算=True",
+      "answer_head": "根据招标文件，**XX市智慧园区信息化建设项目（二期）**（项目编号：ZB-2025-0088）的相关信息如下：\n\n| 项目 | 内容 |\n|------|--"
+    },
+    {
+      "suite": "MVP3条款提取",
+      "id": "M3-01",
+      "name": "评分办法已结构化提取",
+      "status": "PASS",
+      "ms": 2056,
+      "note": "综合评分法，总分100分：价格分40分、技术分35分、商务分15分、业绩分10分"
+    },
+    {
+      "suite": "MVP3条款提取",
+      "id": "M3-02",
+      "name": "资格要求列表非空",
+      "status": "PASS",
+      "ms": 2041,
+      "note": "12 条资格要求"
+    },
+    {
+      "suite": "MVP4条款检查",
+      "id": "M4-01",
+      "name": "合规性扫描(排他性条款)",
+      "status": "PASS",
+      "ms": 10860,
+      "note": "发现 2 个风险项, status=attention, 分级={'high': 0, 'medium': 2, 'low': 0, 'total_checked': 15, 'risks_found': 2}"
+    },
+    {
+      "suite": "MVP4条款检查",
+      "id": "M4-02",
+      "name": "资格条件逐条比对",
+      "status": "PASS",
+      "ms": 21020,
+      "note": "结果项 0, keys=['summary', 'checks', 'gap_report', 'verdict', 'action_suggestions']"
+    },
+    {
+      "suite": "MVP4条款检查",
+      "id": "M4-03",
+      "name": "废标条款提取",
+      "status": "PASS",
+      "ms": 12561,
+      "note": "提取 12 条废标条款"
+    },
+    {
+      "suite": "P4响应性",
+      "id": "P4-01",
+      "name": "投标逐条响应判定(正偏离识别)",
+      "status": "PASS",
+      "ms": 34902,
+      "note": "总25 响应4 正偏离2 verdict=attention"
+    },
+    {
+      "suite": "P5评分辅助表",
+      "id": "P5-01",
+      "name": "评分办法→结构化打分表(权重合计100)",
+      "status": "PASS",
+      "ms": 3519,
+      "note": "['价格分', '技术分', '商务分', '业绩分'], 合计100.0分"
+    },
+    {
+      "suite": "P6多家对比",
+      "id": "P6-01",
+      "name": "三家投标关键字段并排对比",
+      "status": "PASS",
+      "ms": 5764,
+      "note": "字段9个; 报价列: ['820万元', '950万元', '880万元']"
+    },
+    {
+      "suite": "Auth权限",
+      "id": "AUTH-01",
+      "name": "注册→登录→/auth/me 全链路",
+      "status": "PASS",
+      "ms": 6588,
+      "note": "acpt_user01_1789705591 role=auditor"
+    },
+    {
+      "suite": "Auth权限",
+      "id": "AUTH-02",
+      "name": "错误密码登录被拒(401)",
+      "status": "PASS",
+      "ms": 4471,
+      "note": "401 用户名或密码错误"
+    },
+    {
+      "suite": "Auth权限",
+      "id": "AUTH-03",
+      "name": "无token访问/auth/me被拒(401)",
+      "status": "PASS",
+      "ms": 2058,
+      "note": "401 未登录"
+    },
+    {
+      "suite": "Auth权限",
+      "id": "AUTH-04",
+      "name": "默认管理员 admin/admin123 可用",
+      "status": "PASS",
+      "ms": 2239,
+      "note": "admin 登录成功, role=admin"
+    },
+    {
+      "suite": "MVP5复核留痕",
+      "id": "M5-01",
+      "name": "登录态提交复核→user_id自动关联",
+      "status": "PASS",
+      "ms": 8559,
+      "note": "review id=6, reviewer=复核员甲, user_id=11 已关联"
+    },
+    {
+      "suite": "MVP5复核留痕",
+      "id": "M5-02",
+      "name": "非法review_type被拒(400)",
+      "status": "PASS",
+      "ms": 2037,
+      "note": "400 非法类型已拦截"
+    },
+    {
+      "suite": "Workflow编排",
+      "id": "WF-01",
+      "name": "预置工作流清单可查询",
+      "status": "PASS",
+      "ms": 2054,
+      "note": "compliance_review, eval_assist"
+    },
+    {
+      "suite": "Workflow编排",
+      "id": "WF-02",
+      "name": "合规审查一条龙 DAG 执行(3节点+降级容错)",
+      "status": "PASS",
+      "ms": 44919,
+      "note": "verdict=ok 成功3/3 (降级容错机制保留, 本轮无失败节点)"
+    },
+    {
+      "suite": "Workflow编排",
+      "id": "WF-03",
+      "name": "评标辅助一条龙 DAG 执行",
+      "status": "PASS",
+      "ms": 35026,
+      "note": "verdict=ok 成功2/2"
+    }
+  ]
+}

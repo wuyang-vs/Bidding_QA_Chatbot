@@ -1,0 +1,133 @@
+{
+  "tables": [
+    "bidding_documents",
+    "conversations",
+    "document_reviews",
+    "feedback",
+    "users"
+  ],
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "role": "admin",
+      "display_name": "系统管理员"
+    },
+    {
+      "id": 4,
+      "username": "qa_test_user",
+      "role": "auditor",
+      "display_name": "测试用户"
+    },
+    {
+      "id": 5,
+      "username": "testqa",
+      "role": "auditor",
+      "display_name": "测试员"
+    },
+    {
+      "id": 6,
+      "username": "acpt_user01_1789702820",
+      "role": "auditor",
+      "display_name": "验收员"
+    },
+    {
+      "id": 7,
+      "username": "acpt_bad_1789702827",
+      "role": "auditor",
+      "display_name": "acpt_bad_1789702827"
+    },
+    {
+      "id": 8,
+      "username": "acpt_reviewer_1789702836",
+      "role": "auditor",
+      "display_name": "复核员甲"
+    },
+    {
+      "id": 9,
+      "username": "acpt_user01_1789705591",
+      "role": "auditor",
+      "display_name": "验收员"
+    },
+    {
+      "id": 10,
+      "username": "acpt_bad_1789705598",
+      "role": "auditor",
+      "display_name": "acpt_bad_1789705598"
+    },
+    {
+      "id": 11,
+      "username": "acpt_reviewer_1789705606",
+      "role": "auditor",
+      "display_name": "复核员甲"
+    }
+  ],
+  "documents_count": 8,
+  "reviews_total": 6,
+  "reviews_latest": [
+    {
+      "id": 6,
+      "type": "compliance",
+      "verdict": "approved",
+      "reviewer": "复核员甲",
+      "user_id": 11
+    },
+    {
+      "id": 5,
+      "type": "compliance",
+      "verdict": "approved",
+      "reviewer": "复核员甲",
+      "user_id": 8
+    },
+    {
+      "id": 4,
+      "type": "compliance",
+      "verdict": "approved",
+      "reviewer": "李审",
+      "user_id": null
+    },
+    {
+      "id": 3,
+      "type": "rejection",
+      "verdict": "rejected",
+      "reviewer": "李审",
+      "user_id": null
+    },
+    {
+      "id": 2,
+      "type": "compliance",
+      "verdict": "approved",
+      "reviewer": "??",
+      "user_id": null
+    },
+    {
+      "id": 1,
+      "type": "rejection",
+      "verdict": "rejected",
+      "reviewer": "??",
+      "user_id": null
+    }
+  ],
+  "reviews_columns": [
+    "id",
+    "document_id",
+    "review_type",
+    "verdict",
+    "comment",
+    "reviewer",
+    "result_snapshot",
+    "created_at",
+    "user_id"
+  ],
+  "doc_6": {
+    "id": 6,
+    "source_file": "test_bid.txt",
+    "project_name": "XX市智慧园区信息化建设项目（二期）",
+    "budget": "人民币 8,600,000.00 元",
+    "deadline": "2025年12月15日 14:00",
+    "qualification_count": 12,
+    "scoring_text_len": 40,
+    "text_length": 1736,
+    "parse_status": "ok"
+  }
+}

@@ -1,0 +1,46 @@
+﻿
+======================================================================
+招投标采购 RAG-Agent MVP 验收测试  2026-09-18 11:38:35
+目标: http://localhost:8001  测试文档 db_id=6
+======================================================================
+
+  [PASS] ENV-01 后端服务存活 /api/health  (2311ms) {'ready': True, 'agent_ready': True, 'graph_ready': True, 'pg_ready': True, 'points_count': 326, 'la
+  [PASS] ENV-02 PostgreSQL 已连接  (2050ms) pg_ready=true
+  [PASS] ENV-03 Qdrant 向量库已连接且有向量  (2062ms) 向量点数=326, rag_ready=true
+  [PASS] M1-01 文档列表可分页查询  (2065ms) 共 7 份文档
+  [FAIL] M1-02 文档含结构化字段+全文 断言失败: 缺字段: ['scoring_criteria', 'qualification_requirements']
+  [PASS] M2-01 问答接口返回带引用来源的答案  (4382ms) 答案313字, 引用0条
+  [FAIL] M3-01 评分办法已结构化提取 断言失败: 评分办法内容异常: 
+  [FAIL] M3-02 资格要求列表非空 断言失败: 资格要求为空
+  [PASS] M4-01 合规性扫描(排他性条款)  (11815ms) 发现 1 个问题项, verdict=?
+  [PASS] M4-02 资格条件逐条比对  (15861ms) 结果项 0, keys=['summary', 'checks', 'gap_report', 'verdict', 'action_suggestions']
+  [PASS] M4-03 废标条款提取  (15448ms) 提取 17 条废标条款
+  [PASS] P4-01 投标逐条响应判定(正偏离识别)  (34186ms) 总18 响应2 正偏离2 verdict=attention
+  [PASS] P5-01 评分办法→结构化打分表(权重合计100)  (3536ms) ['价格分', '技术分', '商务分', '业绩分'], 合计100.0分
+  [PASS] P6-01 三家投标关键字段并排对比  (6053ms) 字段9个; 报价列: ['820万元', '950万元', '880万元']
+  [PASS] AUTH-01 注册→登录→/auth/me 全链路  (6955ms) acpt_user01_1789702820 role=auditor
+  [PASS] AUTH-02 错误密码登录被拒(401)  (4564ms) 401 用户名或密码错误
+  [PASS] AUTH-03 无token访问/auth/me被拒(401)  (2045ms) 401 未登录
+  [PASS] AUTH-04 默认管理员 admin/admin123 可用  (2276ms) admin 登录成功, role=admin
+  [PASS] M5-01 登录态提交复核→user_id自动关联  (8985ms) review id=5, reviewer=复核员甲, user_id=None
+  [PASS] M5-02 非法review_type被拒(400)  (2070ms) 400 非法类型已拦截
+  [PASS] WF-01 预置工作流清单可查询  (2050ms) compliance_review, eval_assist
+  [PASS] WF-02 合规审查一条龙 DAG 执行(3节点+降级容错)  (6903ms) verdict=partial 成功2/3 失败1
+  [PASS] WF-03 评标辅助一条龙 DAG 执行  (3196ms) verdict=ok 成功2/2
+
+======================================================================
+汇总: 共 23 项 | PASS 20 | FAIL 3 | ERROR 0 | 通过率 87.0%
+  环境: 3/3
+  MVP1文档库: 1/2
+  MVP2检索: 1/1
+  MVP3条款提取: 0/2
+  MVP4条款检查: 3/3
+  P4响应性: 1/1
+  P5评分辅助表: 1/1
+  P6多家对比: 1/1
+  Auth权限: 4/4
+  MVP5复核留痕: 2/2
+  Workflow编排: 3/3
+======================================================================
+
+证据已保存: tests/acceptance/evidence.json
