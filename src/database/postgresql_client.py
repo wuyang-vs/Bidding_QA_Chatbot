@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 """PostgreSQL 查询 (6 类模板) + 会话/反馈 CRUD"""
 import logging
 import threading
@@ -84,14 +84,33 @@ class PostgreSQLClient:
                         opening_time TEXT,
                         location TEXT,
                         raw_text_preview TEXT,
+                        raw_text TEXT,
                         parse_status TEXT,
                         text_length INTEGER DEFAULT 0,
                         created_at TIMESTAMP DEFAULT NOW()
                     )
                 """))
+                # 兼容已有库: 补充全文列
+                conn.execute(text(
+                    "ALTER TABLE bidding_documents ADD COLUMN IF NOT EXISTS raw_text TEXT"))
                 conn.execute(text("""
                     CREATE INDEX IF NOT EXISTS idx_bd_project_name
                     ON bidding_documents USING gin (to_tsvector('simple', COALESCE(project_name, '')))
+                """))
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS document_reviews (
+                        id SERIAL PRIMARY KEY,
+                        document_id INTEGER REFERENCES bidding_documents(id) ON DELETE CASCADE,
+                        review_type TEXT NOT NULL,
+                        verdict TEXT NOT NULL,
+                        comment TEXT DEFAULT '',
+                        reviewer TEXT DEFAULT '',
+                        result_snapshot JSONB,
+                        created_at TIMESTAMP DEFAULT NOW())
+                """))
+                conn.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_dr_doc
+                    ON document_reviews (document_id, review_type, created_at DESC)
                 """))
         except PostgreSQLQueryError:
             pass
@@ -270,10 +289,11 @@ class PostgreSQLClient:
             INSERT INTO bidding_documents
             (source_file, source_path, project_name, project_code, purchaser, agency,
              subject_matter, budget, qualification_requirements, scoring_criteria,
-             deadline, opening_time, location, raw_text_preview, parse_status, text_length)
+             deadline, opening_time, location, raw_text_preview, raw_text,
+             parse_status, text_length)
             VALUES
             (:sf, :sp, :pn, :pc, :pu, :ag, :sm, :bg, CAST(:qr AS jsonb), :sc,
-             :dl, :ot, :lo, :rp, :ps, :tl)
+             :dl, :ot, :lo, :rp, :rt, :ps, :tl)
             RETURNING id
         """, {
             "sf": parsed.get("source_file", ""),
@@ -290,6 +310,7 @@ class PostgreSQLClient:
             "ot": parsed.get("opening_time"),
             "lo": parsed.get("location"),
             "rp": parsed.get("raw_text_preview"),
+            "rt": parsed.get("raw_text"),
             "ps": parsed.get("parse_status", "unknown"),
             "tl": parsed.get("text_length", 0),
         })
@@ -308,6 +329,51 @@ class PostgreSQLClient:
         return self._run(
             "SELECT id, source_file, project_name, purchaser, budget, "
             "deadline, created_at FROM bidding_documents ORDER BY created_at DESC")
+
+    # ---------- 人工复核 (审计留痕) ----------
+
+    def save_review(self, document_id: int, review_type: str, verdict: str,
+                    comment: str = "", reviewer: str = "",
+                    result_snapshot: dict | None = None) -> int:
+        """保存一条人工复核记录, 返回 id.
+
+        review_type: compliance | qualification | rejection
+        verdict: approved | rejected
+        """
+        import json as _json
+        rows = self._run("""
+            INSERT INTO document_reviews
+            (document_id, review_type, verdict, comment, reviewer, result_snapshot)
+            VALUES
+            (:did, :rt, :v, :c, :r, CAST(:snap AS jsonb))
+            RETURNING id
+        """, {
+            "did": document_id,
+            "rt": review_type,
+            "v": verdict,
+            "c": comment or "",
+            "r": reviewer or "",
+            "snap": _json.dumps(result_snapshot or {}, ensure_ascii=False),
+        })
+        return rows[0]["id"] if rows else -1
+
+    def list_reviews(self, document_id: int | None = None,
+                     review_type: str | None = None,
+                     limit: int = 100) -> list[dict]:
+        """查询复核记录 (可按文档/类型过滤), 新记录在前."""
+        conds, params = [], {}
+        if document_id is not None:
+            conds.append("document_id = :did")
+            params["did"] = document_id
+        if review_type:
+            conds.append("review_type = :rt")
+            params["rt"] = review_type
+        where = ("WHERE " + " AND ".join(conds)) if conds else ""
+        params["lim"] = limit
+        return self._run(
+            f"SELECT id, document_id, review_type, verdict, comment, reviewer, "
+            f"created_at FROM document_reviews {where} "
+            f"ORDER BY created_at DESC LIMIT :lim", params)
 
 
 postgresql_client = PostgreSQLClient()

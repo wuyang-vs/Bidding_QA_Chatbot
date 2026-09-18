@@ -417,6 +417,9 @@ def document_upload(file: UploadFile, save_to_db: bool = True):
             tmp_path = tmp.name
         parsed = parse_file(tmp_path)
         os.unlink(tmp_path)
+        # 保留用户原始文件名 (parse_file 默认填的是临时文件名)
+        parsed["source_file"] = file.filename or parsed.get("source_file", "")
+        parsed["source_path"] = ""
 
         db_id = None
         if save_to_db and postgresql_client.ready:
@@ -581,6 +584,83 @@ def qualification_check(req: QualificationCheckRequest):
         llm_client=llm,
     )
     return result
+
+
+class RejectionCheckRequest(BaseModel):
+    text: str = ""
+    db_id: int | None = None
+    bidder_status: str = ""  # 可选: 投标人自述情况, 提供时做废标风险自查
+
+
+@app.post("/api/rejection/check")
+def rejection_check(req: RejectionCheckRequest):
+    """废标(否决投标)条款检查 — 提取废标条款清单, 可选结合投标人情况自查."""
+    from src.tools.bid_rejection_checker import check_bid_rejection
+    from src.clients.llm_factory import get_llm_client
+
+    content: str | dict = req.text
+    if req.db_id is not None:
+        from src.database.postgresql_client import postgresql_client
+        if postgresql_client.ready:
+            rows = postgresql_client._run(
+                "SELECT * FROM bidding_documents WHERE id = :id", {"id": req.db_id})
+            if rows:
+                content = rows[0]
+
+    if not content:
+        raise HTTPException(400, "请提供 text 或 db_id")
+
+    llm = get_llm_client()
+    return check_bid_rejection(
+        content,
+        bidder_status=req.bidder_status or None,
+        llm_client=llm,
+    )
+
+
+# ---------- 人工复核 (审计留痕) ----------
+
+class ReviewSubmitRequest(BaseModel):
+    document_id: int
+    review_type: str  # compliance | qualification | rejection
+    verdict: str      # approved | rejected
+    comment: str = ""
+    reviewer: str = ""
+    result_snapshot: dict | None = None
+
+
+@app.post("/api/reviews")
+def submit_review(req: ReviewSubmitRequest):
+    """提交人工复核结论 (确认通过/驳回 + 备注), 留痕入库."""
+    from src.database.postgresql_client import postgresql_client
+
+    if not postgresql_client.ready:
+        raise HTTPException(503, "PostgreSQL 未连接, 无法保存复核记录")
+    if req.review_type not in ("compliance", "qualification", "rejection"):
+        raise HTTPException(400, f"非法 review_type: {req.review_type}")
+    if req.verdict not in ("approved", "rejected"):
+        raise HTTPException(400, f"非法 verdict: {req.verdict}")
+
+    review_id = postgresql_client.save_review(
+        document_id=req.document_id,
+        review_type=req.review_type,
+        verdict=req.verdict,
+        comment=req.comment,
+        reviewer=req.reviewer,
+        result_snapshot=req.result_snapshot,
+    )
+    logger.info("人工复核已记录 doc=%s type=%s verdict=%s reviewer=%s id=%s",
+                req.document_id, req.review_type, req.verdict, req.reviewer, review_id)
+    return {"id": review_id, "status": "saved"}
+
+
+@app.get("/api/reviews")
+def list_reviews(document_id: int | None = None, review_type: str | None = None):
+    """查询人工复核历史 (可按文档/类型过滤)."""
+    from src.database.postgresql_client import postgresql_client
+    if not postgresql_client.ready:
+        return {"items": [], "warning": "PostgreSQL 未连接"}
+    return {"items": postgresql_client.list_reviews(document_id, review_type)}
 
 
 class PriceAnalyzeRequest(BaseModel):

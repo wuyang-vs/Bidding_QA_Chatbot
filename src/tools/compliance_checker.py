@@ -208,7 +208,7 @@ def check_compliance(
 
     # 接受 document_parser dict
     if isinstance(text, dict):
-        source = text.get("raw_text_preview") or text.get("source_file", "")
+        source = text.get("raw_text") or text.get("raw_text_preview") or text.get("source_file", "")
         tender_info = (
             f"项目: {text.get('project_name', '')}\n"
             f"预算: {text.get('budget', '')}\n"
@@ -296,7 +296,10 @@ def check_compliance(
 
 def _fallback_check(text: str | dict) -> dict[str, Any]:
     """LLM 失败时, 纯关键词匹配降级检查."""
-    content = text.get("raw_text_preview", "") if isinstance(text, dict) else str(text)
+    if isinstance(text, dict):
+        content = text.get("raw_text") or text.get("raw_text_preview", "")
+    else:
+        content = str(text)
     risks = []
     for rule in COMPLIANCE_RULES:
         for kw in rule["keywords"]:

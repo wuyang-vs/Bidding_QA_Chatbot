@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FileText, Upload, Loader2, CheckCircle, AlertCircle, Eye, X, Shield, ClipboardCheck, AlertTriangle, CheckSquare } from "lucide-react";
+import { FileText, Upload, Loader2, CheckCircle, AlertCircle, Eye, X, Shield, ClipboardCheck, AlertTriangle, CheckSquare, FileWarning, UserCheck, History } from "lucide-react";
 
 interface ParsedDoc {
   db_id?: number;
@@ -64,6 +64,40 @@ interface QualificationResult {
   verdict?: string;
 }
 
+interface RejectionClause {
+  id: string;
+  category: string;
+  clause_text: string;
+  requirement?: string;
+  risk_level: "高" | "中" | "低" | string;
+  tip?: string;
+}
+
+interface RejectionSelfCheck {
+  clause_id: string;
+  status: "safe" | "risk" | "uncertain" | string;
+  reason?: string;
+}
+
+interface RejectionResult {
+  summary: { total_clauses: number; by_category: Record<string, number>; risk_count: number };
+  clauses: RejectionClause[];
+  self_check: RejectionSelfCheck[] | null;
+  verdict: "unknown" | "safe" | "attention" | "danger" | string;
+  note?: string;
+  docId?: number;
+}
+
+interface ReviewRecord {
+  id: number;
+  document_id: number;
+  review_type: "compliance" | "qualification" | "rejection" | string;
+  verdict: "approved" | "rejected" | string;
+  comment?: string;
+  reviewer?: string;
+  created_at?: string;
+}
+
 const API = "http://localhost:8001";
 
 function Field({ label, value }: { label: string; value?: string | null }) {
@@ -86,6 +120,137 @@ function StatusBadge({ status }: { status: "ok" | "attention" | "warn" | "loadin
   };
   const m = map[status];
   return <span className={`text-xs px-2 py-0.5 rounded font-medium ${m.cls}`}>{m.text}</span>;
+}
+
+// ================== 人工复核 (通用, 三类检查共用) ==================
+
+function ReviewBox({ docId, type, accent, snapshot }: {
+  docId: number;
+  type: "compliance" | "qualification" | "rejection";
+  accent: "purple" | "blue" | "orange";
+  snapshot: unknown;
+}) {
+  const [records, setRecords] = useState<ReviewRecord[]>([]);
+  const [reviewer, setReviewer] = useState("");
+  const [comment, setComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setReviewer(localStorage.getItem("bid_reviewer") || "");
+    fetch(`${API}/api/reviews?document_id=${docId}&review_type=${type}`)
+      .then((r) => r.json())
+      .then((j) => setRecords(j.items || []))
+      .catch(() => {});
+  }, [docId, type]);
+
+  const accentText = {
+    purple: "text-purple-600",
+    blue: "text-blue-600",
+    orange: "text-orange-600",
+  }[accent];
+
+  const submit = async (verdict: "approved" | "rejected") => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      if (reviewer.trim()) localStorage.setItem("bid_reviewer", reviewer.trim());
+      const r = await fetch(`${API}/api/reviews`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          document_id: docId, review_type: type, verdict,
+          comment: comment.trim(), reviewer: reviewer.trim(),
+          result_snapshot: snapshot,
+        }),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      setComment("");
+      const j = await fetch(`${API}/api/reviews?document_id=${docId}&review_type=${type}`);
+      const data = await j.json();
+      setRecords(data.items || []);
+    } catch (e: any) {
+      setError(e?.message || "保存失败");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const latest = records[0];
+
+  return (
+    <div className="mt-4 border-t border-gray-200 dark:border-gray-800 pt-4">
+      <div className="flex items-center gap-2 mb-2">
+        <UserCheck size={15} className={accentText} />
+        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">人工确认 / 审计留痕</span>
+        {latest && (
+          <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+            latest.verdict === "approved"
+              ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
+              : "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"}`}>
+            最新结论: {latest.verdict === "approved" ? "✅ 已确认" : "❌ 已驳回"}
+            {latest.reviewer ? ` · ${latest.reviewer}` : ""}
+          </span>
+        )}
+      </div>
+
+      <div className="flex gap-2 mb-2">
+        <input
+          value={reviewer}
+          onChange={(e) => setReviewer(e.target.value)}
+          placeholder="复核人姓名"
+          className="w-32 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1.5 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-400"
+        />
+        <input
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          placeholder="复核备注 (可选) — 如: 已人工核对原文, 风险属实"
+          className="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1.5 text-xs text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-400"
+        />
+        <button
+          onClick={() => submit("approved")}
+          disabled={submitting}
+          className="px-3 py-1.5 text-xs bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg transition whitespace-nowrap">
+          {submitting ? <Loader2 className="animate-spin" size={12} /> : <CheckCircle size={12} className="inline mr-1" />}
+          确认通过
+        </button>
+        <button
+          onClick={() => submit("rejected")}
+          disabled={submitting}
+          className="px-3 py-1.5 text-xs bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg transition whitespace-nowrap">
+          <X size={12} className="inline mr-1" />驳回
+        </button>
+      </div>
+      {error && <div className="text-xs text-red-600 mb-1">{error}</div>}
+
+      {records.length > 0 && (
+        <details className="text-xs">
+          <summary className="text-gray-400 cursor-pointer hover:text-gray-600 flex items-center gap-1">
+            <History size={12} /> 复核历史 ({records.length})
+          </summary>
+          <div className="mt-2 space-y-1 max-h-40 overflow-auto">
+            {records.map((r) => (
+              <div key={r.id} className="flex items-start gap-2 text-gray-600 dark:text-gray-400">
+                <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[11px] ${
+                  r.verdict === "approved"
+                    ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
+                    : "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300"}`}>
+                  {r.verdict === "approved" ? "确认" : "驳回"}
+                </span>
+                <span className="flex-1 break-words">
+                  {r.reviewer && <span className="font-medium">{r.reviewer}: </span>}
+                  {r.comment || "(无备注)"}
+                </span>
+                <span className="text-gray-400 flex-shrink-0">
+                  {r.created_at ? new Date(r.created_at).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""}
+                </span>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+    </div>
+  );
 }
 
 // ================== 合规结果展示 ==================
@@ -167,6 +332,10 @@ function CompliancePanel({ result, onClose }: { result: ComplianceResult; onClos
           <div className="text-sm text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950/30 rounded p-3 flex items-center gap-2">
             <CheckCircle size={16} /> 未发现明显风险条款
           </div>
+        )}
+
+        {result.docId != null && (
+          <ReviewBox docId={result.docId} type="compliance" accent="purple" snapshot={{ summary, status }} />
         )}
       </div>
     </div>
@@ -280,6 +449,135 @@ function QualificationPanel({ result, onClose }: { result: QualificationResult; 
             暂无资质要求可比对
           </div>
         )}
+
+        {result.docId != null && (
+          <ReviewBox docId={result.docId} type="qualification" accent="blue" snapshot={{ summary, verdict }} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ================== 废标条款检查结果 ==================
+
+function RejectionPanel({ result, onClose }: { result: RejectionResult; onClose?: () => void }) {
+  const { summary, clauses, self_check, verdict, note } = result;
+
+  const verdictMap: Record<string, { text: string; cls: string }> = {
+    safe: { text: "✅ 自查通过", cls: "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200" },
+    attention: { text: "⚠️ 部分待确认", cls: "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200" },
+    danger: { text: "❌ 存在废标风险", cls: "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200" },
+    unknown: { text: "条款清单", cls: "bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200" },
+  };
+
+  const riskCls = (lv: string) =>
+    lv === "高" ? "bg-red-100 dark:bg-red-900/60 text-red-700 dark:text-red-300"
+    : lv === "中" ? "bg-yellow-100 dark:bg-yellow-900/60 text-yellow-700 dark:text-yellow-300"
+    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400";
+
+  const selfBadge = (s: string) => {
+    const map: Record<string, { t: string; c: string }> = {
+      safe: { t: "✅ 安全", c: "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200" },
+      risk: { t: "❌ 风险", c: "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200" },
+      uncertain: { t: "❓ 待确认", c: "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200" },
+    };
+    const m = map[s] || { t: s, c: "bg-gray-200 text-gray-700" };
+    return <span className={`text-xs px-2 py-0.5 rounded font-medium ${m.c}`}>{m.t}</span>;
+  };
+
+  const checkMap: Record<string, RejectionSelfCheck> = {};
+  (self_check || []).forEach((c) => { checkMap[c.clause_id] = c; });
+
+  const cats = Object.entries(summary.by_category || {});
+
+  return (
+    <div className="mt-4 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+      <div className="bg-orange-50 dark:bg-orange-950/30 border-b border-orange-200 dark:border-orange-800 p-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <FileWarning className="text-orange-600" size={18} />
+          <span className="text-sm font-medium text-orange-900 dark:text-orange-100">废标条款检查</span>
+          <span className={`text-xs px-2 py-0.5 rounded font-medium ${verdictMap[verdict]?.cls || verdictMap.unknown.cls}`}>
+            {verdictMap[verdict]?.text || "条款清单"}
+          </span>
+        </div>
+        {onClose && (
+          <button onClick={onClose} className="text-orange-500 hover:text-orange-700 text-xs">关闭</button>
+        )}
+      </div>
+
+      <div className="p-5">
+        {/* 统计 */}
+        <div className="flex flex-wrap gap-4 mb-4">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{summary.total_clauses}</div>
+            <div className="text-xs text-gray-500">废标条款</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-red-600">{summary.risk_count}</div>
+            <div className="text-xs text-gray-500">高风险项</div>
+          </div>
+          {cats.map(([cat, n]) => (
+            <div key={cat} className="text-center">
+              <div className="text-lg font-bold text-orange-600">{n}</div>
+              <div className="text-xs text-gray-500">{cat}</div>
+            </div>
+          ))}
+        </div>
+
+        {note && (
+          <div className="mb-3 text-xs text-yellow-700 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-950/40 rounded p-2">
+            {note}
+          </div>
+        )}
+
+        {clauses.length === 0 ? (
+          <div className="text-sm text-gray-500 bg-gray-50 dark:bg-gray-900 rounded p-3">
+            未识别到废标条款
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {clauses.map((c) => {
+              const chk = checkMap[c.id];
+              return (
+                <div key={c.id} className={`border rounded-lg p-3 ${
+                  chk?.status === "risk"
+                    ? "border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/20"
+                    : "border-gray-200 dark:border-gray-800"
+                }`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className="text-xs font-mono text-gray-400">{c.id}</span>
+                        <span className="text-xs px-1.5 py-0.5 bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300 rounded">
+                          {c.category}
+                        </span>
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${riskCls(c.risk_level)}`}>
+                          {c.risk_level}风险
+                        </span>
+                        {chk && selfBadge(chk.status)}
+                      </div>
+                      <div className="text-sm text-gray-900 dark:text-gray-100 break-words">{c.clause_text}</div>
+                      {c.tip && (
+                        <div className="text-xs text-orange-700 dark:text-orange-300 mt-1">
+                          💡 {c.tip}
+                        </div>
+                      )}
+                      {chk?.reason && (
+                        <div className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                          自查判定: {chk.reason}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {result.docId != null && (
+          <ReviewBox docId={result.docId} type="rejection" accent="orange" snapshot={{ summary, verdict }} />
+        )}
       </div>
     </div>
   );
@@ -308,6 +606,13 @@ export default function DocumentsPage() {
   const [qualInput, setQualInput] = useState("");
   const qualTargetId = useRef<number | null>(null);
 
+  // 废标条款检查
+  const [rejLoading, setRejLoading] = useState(false);
+  const [rejResult, setRejResult] = useState<RejectionResult | null>(null);
+  const [rejInputOpen, setRejInputOpen] = useState(false);
+  const [rejInput, setRejInput] = useState("");
+  const rejTargetId = useRef<number | null>(null);
+
   const loadDocs = async () => {
     setLoading(true);
     try {
@@ -328,6 +633,7 @@ export default function DocumentsPage() {
     setParsed(null);
     setCompResult(null);
     setQualResult(null);
+    setRejResult(null);
     setUploading(true);
     try {
       const fd = new FormData();
@@ -365,19 +671,20 @@ export default function DocumentsPage() {
         body: JSON.stringify({ db_id: dbId }),
       });
       if (!r.ok) throw new Error(await r.text());
-      setCompResult(await r.json());
+      setCompResult({ ...(await r.json()), docId: dbId });
     } catch (e: any) {
       setCompResult({
         summary: { high: 0, medium: 0, low: 0, total_checked: 0, risks_found: 0 },
         risks: [], clean_rules: [], status: "warn",
         note: `检查失败: ${e?.message || "未知错误"}`,
+        docId: dbId,
       });
     } finally {
       setCompLoading(false);
     }
   };
 
-  const runQualificationCheck = async (dbId: number, companyCerts: string[]) => {
+  const runQualificationCheck = async (dbId: number, certs: string[]) => {
     setQualLoading(true);
     setQualResult(null);
     try {
@@ -387,13 +694,14 @@ export default function DocumentsPage() {
         body: JSON.stringify({ db_id: dbId, company_qualifications: companyCerts }),
       });
       if (!r.ok) throw new Error(await r.text());
-      setQualResult(await r.json());
+      setQualResult({ ...(await r.json()), docId: dbId });
     } catch (e: any) {
       setQualResult({
         summary: { total_req: 0, full: 0, partial: 0, missing: 0 },
         checks: [],
         gap_report: "",
         verdict: "unknown",
+        docId: dbId,
       });
       setError(`资格检查失败: ${e?.message}`);
     } finally {
@@ -405,6 +713,36 @@ export default function DocumentsPage() {
     qualTargetId.current = dbId;
     setQualInput("");
     setQualInputOpen(true);
+  };
+
+  const runRejectionCheck = async (dbId: number, bidderStatus?: string) => {
+    setRejLoading(true);
+    setRejResult(null);
+    try {
+      const r = await fetch(`${API}/api/rejection/check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ db_id: dbId, bidder_status: bidderStatus || "" }),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      setRejResult({ ...(await r.json()), docId: dbId });
+    } catch (e: any) {
+      setRejResult({
+        summary: { total_clauses: 0, by_category: {}, risk_count: 0 },
+        clauses: [], self_check: null, verdict: "unknown",
+        note: `检查失败: ${e?.message || "未知错误"}`,
+        docId: dbId,
+      });
+      setError(`废标检查失败: ${e?.message}`);
+    } finally {
+      setRejLoading(false);
+    }
+  };
+
+  const openRejInput = (dbId: number) => {
+    rejTargetId.current = dbId;
+    setRejInput("");
+    setRejInputOpen(true);
   };
 
   return (
@@ -538,16 +876,32 @@ export default function DocumentsPage() {
                   {qualLoading ? <Loader2 className="animate-spin" size={14} /> : <ClipboardCheck size={14} />}
                   资格条件审查
                 </button>
+                <button
+                  onClick={() => openRejInput(parsed.db_id!)}
+                  disabled={rejLoading}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white rounded-lg transition"
+                >
+                  {rejLoading ? <Loader2 className="animate-spin" size={14} /> : <FileWarning size={14} />}
+                  废标条款检查
+                </button>
               </div>
             )}
-
-            {compResult && (
-              <CompliancePanel result={compResult} onClose={() => setCompResult(null)} />
-            )}
-            {qualResult && (
-              <QualificationPanel result={qualResult} onClose={() => setQualResult(null)} />
-            )}
           </div>
+        </div>
+      )}
+
+      {/* 检查结果区 (从列表触发时 parsed 可能为空, 故独立放置) */}
+      {(compResult || qualResult || rejResult) && (
+        <div className="space-y-0">
+          {compResult && (
+            <CompliancePanel result={compResult} onClose={() => setCompResult(null)} />
+          )}
+          {qualResult && (
+            <QualificationPanel result={qualResult} onClose={() => setQualResult(null)} />
+          )}
+          {rejResult && (
+            <RejectionPanel result={rejResult} onClose={() => setRejResult(null)} />
+          )}
         </div>
       )}
 
@@ -591,6 +945,12 @@ export default function DocumentsPage() {
                       title="资格检查">
                       <ClipboardCheck size={16} />
                     </button>
+                    <button
+                      onClick={() => openRejInput(d.id)}
+                      className="p-2 text-gray-400 hover:text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950 rounded-lg transition"
+                      title="废标条款检查">
+                      <FileWarning size={16} />
+                    </button>
                     <button onClick={() => setDetail(d)}
                             className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition"
                             title="查看详情">
@@ -632,6 +992,11 @@ export default function DocumentsPage() {
                   onClick={() => openQualInput(detail.id)}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition">
                   <ClipboardCheck size={14} /> 资格检查
+                </button>
+                <button
+                  onClick={() => openRejInput(detail.id)}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition">
+                  <FileWarning size={14} /> 废标检查
                 </button>
               </div>
             </div>
@@ -680,6 +1045,55 @@ ISO 9001 质量管理体系认证
                 disabled={!qualInput.trim()}
                 className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition">
                 开始审查
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 废标自查情况输入弹窗 (可留空, 留空仅提取条款清单) */}
+      {rejInputOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setRejInputOpen(false)}>
+          <div className="bg-white dark:bg-gray-900 rounded-xl max-w-lg w-full p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-medium flex items-center gap-2">
+                <FileWarning size={18} className="text-orange-600" /> 废标条款检查
+              </h3>
+              <button onClick={() => setRejInputOpen(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">
+                <X size={18} />
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mb-2">
+              直接点"提取条款"将列出文件中全部废标/否决投标条款；填写我方投标准备情况后，可同时做废标风险自查
+            </p>
+            <textarea
+              value={rejInput}
+              onChange={(e) => setRejInput(e.target.value)}
+              rows={7}
+              placeholder="可选 — 描述我方准备情况, 例如:
+投标报价 820 万元
+已按要求盖章签字, 保证金 10 万元已从基本户汇出
+投标工期承诺 100 天, 投标有效期 90 天
+具备电子与智能化一级资质
+非联合体投标..."
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500 font-mono"
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={() => setRejInputOpen(false)}
+                className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  const status = rejInput.trim();
+                  setRejInputOpen(false);
+                  if (rejTargetId.current) {
+                    runRejectionCheck(rejTargetId.current, status || undefined);
+                  }
+                }}
+                className="px-4 py-2 text-sm bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition">
+                {rejInput.trim() ? "提取条款并自查" : "仅提取条款"}
               </button>
             </div>
           </div>

@@ -143,6 +143,7 @@ def extract_structured(text: str, llm_client=None) -> dict[str, Any]:
             if k not in result:
                 result[k] = None
         result["raw_text_preview"] = text[:2000]
+        result["raw_text"] = text
         result["parse_status"] = "ok"
         return result
     except (json.JSONDecodeError, Exception) as e:
@@ -155,6 +156,7 @@ def extract_structured(text: str, llm_client=None) -> dict[str, Any]:
             "parse_status": "partial",
             "error": str(e),
             "raw_text_preview": text[:2000],
+            "raw_text": text,
         }
 
 
