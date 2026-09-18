@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FileText, Upload, Loader2, CheckCircle, AlertCircle, Eye, X, Shield, ClipboardCheck, AlertTriangle, CheckSquare, FileWarning, UserCheck, History, FileCheck } from "lucide-react";
+import { FileText, Upload, Loader2, CheckCircle, AlertCircle, Eye, X, Shield, ClipboardCheck, AlertTriangle, CheckSquare, FileWarning, UserCheck, History, FileCheck, User, LogOut } from "lucide-react";
 
 interface ParsedDoc {
   db_id?: number;
@@ -949,6 +949,39 @@ export default function DocumentsPage() {
     { name: "投标人A", text: "" }, { name: "投标人B", text: "" }, { name: "投标人C", text: "" },
   ]);
 
+  // 鉴权
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
+  const [authUser, setAuthUser] = useState<{ id: number; username: string; role: string; display_name: string } | null>(null);
+  const [authToken, setAuthToken] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("qa_auth_token") || "";
+  });
+
+  // 工作流
+  const [wfOpen, setWfOpen] = useState(false);
+  const [wfPresets, setWfPresets] = useState<{ id: string; name: string; description: string }[]>([]);
+  const [wfConfig, setWfConfig] = useState("compliance_review");
+  const [wfDbId, setWfDbId] = useState<number | null>(null);
+  const [wfBidText, setWfBidText] = useState("");
+  const [wfLoading, setWfLoading] = useState(false);
+  const [wfResult, setWfResult] = useState<any>(null);
+
+  useEffect(() => {
+    if (authToken) localStorage.setItem("qa_auth_token", authToken);
+    else localStorage.removeItem("qa_auth_token");
+  }, [authToken]);
+  useEffect(() => {
+    if (authUser) localStorage.setItem("qa_auth_user", JSON.stringify(authUser));
+    else localStorage.removeItem("qa_auth_user");
+  }, [authUser]);
+  useEffect(() => {
+    if (!authUser && typeof window !== "undefined") {
+      const raw = localStorage.getItem("qa_auth_user");
+      if (raw) { try { setAuthUser(JSON.parse(raw)); } catch {} }
+    }
+  }, []);
+
   const loadDocs = async () => {
     setLoading(true);
     try {
@@ -1168,13 +1201,51 @@ export default function DocumentsPage() {
         </p>
       </div>
 
-      <div className="flex justify-end">
-        <button
-          onClick={() => setCmpOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition"
-        >
-          <ClipboardCheck size={14} /> 多家投标对比
-        </button>
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCmpOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition"
+          >
+            <ClipboardCheck size={14} /> 多家投标对比
+          </button>
+          <button
+            onClick={async () => {
+              setWfResult(null);
+              try {
+                const r = await fetch(`${API}/api/workflow/presets`);
+                const j = await r.json();
+                setWfPresets(j.presets || []);
+              } catch {}
+              setWfOpen(true);
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition"
+          >
+            <Shield size={14} /> 智能工作流
+          </button>
+        </div>
+        {authUser ? (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="inline-flex items-center gap-1 text-gray-600 dark:text-gray-300">
+              <User size={14} />
+              {authUser.display_name || authUser.username}
+              <span className="px-1.5 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 ml-1">
+                {authUser.role === "admin" ? "管理员" : authUser.role === "auditor" ? "审计员" : "投标人"}
+              </span>
+            </span>
+            <button
+              onClick={() => { setAuthToken(""); setAuthUser(null); }}
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition">
+              <LogOut size={12} /> 退出
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => { setAuthMode("login"); setAuthOpen(true); }}
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-gray-700 hover:bg-gray-800 text-white rounded-lg transition">
+            <User size={14} /> 登录
+          </button>
+        )}
       </div>
 
       {/* 上传区 */}
@@ -1352,6 +1423,9 @@ export default function DocumentsPage() {
       {cmpResult && (
         <ComparePanel result={cmpResult} onClose={() => setCmpResult(null)} />
       )}
+
+      {/* 工作流结果 (独立) */}
+      {wfResult && <WorkflowPanel result={wfResult} onClose={() => setWfResult(null)} />}
 
       {/* 已解析列表 */}
       <div>
@@ -1704,6 +1778,235 @@ ISO 9001 质量管理体系认证
           </div>
         </div>
       )}
+
+      {/* 登录 / 注册弹窗 */}
+      {authOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setAuthOpen(false)}>
+          <div className="bg-white dark:bg-gray-900 rounded-xl max-w-sm w-full p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-medium flex items-center gap-2">
+                <User size={18} className="text-gray-600" /> 招投标 Agent 登录
+              </h3>
+              <button onClick={() => setAuthOpen(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="flex gap-2 mb-4 border-b border-gray-200 dark:border-gray-700">
+              {(["login", "register"] as const).map((m) => (
+                <button key={m} onClick={() => setAuthMode(m)}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition ${
+                    authMode === m ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500"
+                  }`}>
+                  {m === "login" ? "登录" : "注册"}
+                </button>
+              ))}
+            </div>
+            <AuthFormInline mode={authMode} API={API}
+              onSuccess={(token, user) => { setAuthToken(token); setAuthUser(user); setAuthOpen(false); }}
+              onError={(e) => setError(e)} />
+            <p className="mt-3 text-xs text-gray-400 text-center">默认 admin / admin123</p>
+          </div>
+        </div>
+      )}
+
+      {/* 智能工作流弹窗 */}
+      {wfOpen && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setWfOpen(false)}>
+          <div className="bg-white dark:bg-gray-900 rounded-xl max-w-xl w-full p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-medium flex items-center gap-2">
+                <Shield size={18} className="text-emerald-600" /> 智能工作流
+              </h3>
+              <button onClick={() => setWfOpen(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">选择预置工作流</label>
+                {wfPresets.length === 0 ? (
+                  <div className="text-xs text-gray-400">加载中...</div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2">
+                    {wfPresets.map((p) => (
+                      <label key={p.id} className={`flex items-start gap-2 p-3 rounded-lg border cursor-pointer transition ${wfConfig === p.id ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30" : "border-gray-200 dark:border-gray-700 hover:border-gray-400"}`}>
+                        <input type="radio" name="wf" value={p.id} checked={wfConfig === p.id}
+                          onChange={() => setWfConfig(p.id)} className="mt-1 accent-emerald-600" />
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{p.name}</div>
+                          <div className="text-xs text-gray-500 mt-0.5">{p.description}</div>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">招标文件 (从已解析文档选 db_id)</label>
+                <select value={wfDbId ?? ""} onChange={(e) => setWfDbId(e.target.value ? Number(e.target.value) : null)}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <option value="">-- 选择 --</option>
+                  {docs.map((d: any) => (
+                    <option key={d.id} value={d.id}>#{d.id} {d.source_file}</option>
+                  ))}
+                </select>
+              </div>
+              {wfConfig === "eval_assist" && (
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">投标文件内容 (响应性检查可选)</label>
+                  <textarea value={wfBidText} onChange={(e) => setWfBidText(e.target.value)} rows={3}
+                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 p-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                    placeholder="投标报价: xx 万元&#10;投标工期: xxx 天&#10;质保期: x 年..." />
+                </div>
+              )}
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setWfOpen(false)}
+                className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition">取消</button>
+              <button disabled={!wfDbId || wfLoading}
+                onClick={async () => {
+                  setWfLoading(true);
+                  setWfResult(null);
+                  try {
+                    const ctx: any = { db_id: wfDbId };
+                    if (wfBidText) ctx.bid_text = wfBidText;
+                    const r = await fetch(`${API}/api/workflow/run`, {
+                      method: "POST", headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ config: wfConfig, ctx }),
+                    });
+                    if (!r.ok) throw new Error(await r.text());
+                    setWfResult(await r.json());
+                    setWfOpen(false);
+                  } catch (e: any) { setError(`工作流执行失败: ${e?.message}`); }
+                  finally { setWfLoading(false); }
+                }}
+                className="px-4 py-2 text-sm bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg transition">
+                {wfLoading ? <Loader2 className="animate-spin inline" size={14} /> : "执行工作流"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ================== 登录/注册表单 ==================
+
+function AuthFormInline({ mode, API, onSuccess, onError }: {
+  mode: "login" | "register"; API: string;
+  onSuccess: (token: string, user: any) => void; onError: (msg: string) => void;
+}) {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const submit = async () => {
+    if (username.length < 3 || password.length < 6) { onError("用户名至少3位, 密码至少6位"); return; }
+    setLoading(true);
+    try {
+      const r = await fetch(`${API}/auth/${mode}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(mode === "login"
+          ? { username, password }
+          : { username, password, display_name: displayName }),
+      });
+      if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(e.detail || `HTTP ${r.status}`); }
+      const data = await r.json();
+      if (mode === "login" && data.access_token) { onSuccess(data.access_token, data.user); }
+      else {
+        const lr = await fetch(`${API}/auth/login`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+        if (lr.ok) { const ld = await lr.json(); onSuccess(ld.access_token, ld.user); }
+        else { onError("注册成功, 自动登录失败"); }
+      }
+    } catch (e: any) { onError(e?.message || "请求失败"); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className="block text-xs text-gray-500 mb-1">用户名</label>
+        <input value={username} onChange={(e) => setUsername(e.target.value)}
+          className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </div>
+      <div>
+        <label className="block text-xs text-gray-500 mb-1">密码</label>
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+          className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </div>
+      {mode === "register" && (
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">显示名 (可选)</label>
+          <input value={displayName} onChange={(e) => setDisplayName(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+      )}
+      <button onClick={submit} disabled={loading}
+        className="w-full py-2 text-sm bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition">
+        {loading ? <Loader2 className="animate-spin inline" size={14} /> : mode === "login" ? "登录" : "注册并登录"}
+      </button>
+    </div>
+  );
+}
+
+// ================== 工作流结果面板 ==================
+
+function WorkflowPanel({ result, onClose }: { result: any; onClose?: () => void }) {
+  const { name, results, summary, nodes } = result;
+  const verdictMap: Record<string, { text: string; cls: string }> = {
+    ok: { text: "✅ 全部成功", cls: "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200" },
+    partial: { text: "⚠️ 部分降级", cls: "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200" },
+    failed: { text: "❌ 全部失败", cls: "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200" },
+  };
+  return (
+    <div className="mt-4 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+      <div className="bg-emerald-50 dark:bg-emerald-950/30 border-b border-emerald-200 dark:border-emerald-800 p-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Shield className="text-emerald-600" size={18} />
+          <span className="text-sm font-medium text-emerald-900 dark:text-emerald-100">智能工作流</span>
+          <span className="text-xs text-gray-500 ml-1">{name}</span>
+          {summary && (
+            <span className={`text-xs px-2 py-0.5 rounded font-medium ${verdictMap[summary.verdict]?.cls || "bg-gray-100"}`}>
+              {verdictMap[summary.verdict]?.text || summary.verdict}
+              {" "}{summary.success}/{summary.total}
+            </span>
+          )}
+        </div>
+        {onClose && <button onClick={onClose} className="text-emerald-500 hover:text-emerald-700 text-xs">关闭</button>}
+      </div>
+      <div className="p-5">
+        <div className="space-y-2">
+          {nodes?.map((nid: string, idx: number) => {
+            const info = results[nid];
+            const isOk = info?.status === "success";
+            return (
+              <div key={nid} className={`border rounded-lg p-3 ${isOk ? "border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20" : "border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20"}`}>
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <span className="text-xs font-mono text-gray-400">#{idx + 1}</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{nid}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded font-medium ${isOk ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300" : "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300"}`}>
+                    {info?.status}
+                  </span>
+                  {info?.duration_ms != null && <span className="text-xs text-gray-400">{info.duration_ms}ms</span>}
+                </div>
+                {info?.output_keys?.length > 0 && (
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    输出: {info.output_keys.join(", ")}
+                  </div>
+                )}
+                {info?.error && (
+                  <div className="text-xs text-red-600 dark:text-red-400">⚠️ {info.error}</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

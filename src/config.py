@@ -50,6 +50,10 @@ class Settings:
     history_compress_enabled: bool = field(default_factory=lambda: os.getenv("HISTORY_COMPRESS_ENABLED", "true").lower() in ("true", "1", "yes"))
     history_compress_after_rounds: int = field(default_factory=lambda: int(os.getenv("HISTORY_COMPRESS_AFTER_ROUNDS", "10")))
     history_compressed_content_max: int = field(default_factory=lambda: int(os.getenv("HISTORY_COMPRESSED_CONTENT_MAX", "300")))
+    # 鉴权
+    auth_secret: str = field(default_factory=lambda: os.getenv("AUTH_SECRET", "dev-change-me-in-prod-secret-key"))
+    auth_expire_minutes: int = field(default_factory=lambda: int(os.getenv("AUTH_EXPIRE_MINUTES", "120")))
+    auth_enabled: bool = field(default_factory=lambda: os.getenv("AUTH_ENABLED", "false").lower() in ("true", "1", "yes"))
 
     @property
     def cors_origin_list(self):

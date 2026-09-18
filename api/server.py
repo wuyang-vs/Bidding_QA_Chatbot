@@ -5,7 +5,7 @@ import time
 from contextlib import asynccontextmanager
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from src.config import settings
 from src.logging_config import setup_logging
 from src.rate_limiter import rate_limiter
+from src.auth import get_current_user_required, get_current_user_optional
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -34,6 +35,18 @@ async def lifespan(app: FastAPI):
     postgresql_client.initialize()
     web_search_client.initialize()
     exa_search_client.initialize()
+    # 初始化默认 admin 密码 (仅首次)
+    try:
+        from src.auth import hash_password
+        rows = postgresql_client._run(
+            "SELECT id, password_hash FROM users WHERE username='admin'")
+        if rows and rows[0]["password_hash"].startswith("$2b$12$placeholder"):
+            postgresql_client._run(
+                "UPDATE users SET password_hash=:h WHERE id=:id",
+                {"h": hash_password("admin123"), "id": rows[0]["id"]})
+            logger.info("默认 admin 密码已初始化 (admin / admin123)")
+    except Exception as e:
+        logger.warning("默认 admin 初始化失败: %s", e)
     start_auto_ingest()
     system_monitor.start()
     logger.info("API 服务启动完成")
@@ -60,6 +73,74 @@ def rate_limit_middleware(request: Request, call_next):
             return JSONResponse({"detail": "请求过于频繁"}, status_code=429)
     return call_next(request)
 
+
+# ==================== 鉴权端点 ====================
+
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+    display_name: str = ""
+
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+@app.post("/auth/register")
+def register(req: RegisterRequest):
+    from src.auth import hash_password
+    from src.database.postgresql_client import postgresql_client
+    if len(req.username) < 3 or len(req.password) < 6:
+        raise HTTPException(400, "用户名至少3位, 密码至少6位")
+    if not postgresql_client.ready:
+        raise HTTPException(503, "PostgreSQL 未连接")
+    existing = postgresql_client._run(
+        "SELECT id FROM users WHERE username=:u", {"u": req.username})
+    if existing:
+        raise HTTPException(409, "用户名已存在")
+    postgresql_client._run(
+        "INSERT INTO users (username, password_hash, role, display_name) VALUES (:u,:h,'auditor',:d)",
+        {"u": req.username, "h": hash_password(req.password), "d": req.display_name or req.username})
+    return {"status": "ok", "username": req.username}
+
+
+@app.post("/auth/login")
+def login(req: LoginRequest):
+    from src.auth import verify_password, create_access_token
+    from src.database.postgresql_client import postgresql_client
+    if not postgresql_client.ready:
+        raise HTTPException(503, "PostgreSQL 未连接")
+    rows = postgresql_client._run(
+        "SELECT id, username, password_hash, role, display_name FROM users WHERE username=:u",
+        {"u": req.username})
+    if not rows or not verify_password(req.password, rows[0]["password_hash"]):
+        raise HTTPException(401, "用户名或密码错误")
+    user = rows[0]
+    token = create_access_token(user["id"], {
+        "uid": user["id"],
+        "username": user["username"],
+        "role": user["role"],
+        "display_name": user["display_name"],
+    })
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {
+            "id": user["id"],
+            "username": user["username"],
+            "role": user["role"],
+            "display_name": user["display_name"],
+        },
+    }
+
+
+@app.get("/auth/me")
+def auth_me(user: dict = Depends(get_current_user_required)):
+    return {"user": user}
+
+
+# ==================== 业务端点 ====================
 
 class ChatRequest(BaseModel):
     question: str
@@ -712,8 +793,52 @@ def bids_compare(req: BidCompareRequest):
     return compare_bids(req.bids, llm_client=llm)
 
 
+@app.get("/api/workflow/presets")
+def workflow_presets():
+    from src.workflow.engine import list_presets
+    return {"presets": list_presets()}
+
+
+class WorkflowRunRequest(BaseModel):
+    config: str | dict  # 预置 id 或完整配置 dict
+    ctx: dict = {}
+
+
+@app.post("/api/workflow/run")
+def workflow_run(req: WorkflowRunRequest):
+    """执行一个工作流 (预置 id 或完整 JSON 配置).
+
+    body:
+      config: "compliance_review" 或 {... 完整配置 ...}
+      ctx: {db_id, bid_text, clause, qualification_text, ...}
+    """
+    from src.workflow.engine import run_workflow, PRESETS
+    from src.database.postgresql_client import postgresql_client
+
+    config = req.config
+    # 自动从 db_id 补上下文
+    ctx = dict(req.ctx)
+    if ctx.get("db_id") and postgresql_client.ready:
+        rows = postgresql_client._run(
+            "SELECT scoring_criteria, qualification_requirements FROM bidding_documents WHERE id=:id",
+            {"id": ctx["db_id"]})
+        if rows:
+            doc = rows[0]
+            if doc.get("scoring_criteria") and not ctx.get("scoring_criteria"):
+                ctx["scoring_criteria"] = doc["scoring_criteria"]
+            if isinstance(doc.get("qualification_requirements"), list):
+                ctx["qualification_requirements"] = "\n".join(doc["qualification_requirements"])
+            elif doc.get("qualification_requirements"):
+                ctx["qualification_requirements"] = str(doc["qualification_requirements"])
+
+    return run_workflow(config, ctx=ctx, parallel=True)
+
+
 @app.post("/api/reviews")
-def submit_review(req: ReviewSubmitRequest):
+def submit_review(
+    req: ReviewSubmitRequest,
+    user: dict | None = Depends(get_current_user_optional),
+):
     """提交人工复核结论 (确认通过/驳回 + 备注), 留痕入库."""
     from src.database.postgresql_client import postgresql_client
 
@@ -729,8 +854,9 @@ def submit_review(req: ReviewSubmitRequest):
         review_type=req.review_type,
         verdict=req.verdict,
         comment=req.comment,
-        reviewer=req.reviewer,
+        reviewer=req.reviewer or (user["display_name"] if user else ""),
         result_snapshot=req.result_snapshot,
+        user_id=user["id"] if user else None,
     )
     logger.info("人工复核已记录 doc=%s type=%s verdict=%s reviewer=%s id=%s",
                 req.document_id, req.review_type, req.verdict, req.reviewer, review_id)

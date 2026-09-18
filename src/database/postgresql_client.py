@@ -54,6 +54,21 @@ class PostgreSQLClient:
         try:
             with self._engine.begin() as conn:
                 conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS users (
+                        id SERIAL PRIMARY KEY,
+                        username TEXT UNIQUE NOT NULL,
+                        password_hash TEXT NOT NULL,
+                        role TEXT DEFAULT 'auditor',  -- admin / auditor / bidder
+                        display_name TEXT DEFAULT '',
+                        created_at TIMESTAMP DEFAULT NOW())
+                """))
+                # 默认管理员 (密码 admin123, hash 首次启动写入)
+                conn.execute(text("""
+                    INSERT INTO users (username, password_hash, role, display_name)
+                    SELECT 'admin', '$2b$12$placeholder', 'admin', '系统管理员'
+                    WHERE NOT EXISTS (SELECT 1 FROM users WHERE username='admin')
+                """))
+                conn.execute(text("""
                     CREATE TABLE IF NOT EXISTS conversations (
                         session_id TEXT PRIMARY KEY,
                         title TEXT DEFAULT '',
@@ -112,6 +127,8 @@ class PostgreSQLClient:
                     CREATE INDEX IF NOT EXISTS idx_dr_doc
                     ON document_reviews (document_id, review_type, created_at DESC)
                 """))
+                conn.execute(text(
+                    "ALTER TABLE document_reviews ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL"))
         except PostgreSQLQueryError:
             pass
 
@@ -119,11 +136,11 @@ class PostgreSQLClient:
         if not self._ready:
             raise PostgreSQLQueryError("PostgreSQL 未连接")
         try:
-            with self._engine.connect() as conn:
+            with self._engine.begin() as conn:
                 result = conn.execute(text(sql), params or {})
-                rows = [dict(r._mapping) for r in result]
-                conn.commit()
-                return rows
+                if result.returns_rows:
+                    return [dict(r._mapping) for r in result]
+                return []
         except Exception as e:
             raise PostgreSQLQueryError(str(e)) from e
 
@@ -334,18 +351,15 @@ class PostgreSQLClient:
 
     def save_review(self, document_id: int, review_type: str, verdict: str,
                     comment: str = "", reviewer: str = "",
-                    result_snapshot: dict | None = None) -> int:
-        """保存一条人工复核记录, 返回 id.
-
-        review_type: compliance | qualification | rejection
-        verdict: approved | rejected
-        """
+                    result_snapshot: dict | None = None,
+                    user_id: int | None = None) -> int:
+        """保存一条人工复核记录, 返回 id."""
         import json as _json
         rows = self._run("""
             INSERT INTO document_reviews
-            (document_id, review_type, verdict, comment, reviewer, result_snapshot)
+            (document_id, review_type, verdict, comment, reviewer, result_snapshot, user_id)
             VALUES
-            (:did, :rt, :v, :c, :r, CAST(:snap AS jsonb))
+            (:did, :rt, :v, :c, :r, CAST(:snap AS jsonb), :uid)
             RETURNING id
         """, {
             "did": document_id,
@@ -354,6 +368,7 @@ class PostgreSQLClient:
             "c": comment or "",
             "r": reviewer or "",
             "snap": _json.dumps(result_snapshot or {}, ensure_ascii=False),
+            "uid": user_id,
         })
         return rows[0]["id"] if rows else -1
 
