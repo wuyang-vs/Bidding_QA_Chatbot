@@ -5,6 +5,7 @@
   MVP1 文档库 / MVP2 混合检索+引用 / MVP3 条款提取 /
   MVP4 资格+废标检查 / MVP5 人工复核留痕 /
   P4 响应性 / P5 评分辅助表 / P6 多家对比 /
+  P7 报价计算 / P8 投标文件解析器 / P9 围串标线索 /
   Auth 权限控制 / Workflow 工具链编排
 
 用法: .venv/Scripts/python.exe tests/acceptance/run_acceptance.py
@@ -254,6 +255,140 @@ def t():
     prices = [b["values"].get("报价", "") for b in d["bidders"]]
     assert all(prices), f"报价抽取缺失: {prices}"
     return {"note": f"字段{len(d.get('fields',[]))}个; 报价列: {prices}"}
+
+
+# ================= P7 报价计算 (纯规则) =================
+
+@case("P7报价计算", "P7-01", "正确报价表: 算术/汇总/大写/价格分")
+def t():
+    s, d = http("POST", "/api/price/calculate", {
+        "items": [
+            {"name": "服务器", "qty": 10, "unit_price": 50000, "amount": 500000},
+            {"name": "交换机", "qty": 5, "unit_price": 8000, "amount": 40000},
+            {"name": "实施服务", "qty": 1, "unit_price": 200000, "amount": 200000}],
+        "declared_total": 740000, "declared_total_cn": "柒拾肆万元整",
+        "control_price": 1000000, "all_bid_prices": [740000, 800000]}, timeout=30)
+    assert s == 200, f"status={s} {d}"
+    assert d["verdict"] == "pass", f"应无异常: {d['anomalies']}"
+    assert d["subtotal"] == 740000, d["subtotal"]
+    assert d["cn_amount"] == 740000, d["cn_amount"]
+    assert d["price_score"] == 100.0, f"最低价应满分: {d['price_score']}"
+    return {"note": f"合计{d['subtotal']} 大写校验一致 价格分{d['price_score']} verdict=pass"}
+
+
+@case("P7报价计算", "P7-02", "异常检出: 行内算术不符+超最高限价")
+def t():
+    s, d = http("POST", "/api/price/calculate", {
+        "items": [
+            {"name": "服务器", "qty": 10, "unit_price": 50000, "amount": 600000},
+            {"name": "实施服务", "qty": 1, "unit_price": 200000, "amount": 200000}],
+        "declared_total": 800000, "control_price": 700000}, timeout=30)
+    assert s == 200 and d["verdict"] == "fail", f"应判fail: {s} {d.get('verdict')}"
+    codes = {a["code"] for a in d["anomalies"]}
+    assert "ROW_ARITHMETIC" in codes, f"未检出行内错误: {codes}"
+    assert "OVER_CONTROL_PRICE" in codes, f"未检出超限价: {codes}"
+    return {"note": f"verdict=fail, 异常={sorted(codes)}"}
+
+
+@case("P7报价计算", "P7-03", "大小写金额不一致检出")
+def t():
+    s, d = http("POST", "/api/price/calculate", {
+        "items": [{"name": "设备", "qty": 1, "unit_price": 740000, "amount": 740000}],
+        "declared_total": 740000, "declared_total_cn": "柒拾伍万元整"}, timeout=30)
+    assert s == 200
+    codes = {a["code"] for a in d["anomalies"]}
+    assert "CN_MISMATCH" in codes, f"未检出大小写不符: {codes}"
+    return {"note": "大写750000 vs 数字740000 → CN_MISMATCH"}
+
+
+# ================= P8 投标文件解析器 =================
+
+_BID_TEXT = (
+    "投标函\n项目名称：XX市智慧园区信息化建设项目（二期）\n投标人：验收测试科技有限公司\n"
+    "投标总报价：人民币 820 万元\n工期：100 个日历天\n质保期：3 年\n"
+    "投标有效期：90 天\n投标保证金：16 万元\n"
+    "本项目采用微服务架构与国产化服务器，关键技术参数全部满足并优于招标要求。\n"
+    "我司具备电子与智能化工程专业承包贰级资质，近三年完成两个同类信息化项目。\n"
+    "售后服务：2 小时响应、4 小时到场。项目经理为高级工程师。\n"
+    "付款方式：验收合格后支付 95%，质保金 5%。"
+)
+
+
+@case("P8投标解析器", "P8-01", "单份投标→商务/技术/资格三维度结构化")
+def t():
+    s, d = http("POST", "/api/bid/parse",
+                {"bidder_name": "验收测试科技有限公司", "text": _BID_TEXT}, timeout=150)
+    assert s == 200 and d.get("parse_status") == "ok", f"status={s} {str(d)[:200]}"
+    c = d.get("commercial") or {}
+    filled_c = [k for k, v in c.items() if v]
+    assert len(filled_c) >= 4, f"商务字段不足: {filled_c}"
+    tech = d.get("technical") or {}
+    filled_t = [k for k, v in tech.items() if v]
+    assert len(filled_t) >= 2, f"技术维度字段不足: {filled_t}"
+    assert len(d.get("qualifications") or []) >= 1, "资质未抽出"
+    assert d.get("fields", {}).get("报价"), "fields 报价缺失(多家对比兼容)"
+    return {"note": f"商务{len(filled_c)}/6 技术{len(filled_t)}/4 资质{len(d.get('qualifications',[]))}条 "
+                    f"报价={c.get('报价')} 工期={c.get('工期')}"}
+
+
+# ================= P9 围串标线索 =================
+
+_COLLUSION_SENT = ("我方将严格按照ISO9001质量管理体系组织项目实施，确保系统一次验收合格率达到百分之百，"
+                   "售后服务响应时间不超过两小时，质保期内免费上门维护并更换故障部件。")
+
+
+@case("P9围串标线索", "P9-01", "雷同文本+接近报价→线索输出(不定性)")
+def t():
+    s, d = http("POST", "/api/collusion/detect", {"bids": [
+        {"bidder_name": "甲公司", "text": "投标报价：人民币 820 万元。" + _COLLUSION_SENT},
+        {"bidder_name": "乙公司", "text": "投标报价：人民币 822 万元。" + _COLLUSION_SENT},
+        {"bidder_name": "丙公司", "text": "我司投标总报价 950 万元，具备建筑工程总承包一级资质，质保两年。"}]},
+        timeout=60)
+    assert s == 200, f"status={s} {d}"
+    assert d["verdict"] == "clues_found", d["verdict"]
+    clues = d.get("clues", [])
+    assert len(clues) >= 2, f"线索不足: {len(clues)}"
+    dims = {c["dimension"] for c in clues}
+    assert "文本雷同" in dims and "报价规律" in dims, f"维度缺失: {dims}"
+    # 每条线索须含等级/理由/双方证据
+    c0 = clues[0]
+    assert c0.get("level") and c0.get("reason") and "evidence" in c0, c0
+    # 严禁自动定性
+    assert "不构成" in d.get("disclaimer", ""), "缺少不定性免责声明"
+    return {"note": f"{len(clues)}条线索 维度={dims}; 高{d['summary']['high']} 中{d['summary']['medium']}; 仅提示不定性"}
+
+
+@case("P9围串标线索", "P9-02", "内容独立的投标→无线索 clean")
+def t():
+    s, d = http("POST", "/api/collusion/detect", {"bids": [
+        {"bidder_name": "丁公司", "text": "投标报价 680 万元，采用集装箱模块化机房方案，冬季施工。"},
+        {"bidder_name": "戊公司", "text": "投标总报价 910 万元，以分布式光纤组网，项目团队含五名注册建造师。"}]},
+        timeout=60)
+    assert s == 200 and d["verdict"] == "clean", f"应clean: {d.get('verdict')} {d.get('clues')}"
+    assert d["summary"]["total_clues"] == 0
+    return {"note": "两家内容/报价独立, verdict=clean"}
+
+
+@case("P9围串标线索", "P9-03", "少于2份投标被拒(400)")
+def t():
+    s, d = http("POST", "/api/collusion/detect",
+                {"bids": [{"bidder_name": "孤家", "text": "xxx"}]}, timeout=30)
+    assert s == 400, f"应400, 实际{s}"
+    return {"note": "400 输入校验生效"}
+
+
+@case("P9围串标线索", "P9-04", "围串标已注册为工作流节点(自定义配置)")
+def t():
+    cfg = {"name": "围串标快速扫描", "nodes": [
+        {"id": "c", "tool": "collusion_check",
+         "params": {"bids": [
+             {"bidder_name": "甲公司", "text": "投标报价：820 万元。" + _COLLUSION_SENT},
+             {"bidder_name": "乙公司", "text": "投标报价：821 万元。" + _COLLUSION_SENT}]}}]}
+    s, d = http("POST", "/api/workflow/run", {"config": cfg, "ctx": {}}, timeout=120)
+    assert s == 200 and d["summary"]["success"] == 1, f"工作流节点失败: {s} {str(d)[:200]}"
+    out = d["raw"]["c"]["output"]
+    assert out["verdict"] == "clues_found", out.get("verdict")
+    return {"note": f"collusion_check 节点执行成功, 线索{out['summary']['total_clues']}条"}
 
 
 # ================= Auth =================

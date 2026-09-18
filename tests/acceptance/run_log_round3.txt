@@ -1,0 +1,58 @@
+﻿
+======================================================================
+招投标采购 RAG-Agent MVP 验收测试  2026-09-18 12:48:45
+目标: http://localhost:8001  测试文档 db_id=6
+======================================================================
+
+  [PASS] ENV-01 后端服务存活 /api/health  (2141ms) {'ready': True, 'agent_ready': True, 'graph_ready': True, 'pg_ready': True, 'points_count': 339, 'la
+  [PASS] ENV-02 PostgreSQL 已连接  (2048ms) pg_ready=true
+  [PASS] ENV-03 Qdrant 向量库已连接且有向量  (2056ms) 向量点数=339, rag_ready=true
+  [PASS] M1-01 文档列表可分页查询  (2083ms) 共 8 份文档
+  [PASS] M1-02 文档含结构化字段+全文  (2056ms) #6 test_bid.txt 全文1736字
+  [PASS] M1-03 上传招标文件→解析入库+自动向量化  (4768ms) db_id=9, 解析状态=ok, 向量化分片=1
+  [PASS] M2-01 问答接口返回带引用来源的答案(命中文档库)  (61077ms) 答案433字, 引用2条(招标分片2), 事实命中: 截止=True 预算=True
+  [PASS] M3-01 评分办法已结构化提取  (2048ms) 综合评分法，总分100分：价格分40分、技术分35分、商务分15分、业绩分10分
+  [PASS] M3-02 资格要求列表非空  (2065ms) 12 条资格要求
+  [PASS] M4-01 合规性扫描(排他性条款)  (25615ms) 发现 1 个风险项, status=attention, 分级={'high': 0, 'medium': 1, 'low': 0, 'total_checked': 15, 'risks_found': 1}
+  [PASS] M4-02 资格条件逐条比对  (9038ms) 结果项 0, keys=['summary', 'checks', 'gap_report', 'verdict', 'action_suggestions']
+  [PASS] M4-03 废标条款提取  (22716ms) 提取 12 条废标条款
+  [PASS] P4-01 投标逐条响应判定(正偏离识别)  (58060ms) 总19 响应2 正偏离2 verdict=attention
+  [PASS] P5-01 评分办法→结构化打分表(权重合计100)  (2973ms) ['价格分', '技术分', '商务分', '业绩分'], 合计100.0分
+  [PASS] P6-01 三家投标关键字段并排对比  (7151ms) 字段9个; 报价列: ['820万元', '950万元', '880 万元']
+  [PASS] P7-01 正确报价表: 算术/汇总/大写/价格分  (2056ms) 合计740000.0 大写校验一致 价格分100.0 verdict=pass
+  [PASS] P7-02 异常检出: 行内算术不符+超最高限价  (2039ms) verdict=fail, 异常=['OVER_CONTROL_PRICE', 'ROW_ARITHMETIC', 'SUM_MISMATCH']
+  [PASS] P7-03 大小写金额不一致检出  (2067ms) 大写750000 vs 数字740000 → CN_MISMATCH
+  [PASS] P8-01 单份投标→商务/技术/资格三维度结构化  (4972ms) 商务6/6 技术4/4 资质1条 报价=人民币 820 万元 工期=100 个日历天
+  [PASS] P9-01 雷同文本+接近报价→线索输出(不定性)  (2071ms) 2条线索 维度={'文本雷同', '报价规律'}; 高2 中0; 仅提示不定性
+  [PASS] P9-02 内容独立的投标→无线索 clean  (2040ms) 两家内容/报价独立, verdict=clean
+  [PASS] P9-03 少于2份投标被拒(400)  (2065ms) 400 输入校验生效
+  [PASS] P9-04 围串标已注册为工作流节点(自定义配置)  (2060ms) collusion_check 节点执行成功, 线索2条
+  [PASS] AUTH-01 注册→登录→/auth/me 全链路  (6588ms) acpt_user01_1789707150 role=auditor
+  [PASS] AUTH-02 错误密码登录被拒(401)  (4495ms) 401 用户名或密码错误
+  [PASS] AUTH-03 无token访问/auth/me被拒(401)  (2083ms) 401 未登录
+  [PASS] AUTH-04 默认管理员 admin/admin123 可用  (2244ms) admin 登录成功, role=admin
+  [PASS] M5-01 登录态提交复核→user_id自动关联  (8642ms) review id=7, reviewer=复核员甲, user_id=14 已关联
+  [PASS] M5-02 非法review_type被拒(400)  (2040ms) 400 非法类型已拦截
+  [PASS] WF-01 预置工作流清单可查询  (2041ms) compliance_review, eval_assist
+  [PASS] WF-02 合规审查一条龙 DAG 执行(3节点+降级容错)  (39690ms) verdict=ok 成功3/3 (降级容错机制保留, 本轮无失败节点)
+  [PASS] WF-03 评标辅助一条龙 DAG 执行  (44525ms) verdict=ok 成功2/2
+
+======================================================================
+汇总: 共 32 项 | PASS 32 | FAIL 0 | ERROR 0 | 通过率 100.0%
+  环境: 3/3
+  MVP1文档库: 3/3
+  MVP2检索: 1/1
+  MVP3条款提取: 2/2
+  MVP4条款检查: 3/3
+  P4响应性: 1/1
+  P5评分辅助表: 1/1
+  P6多家对比: 1/1
+  P7报价计算: 3/3
+  P8投标解析器: 1/1
+  P9围串标线索: 4/4
+  Auth权限: 4/4
+  MVP5复核留痕: 2/2
+  Workflow编排: 3/3
+======================================================================
+
+证据已保存: tests/acceptance/evidence.json
