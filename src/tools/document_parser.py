@@ -44,17 +44,79 @@ EXTRACT_SCHEMA = """{
 
 # ---------- 文本提取 ----------
 
-def extract_text_pdf(path: str | Path) -> str:
-    """PDF 全文提取 (PyMuPDF)."""
+# OCR 单例 (懒加载, 避免启动时拉起 onnxruntime)
+_ocr_engine = None
+# 页面文本少于该字符数视为扫描页 (无文本层)
+_OCR_MIN_CHARS = 15
+_OCR_DPI = 180
+# OCR 页数安全上限 (超出后保留空页并在结果中标记 ocr_truncated, 防止超长扫描件卡死)
+_OCR_MAX_PAGES = 100
+
+
+def _get_ocr_engine():
+    global _ocr_engine
+    if _ocr_engine is None:
+        from rapidocr_onnxruntime import RapidOCR
+        logger.info("🖼  首次扫描件, 加载 RapidOCR 模型 ...")
+        _ocr_engine = RapidOCR()
+    return _ocr_engine
+
+
+def _ocr_page(page) -> str:
+    """对单个 PyMuPDF 页渲染后 OCR, 返回拼接文本."""
+    import numpy as np
+    import cv2
+    png = page.get_pixmap(dpi=_OCR_DPI).tobytes("png")
+    img = cv2.imdecode(np.frombuffer(png, np.uint8), cv2.IMREAD_COLOR)
+    result, _ = _get_ocr_engine()(img)
+    if not result:
+        return ""
+    # result: [[box, text, score], ...] 按行上到下已大致有序
+    return "\n".join(item[1] for item in result if item and len(item) > 1 and item[1])
+
+
+def extract_pages_pdf(path: str | Path) -> tuple[list[dict[str, Any]], list[int], dict[str, Any]]:
+    """PDF 按页提取, 返回 (pages, ocr_pages).
+
+    pages: [{"page_no": 1 起, "text": str}]
+    文本层为空的扫描页自动走 OCR; ocr_pages 记录实际 OCR 的页号.
+    """
     import pymupdf
     doc = pymupdf.open(path)
+    pages: list[dict[str, Any]] = []
+    ocr_pages: list[int] = []
+    truncated = False
     try:
-        pages = []
-        for page in doc:
-            pages.append(page.get_text())
-        return "\n".join(pages)
+        for idx, page in enumerate(doc, start=1):
+            text = page.get_text() or ""
+            if len(text.strip()) < _OCR_MIN_CHARS:
+                if len(ocr_pages) >= _OCR_MAX_PAGES:
+                    truncated = True
+                    logger.warning("OCR 页数超过上限 %d, 第 %d 页起跳过", _OCR_MAX_PAGES, idx)
+                else:
+                    logger.info("🖼  第 %d 页无文本层, 执行 OCR ...", idx)
+                    try:
+                        ocr_text = _ocr_page(page)
+                        if ocr_text.strip():
+                            text = ocr_text
+                            ocr_pages.append(idx)
+                    except Exception as e:  # OCR 失败不应拖垮整个解析
+                        logger.warning("第 %d 页 OCR 失败: %s", idx, e)
+            pages.append({"page_no": idx, "text": text})
     finally:
         doc.close()
+    if truncated:
+        # 标记挂到调用方可读位置 (通过模块属性返回不方便, 用日志 + 末页标记)
+        pages_meta = {"ocr_truncated": True}
+    else:
+        pages_meta = {"ocr_truncated": False}
+    return pages, ocr_pages, pages_meta
+
+
+def extract_text_pdf(path: str | Path) -> str:
+    """PDF 全文提取 (PyMuPDF, 扫描页自动 OCR)."""
+    pages, _ocr, _meta = extract_pages_pdf(path)
+    return "\n".join(p["text"] for p in pages)
 
 
 def extract_text_docx(path: str | Path) -> str:
@@ -70,6 +132,23 @@ def extract_text_docx(path: str | Path) -> str:
     return "\n".join(parts)
 
 
+def extract_text_xlsx(path: str | Path) -> str:
+    """Excel 招标文件提取 (openpyxl), 逐 sheet 逐行, 单元格以 | 连接."""
+    import openpyxl
+    wb = openpyxl.load_workbook(str(path), data_only=True, read_only=True)
+    parts: list[str] = []
+    try:
+        for ws in wb.worksheets:
+            parts.append(f"## Sheet: {ws.title}")
+            for row in ws.iter_rows(values_only=True):
+                cells = [str(c).strip() for c in row if c is not None and str(c).strip()]
+                if cells:
+                    parts.append(" | ".join(cells))
+    finally:
+        wb.close()
+    return "\n".join(parts)
+
+
 def extract_text_txt(path: str | Path) -> str:
     """纯文本 (含 GBK 兼容)."""
     for enc in ("utf-8", "utf-8-sig", "gbk", "gb18030"):
@@ -78,6 +157,22 @@ def extract_text_txt(path: str | Path) -> str:
         except UnicodeDecodeError:
             continue
     return Path(path).read_text(encoding="utf-8", errors="replace")
+
+
+def extract_pages(path: str | Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """统一按页提取: 返回 (pages, meta).
+
+    PDF 有真实页码 (扫描页 OCR); 其他格式无分页概念, page_no=None,
+    引用溯源时仅显示文件名不伪造页码.
+    meta: {"ocr_pages": [...], "ocr_truncated": bool}
+    """
+    p = Path(path)
+    ext = p.suffix.lower()
+    if ext == ".pdf":
+        pages, ocr_pages, pages_meta = extract_pages_pdf(p)
+        return pages, {"ocr_pages": ocr_pages, **pages_meta}
+    text = extract_text(p)
+    return [{"page_no": None, "text": text}], {"ocr_pages": [], "ocr_truncated": False}
 
 
 def extract_text(path: str | Path) -> str:
@@ -90,9 +185,13 @@ def extract_text(path: str | Path) -> str:
         if ext == ".doc":
             logger.warning(".doc 旧格式, 可能无法完整解析, 建议转 .docx")
         return extract_text_docx(p)
+    if ext in (".xlsx", ".xls"):
+        if ext == ".xls":
+            logger.warning(".xls 旧格式建议另存为 .xlsx")
+        return extract_text_xlsx(p)
     if ext in (".txt", ".md"):
         return extract_text_txt(p)
-    raise ValueError(f"不支持的文件格式: {ext} (支持 .pdf/.docx/.txt/.md)")
+    raise ValueError(f"不支持的文件格式: {ext} (支持 .pdf/.docx/.xlsx/.txt/.md)")
 
 
 # ---------- LLM 结构化抽取 ----------
@@ -177,10 +276,17 @@ def parse_file(path: str | Path, llm_client=None) -> dict[str, Any]:
     if not p.exists():
         raise FileNotFoundError(f"文件不存在: {path}")
     logger.info("📄 解析文件: %s", p.name)
-    text = extract_text(p)
-    logger.info("  提取文本长度: %d 字符", len(text))
+    pages, page_meta = extract_pages(p)
+    text = "\n".join(pg["text"] for pg in pages)
+    logger.info("  提取文本长度: %d 字符, %d 页 (其中 OCR 页: %s%s)",
+                len(text), len(pages), page_meta.get("ocr_pages") or "无",
+                ", 已截断" if page_meta.get("ocr_truncated") else "")
     structured = extract_structured(text, llm_client)
     structured["source_file"] = p.name
     structured["source_path"] = str(p.resolve())
     structured["text_length"] = len(text)
+    structured["pages"] = pages
+    structured["page_count"] = len(pages)
+    structured["ocr_pages"] = page_meta.get("ocr_pages", [])
+    structured["ocr_truncated"] = page_meta.get("ocr_truncated", False)
     return structured

@@ -11,5 +11,16 @@ data/batch/*
 !data/batch/.gitkeep
 frontend/node_modules/
 frontend/.next/
+frontend/tsconfig.tsbuildinfo
 .DS_Store
 *.tmp.xlsx
+
+# 运行产物 / 日志 / IDE
+.trae/
+logs/
+*.log
+run_log*.txt
+backend_run.log
+frontend/next_dev.log
+tests/acceptance/run_log*.txt
+
