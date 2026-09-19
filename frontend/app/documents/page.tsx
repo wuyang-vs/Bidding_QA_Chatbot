@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode, type ComponentType } from 
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { FileText, Upload, Loader2, CheckCircle, AlertCircle, Eye, X, Shield, ClipboardCheck, AlertTriangle, CheckSquare, FileWarning, UserCheck, History, FileCheck, User, LogOut, Calculator, FileSearch, Radar, PenLine, Download, Copy, Building2, BookOpen } from "lucide-react";
+import AlertModal, { type AlertPayload } from "@/components/AlertModal";
 
 interface ParsedDoc {
   db_id?: number;
@@ -955,6 +956,11 @@ export default function DocumentsPage() {
   const [qualLoading, setQualLoading] = useState(false);
   const [qualResult, setQualResult] = useState<QualificationResult | null>(null);
 
+  // 检测结果主动预警弹窗 (R17)
+  const [alert, setAlert] = useState<AlertPayload | null>(null);
+  const clip = (s: string | undefined, n = 90) =>
+    s ? (s.length > n ? s.slice(0, n) + "…" : s) : "";
+
   // 弹窗（企业资质输入）
   const [qualInputOpen, setQualInputOpen] = useState(false);
   const [qualInput, setQualInput] = useState("");
@@ -1200,7 +1206,22 @@ export default function DocumentsPage() {
         body: JSON.stringify({ db_id: dbId }),
       });
       if (!r.ok) throw new Error(await r.text());
-      setCompResult({ ...(await r.json()), docId: dbId });
+      const j: ComplianceResult = await r.json();
+      setCompResult({ ...j, docId: dbId });
+      // 主动预警 (R17): 高风险弹红, 中风险弹黄
+      const hi = (j.risks || []).filter((x) => x.risk_level === "高");
+      const mid = (j.risks || []).filter((x) => x.risk_level === "中");
+      if (hi.length > 0) {
+        setAlert({
+          level: "high", title: "合规检测发现高风险排他性条款", docId: dbId,
+          items: hi.map((x) => `【${x.rule_id}·${x.category}】${clip(x.detail || x.matched_text)}`),
+        });
+      } else if (mid.length > 0) {
+        setAlert({
+          level: "medium", title: "合规检测发现中风险条款", docId: dbId,
+          items: mid.map((x) => `【${x.rule_id}·${x.category}】${clip(x.detail || x.matched_text)}`),
+        });
+      }
     } catch (e: any) {
       setCompResult({
         summary: { high: 0, medium: 0, low: 0, total_checked: 0, risks_found: 0 },
@@ -1223,7 +1244,22 @@ export default function DocumentsPage() {
         body: JSON.stringify({ db_id: dbId, company_qualifications: certs }),
       });
       if (!r.ok) throw new Error(await r.text());
-      setQualResult({ ...(await r.json()), docId: dbId });
+      const j: QualificationResult = await r.json();
+      setQualResult({ ...j, docId: dbId });
+      // 主动预警 (R17): 有资格项不满足弹红, 部分满足弹黄
+      const miss = (j.checks || []).filter((c) => c.status === "NO_MATCH" || c.status === "INFO_MISSING");
+      const part = (j.checks || []).filter((c) => c.status === "PARTIAL_MATCH");
+      if (miss.length > 0) {
+        setAlert({
+          level: "high", title: "资格检查存在不满足项，可能被否决", docId: dbId,
+          items: miss.map((c) => `${clip(c.requirement)}${c.detail ? ` — ${clip(c.detail, 40)}` : ""}`),
+        });
+      } else if (part.length > 0) {
+        setAlert({
+          level: "medium", title: "资格检查存在部分满足项", docId: dbId,
+          items: part.map((c) => `${clip(c.requirement)}${c.detail ? ` — ${clip(c.detail, 40)}` : ""}`),
+        });
+      }
     } catch (e: any) {
       setQualResult({
         summary: { total_req: 0, full: 0, partial: 0, missing: 0 },
@@ -1254,7 +1290,24 @@ export default function DocumentsPage() {
         body: JSON.stringify({ db_id: dbId, bidder_status: bidderStatus || "" }),
       });
       if (!r.ok) throw new Error(await r.text());
-      setRejResult({ ...(await r.json()), docId: dbId });
+      const j: RejectionResult = await r.json();
+      setRejResult({ ...j, docId: dbId });
+      // 主动预警 (R17): 废标风险弹红, 待确认弹黄
+      const self = j.self_check || [];
+      const risks = self.filter((s) => s.status === "risk");
+      const uncertains = self.filter((s) => s.status === "uncertain");
+      const clauseText = (id: string) => clip((j.clauses || []).find((c) => c.id === id)?.clause_text);
+      if (j.verdict === "danger" || risks.length > 0) {
+        setAlert({
+          level: "high", title: "废标自查存在风险条款", docId: dbId,
+          items: risks.map((s) => `【${s.clause_id}】${clauseText(s.clause_id)}${s.reason ? ` — ${clip(s.reason, 50)}` : ""}`),
+        });
+      } else if (j.verdict === "attention" || uncertains.length > 0) {
+        setAlert({
+          level: "medium", title: "废标自查存在待确认条款", docId: dbId,
+          items: uncertains.map((s) => `【${s.clause_id}】${clauseText(s.clause_id)}${s.reason ? ` — ${clip(s.reason, 50)}` : ""}`),
+        });
+      }
     } catch (e: any) {
       setRejResult({
         summary: { total_clauses: 0, by_category: {}, risk_count: 0 },
@@ -1284,7 +1337,22 @@ export default function DocumentsPage() {
         body: JSON.stringify({ tender_db_id: dbId, bid_text: bidText, clause }),
       });
       if (!r.ok) throw new Error(await r.text());
-      setRespResult({ ...(await r.json()), docId: dbId });
+      const j: ResponseResult = await r.json();
+      setRespResult({ ...j, docId: dbId });
+      // 主动预警 (R17): 负偏离弹红, 未响应弹黄
+      const neg = (j.clauses || []).filter((c) => c.status === "negative");
+      const none = (j.clauses || []).filter((c) => c.status === "none");
+      if (j.verdict === "danger" || neg.length > 0) {
+        setAlert({
+          level: "high", title: "响应性检查存在负偏离项", docId: dbId,
+          items: neg.map((c) => `【${c.clause_no || c.id}】${clip(c.tender_clause)}${c.detail ? ` — ${clip(c.detail, 40)}` : ""}`),
+        });
+      } else if (j.verdict === "attention" || none.length > 0) {
+        setAlert({
+          level: "medium", title: "响应性检查存在未响应项", docId: dbId,
+          items: none.map((c) => `【${c.clause_no || c.id}】${clip(c.tender_clause)}`),
+        });
+      }
     } catch (e: any) {
       setRespResult({
         summary: { total: 0, response: 0, positive: 0, negative: 0, none: 0 },
@@ -1367,8 +1435,23 @@ export default function DocumentsPage() {
         }),
       });
       if (!r.ok) throw new Error(await r.text());
-      setPriceResult(await r.json());
+      const j = await r.json();
+      setPriceResult(j);
       setPriceOpen(false);
+      // 主动预警 (R17): 报价校验错误弹红, 警告弹黄
+      const errs = (j.anomalies || []).filter((a: any) => a.level === "error");
+      const warns = (j.anomalies || []).filter((a: any) => a.level !== "error");
+      if (errs.length > 0) {
+        setAlert({
+          level: "high", title: "报价校验存在错误，可能导致废标", targetId: "price-result",
+          items: errs.map((a: any) => `【${a.code}】${clip(a.message)}`),
+        });
+      } else if (warns.length > 0) {
+        setAlert({
+          level: "medium", title: "报价校验存在警告", targetId: "price-result",
+          items: warns.map((a: any) => `【${a.code}】${clip(a.message)}`),
+        });
+      }
     } catch (e: any) {
       setError(`报价计算失败: ${e?.message}`);
     } finally {
@@ -1933,7 +2016,11 @@ export default function DocumentsPage() {
       {wfResult && <WorkflowPanel result={wfResult} onClose={() => setWfResult(null)} />}
 
       {/* 报价计算结果 (独立) */}
-      {priceResult && <PricePanel result={priceResult} onClose={() => setPriceResult(null)} />}
+      {priceResult && (
+        <div id="price-result" className="scroll-mt-4">
+          <PricePanel result={priceResult} onClose={() => setPriceResult(null)} />
+        </div>
+      )}
 
       {/* 投标解析结果 (独立) */}
       {bpResult && <BidParsePanel result={bpResult} onClose={() => setBpResult(null)} />}
@@ -2597,6 +2684,19 @@ ISO 9001 质量管理体系认证
             </div>
           </div>
         </div>
+      )}
+
+      {/* 检测结果主动预警弹窗 (R17) */}
+      {alert && (
+        <AlertModal
+          alert={alert}
+          onClose={() => setAlert(null)}
+          onDetail={
+            alert.targetId
+              ? () => document.getElementById(alert.targetId!)?.scrollIntoView({ behavior: "smooth", block: "start" })
+              : undefined
+          }
+        />
       )}
 
       {/* 登录 / 注册弹窗 */}
