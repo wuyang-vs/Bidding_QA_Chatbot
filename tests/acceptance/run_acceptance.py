@@ -1419,6 +1419,38 @@ def t():
     return {"note": "上传失败定位up-3/开标解密dec-2含同一把CA提示/仅角色不锁定阶段/招标人tdr-3/三角色≥7流程/404"}
 
 
+@case("V21检测预警弹窗", "ALERT-01", "检测预警弹窗数据契约: error级anomalies驱动前端红弹窗, 无异常不弹")
+def t():
+    # 1) error 场景: 总价与分项不符 → SUM_MISMATCH(error) → 前端弹红窗
+    s, d = http("POST", "/api/price/calculate",
+                {"items": [{"name": "设备A", "qty": "1", "unit_price": "100", "amount": "100"},
+                           {"name": "设备B", "qty": "2", "unit_price": "50", "amount": "100"}],
+                 "declared_total": 300}, timeout=15)
+    assert s == 200, f"报价校验失败 {s} {str(d)[:200]}"
+    assert d["verdict"] == "fail", f"error 场景 verdict 应为 fail, 实际 {d.get('verdict')}"
+    errs = [a for a in d["anomalies"] if a["level"] == "error"]
+    assert errs, "应有 error 级 anomalies (前端弹红窗数据依据)"
+    assert any(a["code"] == "SUM_MISMATCH" and a.get("message") for a in errs), \
+        f"应含 SUM_MISMATCH 且带 message, 实际 {errs}"
+
+    # 2) 大写不一致 → CN_MISMATCH(error) 追加弹窗条目
+    s, d = http("POST", "/api/price/calculate",
+                {"items": [{"name": "设备A", "qty": "1", "unit_price": "100", "amount": "100"}],
+                 "declared_total": 100, "declared_total_cn": "柒拾肆万元整"}, timeout=15)
+    assert s == 200
+    assert any(a["code"] == "CN_MISMATCH" and a["level"] == "error" for a in d["anomalies"]), \
+        f"应含 CN_MISMATCH error, 实际 {d['anomalies']}"
+
+    # 3) 无异常场景: 总价一致且无大写 → pass + 无 error → 前端不弹窗
+    s, d = http("POST", "/api/price/calculate",
+                {"items": [{"name": "设备A", "qty": "1", "unit_price": "100", "amount": "100"}],
+                 "declared_total": 100}, timeout=15)
+    assert s == 200
+    assert d["verdict"] == "pass", f"一致场景应 pass, 实际 {d.get('verdict')}"
+    assert not [a for a in d["anomalies"] if a["level"] == "error"], "无异常场景不应有 error"
+    return {"note": "SUM_MISMATCH error→fail弹红窗契约/CN_MISMATCH大写不符/一致→pass空异常不弹窗"}
+
+
 # ================= main =================
 
 def main():

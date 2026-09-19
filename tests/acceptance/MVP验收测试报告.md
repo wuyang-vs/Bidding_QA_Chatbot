@@ -3,15 +3,29 @@
 | 项目 | 内容 |
 |---|---|
 | 系统名称 | 招投标采购智能问答与辅助评标系统（Bidding_QA_Chatbot） |
-| 报告版本 | V2.0（在 V1.9 56 项基线上关闭智慧问答四类功能中的后两项：R15 异议投诉咨询——结构化专项知识库覆盖工程招投标"异议→投诉"与政府采购"质疑→投诉"两套渠道、法定时限、材料、流程与法规；R16 操作智能引导——按投标人/招标人/评标专家三类角色识别当前操作阶段并给出针对性步骤；新增 APPEAL-01、GUIDE-01 验收用例，全量 58 项，四类智慧问答功能全部关闭） |
-| 测试日期 | 2026-09-19（V2.0 回归，PROFILE_ENC_KEYS 双密钥链环境） |
+| 报告版本 | V2.1（在 V2.0 58 项基线上落地增强项 R17 检测结果前端主动弹窗预警：合规/资格/废标/响应性/报价五类检测完成后发现不合格或风险项时主动弹出红色/琥珀色预警，列出不合格条目并支持一键定位结果面板，无异常时不弹窗；新增 ALERT-01 验收用例，全量 59 项） |
+| 测试日期 | 2026-09-20（V2.1 回归，PROFILE_ENC_KEYS 双密钥链环境，脚本与后端同密钥链启动） |
 | 测试执行人 | 自动化验收套件（tests/acceptance/run_acceptance.py）＋离线确定性测试＋浏览器 UI 实测 |
-| 基线代码 | V1.9 commit `9e3c135`；V2.0 改动见第 5 章（尚未提交） |
-| 报告依据 | 全量执行日志 run_log_v20b.txt、evidence.json、离线测试输出、UI 截图（见第 7 章） |
+| 基线代码 | V2.0 commit `b62acac`；V2.1 改动见第 5 章（R17 弹窗组件与五类检测接入，尚未提交） |
+| 报告依据 | 全量执行日志（本地留存）、evidence.json、离线测试输出、UI 截图 v21_alert_modal.png/v21_no_alert_pass.png（见第 7 章） |
 
 ---
 
 ## 1. 验收结论
+
+**V2.1 验收套件共 59 项，全量回归 59 PASS / 0 FAIL / 0 ERROR（通过率 100%，PROFILE_ENC_KEYS 双密钥链环境，验收脚本与后端以同一密钥链启动）。本期落地增强项 R17「检测结果前端主动弹窗预警」：五类检测（合规/资格/废标/响应性/报价）完成后发现不合格或风险项时主动弹窗，无需用户翻阅结果面板。新增 ALERT-01 验收用例。**
+
+本轮（⑱ R17）交付的关键结论：
+
+1. **通用预警弹窗组件**：[frontend/components/AlertModal.tsx] 单一受控组件，双级配色——红色顶条 `level=high`（不合格项/废标风险，"发现不合格项，请及时处理"）、琥珀顶条 `level=medium`（待确认/警告，"检测发现风险项"）；列出不合格条目（最多 5 条，超出折叠为"共 N 项"）、条目截断 90 字防溢出；"查看详情"平滑滚动至对应结果面板锚点（check-results/price-result），"知道了"仅关闭。z-[60] 高于业务弹窗（z-50），遮罩点击与 X 均可关闭。
+2. **五类检测全部接入主动预警**（[frontend/app/documents/page.tsx]）：①合规检测——高风险排他条款弹红、中风险弹黄（取 risk_level=高/中，条目含规则号+类别+证据）；②资格检查——NO_MATCH/INFO_MISSING 不满足项弹红（可能被否决）、PARTIAL_MATCH 弹黄；③废标自查——verdict=danger 或 self_check 含 risk 弹红、attention/uncertain 弹黄（关联条款原文）；④响应性检查——负偏离弹红、未响应弹黄；⑤报价计算——anomalies 中 error 级（SUM_MISMATCH/CN_MISMATCH/ROW_ARITHMETIC/OVER_CONTROL_PRICE）弹红、warning 级弹黄。
+3. **无异常不打扰**：检测 verdict=pass/safe 或无风险条目时不弹窗，仅渲染原结果面板，避免告警疲劳。
+4. **ALERT-01 端到端实证（6.1s）**：报价 error 场景（分项合计 200 vs 投标总价 300）verdict=fail 且 anomalies 含 SUM_MISMATCH（level=error、带 message），构成前端红窗数据契约；大写金额"柒拾肆万元整"与数字 100 不符触发 CN_MISMATCH error；总价一致且无大写时 verdict=pass、无 error 级异常（不弹窗契约）。
+5. **浏览器 UI 实测三场景全过**：报价 SUM_MISMATCH+CN_MISMATCH 双错误红色弹窗实际渲染（标题/条目/双按钮齐全，截图 v21_alert_modal.png）、"查看详情"关闭弹窗并滚动至报价计算表面板、总价一致时不弹窗且面板显示"✅ 校验通过"（截图 v21_no_alert_pass.png），console 无错误。
+6. **零回退**：V2.0 及以前 58 项存量防线在 V2.1 全量回归中持续有效（PROFILE-03 双密钥链、BID-01~06 标书闭环、CERT-01、硬闸门、RBAC 等全过）；tsc 0 报错；本期仅改前端与验收脚本，后端无改动。
+7. **MinIO 真连通实测的环境受限说明**：本期尝试 Docker 拉取 minio/minio（经默认加速器/轩辕/DaoCloud/1ms/dockerpull 多源）均失败（免费节点繁忙/denied/镜像 not found/网络不可达），dl.min.io 官方 Windows 二进制已 410 Gone（开源版归档）；真实 MinIO 连通实测顺延，S3 链路仍由 V1.7 的 7 项 botocore Stubber 离线单测保障，R11 风险条更新见第 6 章。
+
+---
 
 **V2.0 验收套件共 58 项，全量回归 58 PASS / 0 FAIL / 0 ERROR（通过率 100%，PROFILE_ENC_KEYS 双密钥链环境）。本期关闭"智慧问答四类功能"中的后两项：R15 异议投诉咨询、R16 操作智能引导。新增 APPEAL-01、GUIDE-01 两个验收用例。至此四类智慧问答功能全部关闭。**
 
@@ -148,18 +162,19 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | **⑮ V1.8 审计落库** | audit_logs 表持久化（字段名清单 JSONB、user_id 外键、双索引）、record_audit/list_audit_logs（降级不阻断/参数化/限长/排序白名单）、企业资料/证书 OCR/密钥轮换三类敏感操作接入、GET /api/audit/logs 端点（admin/auditor 403/401） | AUDIT-01 |
 | **⑯ V1.9 异常解释+范本推荐** | 12 code 结构化异常知识库（原因/影响/处置/法规）+ explain_anomaly Agent 工具 + /api/anomaly/explain(_batch)；11 份范本库+中文分词推荐 + recommend_template 工具 + /api/templates 三件套 | ANOMALY-01、TEMPLATE-01 |
 | **⑰ V2.0 异议投诉+操作引导** | 11 主题异议投诉专项库（渠道/时限/材料/流程/法规，工程招投标与政采两套区分）+ consult_appeal 工具 + /api/appeal 三件套；7 流程 27 阶段操作引导（投标人/招标人/评标专家，含阶段识别+前后衔接）+ guide_operation 工具 + /api/guide 三件套 | APPEAL-01、GUIDE-01 |
+| **⑱ V2.1 检测主动预警** | 五类检测（合规高/中风险、资格不满足/部分满足、废标 risk/uncertain、响应性负偏离/未响应、报价 error/warning 异常码）完成后前端主动弹红/黄预警，AlertModal 通用组件+锚点定位详情，无异常不弹窗 | ALERT-01 |
 | Workflow | 预置清单、合规 DAG、评标辅助 DAG | WF-01 ~ WF-03 |
 | **离线专项** | 检索质量评测（17 例 5 指标）、页码切分、RAG 召回行级隔离、**硬闸门纯函数 44 断言**、**占位符回填/跨 chunk 流式/prompt 注入离线自测、pytest（test_new_tools.py 67 项：含证书 OCR 正则/LLM/存储隔离、对照表校验+缓存、字段加密+掩码、存储抽象、多密钥轮换、S3 Stubber 全链路；全量 250 passed，test_intent 3 项为基线既有失败）** | tests/eval/ 四个脚本＋tests/test_new_tools.py |
 | **① OCR/Excel** | 扫描件 OCR、xlsx 提取（离线手工实测，见 4.4） | 离线实测 |
 | **浏览器 UI** | 注册角色选择、投标人入口隐藏、上传元数据表、状态机面板、引用文件名/页码、标书生成器弹窗、**企业资料库页（表单/证书增删/完整度）、整本合稿 Tab（章节进度/对照表红行/硬失败红框/整本预览）、单章回填后无占位符** | 15 张截图（7.2） |
 
-### 2.2 范围外说明（截至 V2.0 仍未覆盖）
+### 2.2 范围外说明（截至 V2.1 仍未覆盖）
 
-- **智慧问答四类功能已全部实现**（①R16 操作引导 ②R14 范本推荐 ③R13 异常解释 ④R15 异议投诉），均为内置静态结构化知识库 + Agent 工具查表模式，规避 LLM 编造；后续增强项：范本库与操作流程库接入运营后台动态维护、异常 code 与操作 stage 随业务扩展持续补录、检测结果前端主动弹窗预警（当前为用户主动问/调端点）；
+- **智慧问答四类功能已全部实现**（①R16 操作引导 ②R14 范本推荐 ③R13 异常解释 ④R15 异议投诉），均为内置静态结构化知识库 + Agent 工具查表模式，规避 LLM 编造；**V2.1 另落地 R17 检测结果前端主动弹窗预警**（五类检测完成即弹窗，见 4.5i）；后续增强项：范本库与操作流程库接入运营后台动态维护、异常 code 与操作 stage 随业务扩展持续补录；
 - 压力/并发性能、安全渗透（token 篡改/过期/水平越权穷举扫描）；
 - 移动端 H5/公众号、CA/USBKey 认证、敏感词过滤、平台对接（属后续二期，已在需求符合性评估中记录）；
 - OCR/Excel 未纳入 HTTP 自动验收（以离线实测＋META-01 上传链路间接覆盖 PDF 侧，证书 OCR 由 CERT-01 覆盖）；
-- 证书原件已支持 Local/S3 双后端（**V1.7 已接入 boto3 实际 S3/MinIO**，配置见 .env.example：CERT_STORAGE_TYPE/CERT_S3_*），S3 链路由 7 项 botocore Stubber 离线单测覆盖，**未搭建真实 MinIO/S3 环境做连通实测**（部署时按 .env.example 配置即可，auto_bucket 自动建桶）；OCR 已加灰度+小图放大预处理，复杂版式/手写/印章遮挡场景仍需用户手工核对（系统提供可折叠 OCR 原文对照）；
+- 证书原件已支持 Local/S3 双后端（**V1.7 已接入 boto3 实际 S3/MinIO**，配置见 .env.example：CERT_STORAGE_TYPE/CERT_S3_*），S3 链路由 7 项 botocore Stubber 离线单测覆盖，**真实 MinIO 连通实测仍未完成**：V2.1 已尝试但受本机环境限制（Docker Hub 加速器免费节点繁忙、DaoCloud denied、1ms not found、dockerpull.org 网络不可达；dl.min.io 官方 Windows 开源二进制已 410 Gone 归档），待网络可用或改用商用 S3 测试桶时补测（部署时按 .env.example 配置即可，auto_bucket 自动建桶）；OCR 已加灰度+小图放大预处理，复杂版式/手写/印章遮挡场景仍需用户手工核对（系统提供可折叠 OCR 原文对照）；
 - 对照表已加行结构校验+缓存，仍为 LLM 抽取判定（带关键词回退），非确定性场景需人工复核；投标报价测算类参数仍需业务人员手工确认（系统显式黄色提示而非杜撰）；
 - 企业资料敏感字段已应用层加密+掩码，**V1.7 已支持多密钥链无停机轮换与批量重加密（PROFILE-03 全过）**；**V1.8 已支持敏感操作审计落库表（AUDIT-01 全过，admin/auditor 可按字段名查询且不含明文）**；数据库透明加密（TDE）仍待下一期。
 
@@ -179,7 +194,7 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | 嵌入/精排 | BGE-M3（dense+sparse）＋ reranker-v2-m3 |
 | OCR/文档 | rapidocr-onnxruntime 1.4.4（懒加载）、pymupdf、openpyxl |
 | 对象存储 | boto3 1.43（仅 CERT_STORAGE_TYPE=s3 时懒加载，兼容 AWS S3 / MinIO，path-style+s3v4） |
-| 前后端 | Next.js localhost:3000；uvicorn localhost:8001（V1.7 验收以 PROFILE_ENC_KEYS=K1,K2 双密钥链启动） |
+| 前后端 | Next.js localhost:3000；uvicorn localhost:8001（V1.7 起验收以 PROFILE_ENC_KEYS=K1,K2 双密钥链启动；V2.1 起验收脚本与后端必须同密钥链，否则直连 PG 密文断言 PROFILE-02/03 失败） |
 
 ### 3.2 测试数据
 
@@ -191,10 +206,10 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 
 ## 4. 测试用例执行情况
 
-### 4.1 总览（V2.0 全量回归，2026-09-19，PROFILE_ENC_KEYS 双密钥链环境）
+### 4.1 总览（V2.1 全量回归，2026-09-20，PROFILE_ENC_KEYS 双密钥链环境，脚本与后端同密钥链）
 
-- **共 58 项：PASS 58，FAIL 0，ERROR 0，通过率 100.0%**；
-- 原始输出：`run_log_v20b.txt`（仓库未纳管，留存本地）；结构化结果：`tests/acceptance/evidence.json`。
+- **共 59 项：PASS 59，FAIL 0，ERROR 0，通过率 100.0%**；
+- 原始输出：全量执行日志（仓库未纳管，留存本地）；结构化结果：`tests/acceptance/evidence.json`。
 
 | 测试组 | 通过/总数 |
 |---|---|
@@ -222,7 +237,8 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | **⑮ V1.8 审计落库** | **1/1**（AUDIT-01 敏感操作落库+按字段名可查无明文+RBAC） |
 | **⑯ V1.9 异常解释+范本推荐** | **2/2**（ANOMALY-01 12code解释/批量/404、TEMPLATE-01 匹配/过滤/详情/列表） |
 | **⑰ V2.0 异议投诉+操作引导** | **2/2**（APPEAL-01 渠道/时限/材料/政采区分、GUIDE-01 阶段识别/三角色/404） |
-| **合计** | **58/58** |
+| **⑱ V2.1 检测主动预警** | **1/1**（ALERT-01 error 级 anomalies 驱动红窗/CN_MISMATCH/无异常不弹窗数据契约） |
+| **合计** | **59/59** |
 
 ### 4.2 新增用例明细（本轮，关键观测均取自实际日志）
 
@@ -257,6 +273,7 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | **TEMPLATE-01** | **范本推荐：按项目类型匹配招标/合同/表单范本＋详情/列表** | **PASS** | **10.2s** | "工程施工项目招标"首推 TPL-BID-001（score>0）；category="合同范本"过滤后全部合同类；详情 sections 含"招标公告/投标人须知"；不存在范本 404；列表 categories 三类、items ≥10 份 |
 | **APPEAL-01** | **异议投诉咨询：渠道/时限/材料/流程/法规检索＋政采区分** | **PASS** | **12.3s** | 评标结果异议首推 APPEAL_RESULT（公示期+3 日）；投诉材料命中 COMPLAINT_MATERIALS 且材料≥5；投诉流程详情含"行政监督部门""10 日""第六十条""异议前置"；政采质疑首推 GOV_CHALLENGE 走财政渠道+7/15 工作日；列表 4 类 11 主题 |
 | **GUIDE-01** | **操作引导：识别当前操作阶段并给出针对性步骤＋三类角色流程** | **PASS** | **16.4s** | 上传失败定位 GW-BID-UPLOAD/up-3（stage_locked=True，前后阶段均存在）；开标解密 dec-2 含"同一把 CA"；仅说"评标专家"命中流程但不锁定阶段；招标人发布公告 tdr-3；无法识别 404；列表三角色 7 流程、专家流程 5 阶段 |
+| **ALERT-01** | **检测预警弹窗数据契约：error 级 anomalies 驱动前端红弹窗，无异常不弹** | **PASS** | **6.1s** | 分项合计 200 vs 投标总价 300 → verdict=fail、anomalies 含 SUM_MISMATCH（level=error+message，前端红窗依据）；大写"柒拾肆万元整"与数字 100 → CN_MISMATCH error；总价一致且无大写 → verdict=pass 且无 error（不弹窗依据） |
 
 其余存量用例（ENV/M1/M3/M4/P4-P9/AUTH/M5/WF/RBAC/META/STAGE/GATE/BID-01~06/PROFILE-01/02/03/CERT-01/MATRIX-02/AUDIT-01/ANOMALY-01/TEMPLATE-01）V2.0 轮全部 PASS（共 56/56 无回退，PROFILE-03 双密钥链 10.8s、CERT-01 正常通过），观测与 V1.9 报告一致（耗时随 LLM 负载波动）。
 
@@ -346,6 +363,13 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 - HTTP 冒烟：upload/decrypt/role-only/tenderer/404 五场景全过；APPEAL 渠道、时限、政采区分正确；
 - 硬闸门 **44 断言全过**；前端 `npx tsc --noEmit` **0 报错**（本期未改前端）。
 
+### 4.5i V2.1 R17 检测结果主动弹窗预警（前端 tsc + HTTP 契约 + 浏览器，均通过）
+
+- 本期为纯前端增强（+验收用例），**后端零改动**；弹窗触发判定直接消费既有检测端点返回的 risks/checks/self_check/clauses/anomalies 字段，无需新增 API；
+- 前端 `npx tsc --noEmit` **0 报错**；新增 [frontend/components/AlertModal.tsx]（level 双级/条目折叠/锚点详情）并在 [frontend/app/documents/page.tsx] 五类检测完成回调接入（合规/资格/废标/响应性/报价）；
+- HTTP 数据契约由 **ALERT-01** 覆盖（6.1s，fail+error 异常/CN_MISMATCH/pass 无 error 三断言）；
+- 浏览器实测三场景：①报价总价 300 vs 分项合计 200（叠加大写 740000 残留）→ 红色弹窗含 SUM_MISMATCH+CN_MISMATCH 两条、标题"发现不合格项，请及时处理"、双按钮齐全（v21_alert_modal.png）；②"查看详情"关闭弹窗并平滑滚动至报价计算表面板；③总价 200 一致、清空大写 → **不弹窗**、面板"✅ 校验通过"（v21_no_alert_pass.png）；console 全程无错误。
+
 ### 4.6 浏览器 UI 实测（V1.3：2026-09-18；V1.4 补测：2026-09-19，admin/admin123）
 
 | 验证点 | 结果 | 证据 |
@@ -402,6 +426,8 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 
 **V2.0（⑰ R15/R16 异议投诉＋操作引导）未发现产品缺陷**：R15 单测首轮发现 COMPLAINT_MATERIALS 主题的材料清单遗漏"投诉书正文"本身（已补六段式撰写说明）；R16 识别器首轮存在流程级关键词误致阶段锁定的逻辑缺陷（仅说"评标专家"被错误锁定到第 1 阶段而非保持不锁定），已修正为必须命中至少 1 个阶段专属关键词才锁定阶段，否则 stage_locked=False。两处均属新功能内部先红后绿修复，非已上线缺陷。全量 HTTP 验收 58/58 一次通过。
 
+**V2.1（⑱ R17 检测主动预警）未发现产品缺陷**：前端 tsc、ALERT-01 契约、浏览器三场景（红窗/详情定位/无异常不弹）全部一次通过。验收过程两度受**测试环境**（非代码）干扰并已澄清：①接手时运行中的后端进程未带 `PROFILE_ENC_KEYS` 双密钥链（PROFILE-02/03 失败），且验收脚本进程同样需要该变量直连 PG 解密（脚本与后端必须同密钥链），两端补齐后恢复；②连续两轮全量间隔 <1 小时时 MATRIX-02 因 V1.6 内存 TTL 缓存（SHA256 键、1 小时 TTL、进程内存）首请命中旧缓存而失败，重启后端清空缓存后全绿——该现象符合缓存设计，非功能缺陷。另：BID-01/02/03/04、P8-01 在首轮曾失败（500/超时/LLM 未调工具/解析空），未改任何代码、后端重启后复跑全部 PASS，定性为 LLM 云端 API 当轮响应波动。
+
 ---
 
 ## 6. 风险评估与遗留事项
@@ -418,8 +444,8 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 | R8 | ~~标书生成当前为**单章流式**（5 章独立生成），企业资料库未接入，[公司全称]/[资质证书号] 等占位符需人工补；尚无整本合稿、逐条招标要求响应对照表与不合格项自动标红~~ **V1.4 已关闭**：企业资料库 1:1＋占位符双路径回填＋整本一键合稿 SSE＋响应对照表（🔴/🟡 标红，硬失败清单）＋docx 同色导出；**V1.5 进一步关闭"证书附件"**：图片/PDF 上传→OCR 四字段→私有原件→鉴权预览→整表保存→孤儿清理（CERT-01 全过） | 已实现"自动成册＋证书 OCR"，PROFILE-01/BID-04/05/06/CERT-01 与浏览器实测通过 | 剩余：业务测算类参数仍显式提示人工确认；证书原件未接入对象存储（见 R11） |
 | R9（新增） | ~~对照表要求抽取与响应判定依赖 LLM（带关键词回退），条款条数/分类可能随模型波动~~ **V1.6 已关闭**：`_validate_row` 行结构校验（空要求丢弃、非法 status→NO_RESPONSE、category 白名单、material 启发式校正防乱标）＋1 小时内存 TTL 缓存（相同 db_id+bid_hash 复用，cached=True 跳过 LLM） | 可能漏标/错标个别偏离项 | 已用校验+缓存+硬失败清单+红黄分级+导出前整改提示；剩余：非确定性 LLM 判定仍需人工最终复核（业务测算类参数显式黄色提示） |
 | R10（新增） | ~~企业资料按账号 1:1 明文存 PG（含银行账号等敏感字段），暂无字段级加密/脱敏~~ **V1.6 已关闭**：bank_account/contact_phone/contact_email/legal_person 应用层 Fernet 加密（PBKDF2 派生密钥）入库，GET 掩码展示（银行后 4/电话前 3 后 4/邮箱首字母+***/法人姓+**），PUT 掩码回传自动保留旧明文，upsert 字段级审计日志（不含值）。**V1.7 已支持多密钥链无停机轮换与批量重加密**。**V1.8 已支持审计落库表（audit_logs，admin/auditor 按字段名/动作/账号分页查询，AUDIT-01 全过无明文泄露）** | 多租户合规差距 | 已实现加密+掩码+密钥轮换+审计落库；剩余：TDE（数据库透明加密）待下一期 |
-| R11（新增 V1.5） | ~~证书原件存本地 `uploads/certs/{uid}/`，未接入对象存储/CDN；OCR 识别准确度依赖图片清晰度~~ **V1.6 部分关闭**：存储抽象为 `CertStorage` 基类＋`LocalCertStorage`（默认）＋`S3CertStorage`（接口占位）；OCR 前加灰度化+小图放大预处理。**V1.7 完全关闭对象存储**：boto3 实际接入 S3CertStorage（put/get/delete/list 批量清理、s3v4 预签名 307、MinIO endpoint+path-style 适配、auto_bucket 自动建桶、中文原名 URL 编码 D18），OCR 改字节流、预览双通道，7 项 Stubber 单测全过 | 多实例部署/生产可靠性、识别准确度 | Local/S3 双后端均已可用（CERT_STORAGE_TYPE 切换，.env.example 已补全部配置）；剩余：未做真实 MinIO/S3 环境连通实测（Stubber 模拟覆盖）、复杂版式/手写/印章遮挡仍需人工核对 |
-| R12（新增 V1.9） | ~~智慧问答四类功能覆盖不完整~~ **V2.0 四类已全部关闭**：②范本智能推荐（R14，11 份静态范本库+中文分词匹配）、③异常预警问答（R13，12 code 原因/处置/法规解释层，检测能力 P4-P9 早已具备）、④异议投诉咨询（R15，11 主题专项库，工程招投标与政采两套渠道区分）、①操作智能引导（R16，7 流程 27 阶段，三角色阶段识别+前后衔接） | 面向交易平台用户的服务完整性 | 后续增强：范本/流程/异常知识库接运营后台动态维护、检测结果前端主动弹窗预警、异常 code 与操作 stage 随业务扩展持续补录 |
+| R11（新增 V1.5） | ~~证书原件存本地 `uploads/certs/{uid}/`，未接入对象存储/CDN；OCR 识别准确度依赖图片清晰度~~ **V1.6 部分关闭**：存储抽象为 `CertStorage` 基类＋`LocalCertStorage`（默认）＋`S3CertStorage`（接口占位）；OCR 前加灰度化+小图放大预处理。**V1.7 完全关闭对象存储**：boto3 实际接入 S3CertStorage（put/get/delete/list 批量清理、s3v4 预签名 307、MinIO endpoint+path-style 适配、auto_bucket 自动建桶、中文原名 URL 编码 D18），OCR 改字节流、预览双通道，7 项 Stubber 单测全过 | 多实例部署/生产可靠性、识别准确度 | Local/S3 双后端均已可用（CERT_STORAGE_TYPE 切换，.env.example 已补全部配置）；剩余：**真实 MinIO/S3 连通实测待补**——V2.1 尝试经 Docker 多镜像源拉取 minio/minio 与官方 Windows 二进制均受本机网络/归档限制未果（详见 2.2），建议在可联网部署环境或商用 S3 测试桶执行一次全链路（自动建桶/中文名/预签名/cleanup/404）；复杂版式/手写/印章遮挡仍需人工核对 |
+| R12（新增 V1.9） | ~~智慧问答四类功能覆盖不完整~~ **V2.0 四类已全部关闭**：②范本智能推荐（R14，11 份静态范本库+中文分词匹配）、③异常预警问答（R13，12 code 原因/处置/法规解释层，检测能力 P4-P9 早已具备）、④异议投诉咨询（R15，11 主题专项库，工程招投标与政采两套渠道区分）、①操作智能引导（R16，7 流程 27 阶段，三角色阶段识别+前后衔接）。**V2.1 另关闭"检测结果前端主动弹窗预警"（R17）**：合规/资格/废标/响应性/报价五类检测完成即红/黄弹窗（ALERT-01+浏览器实测全过） | 面向交易平台用户的服务完整性 | 后续增强：范本/流程/异常知识库接运营后台动态维护、异常 code 与操作 stage 随业务扩展持续补录；弹窗阈值可随业务反馈分级调优 |
 
 ---
 
@@ -429,8 +455,8 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 
 | 文件 | 说明 |
 |---|---|
-| acceptance/run_acceptance.py | **58 项**验收用例源码（含 RBAC/META/STAGE/GATE/BID/PROFILE/CERT/MATRIX/AUDIT/ANOMALY/TEMPLATE/APPEAL/GUIDE 与 multipart 上传/SSE 流式消费/证书 OCR 夹具/PG 直连密文断言/多密钥链轮换/审计落库明文负向断言/异常批量解释/范本匹配/异议政采区分/操作阶段识别断言 helper） |
-| tests/acceptance/evidence.json | V2.0 结构化结果（逐条 status/耗时/备注） |
+| acceptance/run_acceptance.py | **59 项**验收用例源码（含 RBAC/META/STAGE/GATE/BID/PROFILE/CERT/MATRIX/AUDIT/ANOMALY/TEMPLATE/APPEAL/GUIDE/**ALERT** 与 multipart 上传/SSE 流式消费/证书 OCR 夹具/PG 直连密文断言/多密钥链轮换/审计落库明文负向断言/异常批量解释/范本匹配/异议政采区分/操作阶段识别/弹窗数据契约断言 helper） |
+| tests/acceptance/evidence.json | V2.1 结构化结果（逐条 status/耗时/备注） |
 | tests/test_new_tools.py | 后端 pytest **102 项**（含企业资料占位符回填/跨 chunk 流式、证书 OCR 正则/LLM/存储隔离、对照表校验+缓存、字段加密+掩码、存储抽象、多密钥轮换、S3 Stubber 全链路、R12 审计落库 8 项、R13 异常 catalog 4 项、R14 范本推荐 6 项、**R15 异议投诉 8 项、R16 操作引导 9 项**） |
 | acceptance/sample_multipage.pdf | META-01 用 2 页中文 PDF 夹具 |
 | eval/retrieval_cases.json | 17 条检索评测用例（招标事实 7/企业 3/法规 7） |
@@ -463,6 +489,8 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 | v15_cert_ocr.png | V1.5 证书 OCR：四字段自动填充＋原件缩略图＋OCR 原文展开 |
 | v15_cert_saved.png | V1.5 保存企业资料绿色提示 |
 | v15_cert_reload.png | V1.5 刷新后证书与缩略图回显 |
+| v21_alert_modal.png | V2.1 报价检测 SUM_MISMATCH+CN_MISMATCH 红色主动预警弹窗（条目+查看详情/知道了） |
+| v21_no_alert_pass.png | V2.1 总价一致无异常时不弹窗，报价计算表面板"✅ 校验通过" |
 
 ### 7.3 复测方法
 
