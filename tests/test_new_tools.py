@@ -404,3 +404,116 @@ class TestCompetitorAnalyzer:
         out = _convert_row(row)
         assert isinstance(out["subjects"], list)
         assert "subjectA" in out["subjects"]
+
+
+# ========== cert_ocr: 证书 OCR 结构化 (V1.5) ==========
+
+class TestCertOcr:
+    def test_fallback_qualification_cert(self):
+        from src.tools.cert_ocr import fallback_cert_fields
+        r = fallback_cert_fields(
+            "建筑业企业资质证书\n等级：一级\n证书编号：BZ-2025-888666\n"
+            "有效期至：2028年06月30日")
+        assert r["name"] == "建筑业企业资质证书"
+        assert r["level"] == "一级"
+        assert r["cert_no"] == "BZ-2025-888666"
+        assert r["valid_until"] == "2028-06-30"
+
+    def test_fallback_business_license(self):
+        from src.tools.cert_ocr import fallback_cert_fields
+        r = fallback_cert_fields(
+            "营业执照\n统一社会信用代码：91310000MA1FL88X2Q\n营业期限至 长期")
+        assert r["name"] == "营业执照"
+        assert r["cert_no"] == "91310000MA1FL88X2Q"
+        assert r["valid_until"] == "长期"
+
+    def test_fallback_level_stripped_from_name(self):
+        from src.tools.cert_ocr import fallback_cert_fields
+        r = fallback_cert_fields("建筑工程施工总承包一级资质证书 编号:A123456789")
+        assert "一级" not in r["name"]
+        assert r["level"] == "一级"
+        assert r["cert_no"] == "A123456789"
+
+    def test_fallback_empty(self):
+        from src.tools.cert_ocr import fallback_cert_fields
+        assert fallback_cert_fields("") == {
+            "name": "", "level": "", "cert_no": "", "valid_until": ""}
+
+    def test_extract_llm_success(self):
+        from src.tools.cert_ocr import extract_cert_fields
+        fake_llm = MagicMock()
+        fake_llm.chat.return_value = (
+            '```json\n{"name": "CMMI3级证书", "level": "三级", '
+            '"cert_no": "CMMI-001", "valid_until": "2027-01-02"}\n```')
+        r = extract_cert_fields("某证书 OCR 文本", llm_client=fake_llm)
+        assert r["source"] == "llm"
+        assert r["cert_no"] == "CMMI-001"
+        assert r["valid_until"] == "2027-01-02"
+
+    def test_extract_llm_failure_fallback(self):
+        from src.tools.cert_ocr import extract_cert_fields
+        fake_llm = MagicMock()
+        fake_llm.chat.side_effect = RuntimeError("llm down")
+        r = extract_cert_fields("资质证书 编号：Z-9988 有效期至2026-12-01",
+                                llm_client=fake_llm)
+        assert r["source"] == "fallback"
+        assert r["cert_no"] == "Z-9988"
+        assert r["valid_until"] == "2026-12-01"
+        assert r["warnings"]
+
+    def test_extract_empty_text(self):
+        from src.tools.cert_ocr import extract_cert_fields
+        r = extract_cert_fields("", llm_client=MagicMock())
+        assert r["source"] == "none"
+        assert not r["cert_no"]
+        assert r["warnings"]
+
+    def test_cert_storage_lifecycle_and_isolation(self, tmp_path, monkeypatch):
+        from src.tools import cert_ocr
+        monkeypatch.setattr(cert_ocr, "CERT_UPLOAD_DIR", tmp_path / "certs")
+
+        saved = cert_ocr.save_cert_file(7, "我的证书.png", b"\x89PNGfake")
+        token = saved["file_token"]
+        assert token.endswith(".png")
+
+        # 本人可解析且读回内容一致
+        p = cert_ocr.cert_file_path(7, token)
+        assert p.read_bytes() == b"\x89PNGfake"
+
+        # 跨用户目录访问 → 404
+        with pytest.raises(FileNotFoundError):
+            cert_ocr.cert_file_path(8, token)
+        # 路径穿越 / 非法 token → 404
+        with pytest.raises(FileNotFoundError):
+            cert_ocr.cert_file_path(7, "../../etc/passwd")
+        with pytest.raises(FileNotFoundError):
+            cert_ocr.cert_file_path(7, "x" * 32 + ".exe")
+
+        # 非法扩展名上传被拒
+        with pytest.raises(ValueError):
+            cert_ocr.save_cert_file(7, "evil.exe", b"xx")
+
+        # 孤儿清理: 保存第二个文件后, 只保留第二个
+        saved2 = cert_ocr.save_cert_file(7, "b.jpg", b"jpg")
+        removed = cert_ocr.cleanup_orphan_certs(7, {saved2["file_token"]})
+        assert removed == 1
+        with pytest.raises(FileNotFoundError):
+            cert_ocr.cert_file_path(7, token)
+        assert cert_ocr.cert_file_path(7, saved2["file_token"]).is_file()
+
+    def test_ocr_image_uses_rapidocr(self, monkeypatch):
+        """图片字节 → cv2 解码 → RapidOCR 结果按行拼接 (引擎 mock, 不拉模型)。"""
+        from src.tools import cert_ocr
+
+        fake_engine = MagicMock()
+        fake_engine.return_value = (
+            [[None, "证书编号：X-1"], [None, "有效期至 2029-09-09"]], None)
+        monkeypatch.setattr(
+            "src.tools.document_parser._get_ocr_engine", lambda: fake_engine)
+        fake_cv2 = MagicMock()
+        fake_cv2.imdecode.return_value = "IMG"
+        monkeypatch.setattr("cv2.imdecode", fake_cv2.imdecode)
+
+        text = cert_ocr._ocr_image_bytes(b"fake-bytes")
+        assert "X-1" in text and "2029-09-09" in text
+        fake_engine.assert_called_once_with("IMG")

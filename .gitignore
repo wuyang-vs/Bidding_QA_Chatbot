@@ -9,6 +9,9 @@ data/batch/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 !data/batch/.gitkeep
+# 用户证书原件 (账号私有, 运行时生成)
+uploads/*
+!uploads/.gitkeep
 frontend/node_modules/
 frontend/.next/
 frontend/tsconfig.tsbuildinfo

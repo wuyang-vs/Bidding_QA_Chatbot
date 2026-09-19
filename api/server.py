@@ -7,7 +7,7 @@ from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Depends, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 from pydantic import BaseModel, Field
 
 from src.config import settings
@@ -666,6 +666,10 @@ class CertItem(BaseModel):
     level: str = ""
     cert_no: str = ""
     valid_until: str = ""
+    # 证书原件附件 (上传 OCR 后随整表一起保存; 无附件的手工证书为空)
+    file_token: str = ""
+    file_name: str = ""
+    ocr_text: str = ""
 
 
 class PastProjectItem(BaseModel):
@@ -705,14 +709,92 @@ def get_profile(user: dict = Depends(get_current_user_required)):
 def put_profile(req: CompanyProfileRequest,
                 user: dict = Depends(get_current_user_required)):
     """全量更新当前登录账号的企业资料档案。"""
-    from src.tools.company_profile import upsert_profile, profile_completeness
+    from src.tools.company_profile import (
+        upsert_profile, profile_completeness, get_profile as _get_profile,
+    )
+    from src.tools.cert_ocr import cleanup_orphan_certs
+    # 保存前记录旧证书附件, 保存后清理被移除证书的孤儿原件
+    old_tokens = {c.get("file_token") for c in _get_profile(user["id"]).get("certs", [])
+                  if isinstance(c, dict) and c.get("file_token")}
     data = req.model_dump()
     try:
         profile = upsert_profile(user["id"], data)
     except Exception as e:
         logger.exception("企业资料保存失败")
         raise HTTPException(500, f"企业资料保存失败: {e}")
+    new_tokens = {c.get("file_token") for c in profile.get("certs", [])
+                  if isinstance(c, dict) and c.get("file_token")}
+    removed = cleanup_orphan_certs(user["id"], new_tokens)
+    if removed:
+        logger.info("账号 %s 清理 %d 个已移除的证书原件", user["id"], removed)
     return {"profile": profile, "completeness": profile_completeness(profile)}
+
+
+@app.post("/api/profile/cert/ocr")
+def cert_ocr_upload(file: UploadFile = File(...),
+                    user: dict = Depends(get_current_user_required)):
+    """上传资质证书图片/PDF → 私有落盘 → OCR → 结构化四字段。
+
+    不直接写库: 返回的 cert 对象由前端展示/校正后, 随 PUT /api/profile 整表保存。
+    """
+    import os
+    from src.tools import cert_ocr
+
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in cert_ocr.CERT_EXTS:
+        raise HTTPException(400, f"不支持的证书格式 {ext}, 允许: "
+                                 f"图片({'/'.join(sorted(cert_ocr.IMAGE_EXTS))}) 或 .pdf")
+    data = file.file.read()
+    if not data:
+        raise HTTPException(400, "上传文件为空")
+    if len(data) > cert_ocr.MAX_CERT_BYTES:
+        raise HTTPException(400, f"证书文件超过 "
+                                 f"{cert_ocr.MAX_CERT_BYTES // 1024 // 1024}MB 上限")
+    try:
+        saved = cert_ocr.save_cert_file(user["id"], file.filename or f"cert{ext}", data)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+    try:
+        text = cert_ocr.ocr_cert_file(
+            str(cert_ocr.cert_file_path(user["id"], saved["file_token"])), ext)
+    except FileNotFoundError:
+        raise HTTPException(500, "证书文件落盘失败")
+    except Exception as e:
+        logger.exception("证书 OCR 失败")
+        # OCR 失败: 原件未被任何档案引用, 立即删除避免孤儿, 由用户改手工录入
+        cert_ocr.delete_cert_file(user["id"], saved["file_token"])
+        raise HTTPException(422, f"证书识别失败, 请换清晰图片或手工录入: {e}")
+
+    result = cert_ocr.extract_cert_fields(text)
+    cert = {
+        "name": result["name"], "level": result["level"],
+        "cert_no": result["cert_no"], "valid_until": result["valid_until"],
+        "file_token": saved["file_token"],
+        "file_name": saved["file_name"],
+        "ocr_text": text,
+    }
+    return {"cert": cert, "source": result["source"], "warnings": result["warnings"]}
+
+
+_CERT_MEDIA = {
+    ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png",
+    ".bmp": "image/bmp", ".webp": "image/webp", ".pdf": "application/pdf",
+}
+
+
+@app.get("/api/profile/cert/file")
+def cert_file_view(token: str, user: dict = Depends(get_current_user_required)):
+    """按登录身份内联返回证书原件 (只能访问本人目录; token 非法/越权 → 404)。"""
+    import os
+    from src.tools.cert_ocr import cert_file_path
+    try:
+        path = cert_file_path(user["id"], token)
+    except FileNotFoundError:
+        raise HTTPException(404, "证书不存在或无权访问")
+    ext = os.path.splitext(token)[1].lower()
+    return FileResponse(str(path), media_type=_CERT_MEDIA.get(ext, "application/octet-stream"),
+                        content_disposition_type="inline")
 
 
 @app.post("/api/bid/generate")

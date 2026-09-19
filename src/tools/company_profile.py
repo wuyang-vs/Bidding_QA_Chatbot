@@ -24,6 +24,11 @@ PROFILE_FIELDS = (
 )
 JSON_FIELDS = ("certs", "past_projects")
 
+# certs/past_projects 列表项允许的键 (白名单, 过滤前端塞入的其他内容)
+CERT_KEYS = ("name", "level", "cert_no", "valid_until",
+             "file_token", "file_name", "ocr_text")
+PROJECT_KEYS = ("name", "owner", "amount", "date", "role")
+
 EMPTY_PROFILE: dict = {f: "" for f in PROFILE_FIELDS}
 EMPTY_PROFILE.update({"certs": [], "past_projects": []})
 
@@ -71,11 +76,23 @@ def _norm(profile: dict | None) -> dict:
             v = profile.get(f)
             if v is not None:
                 p[f] = str(v)
-        for f in JSON_FIELDS:
-            v = profile.get(f)
-            if isinstance(v, list):
-                p[f] = v
+        if isinstance(profile.get("certs"), list):
+            p["certs"] = _norm_items(profile["certs"], CERT_KEYS)
+        if isinstance(profile.get("past_projects"), list):
+            p["past_projects"] = _norm_items(profile["past_projects"], PROJECT_KEYS)
     return p
+
+
+def _norm_items(items: list, keys: tuple) -> list[dict]:
+    """列表项白名单清洗: 仅保留允许键, 值统一转字符串 (空值保留空串)。"""
+    out = []
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        row = {k: str(it.get(k) or "").strip() for k in keys if it.get(k) not in (None, "")}
+        if row:
+            out.append(row)
+    return out
 
 
 # ---------- CRUD ----------
@@ -94,11 +111,12 @@ def get_profile(user_id: int) -> dict:
     if not rows:
         return dict(EMPTY_PROFILE)
     row = rows[0]
-    p = {f: (row.get(f) or "") for f in PROFILE_FIELDS}
+    raw = {f: (row.get(f) or "") for f in PROFILE_FIELDS}
     for f in JSON_FIELDS:
         v = row.get(f)
-        p[f] = v if isinstance(v, list) else []
-    return p
+        raw[f] = v if isinstance(v, list) else []
+    # 过白名单归一化, 保证 certs/业绩项字段形状一致 (历史数据/新附件键兼容)
+    return _norm(raw)
 
 
 def upsert_profile(user_id: int, data: dict) -> dict:
