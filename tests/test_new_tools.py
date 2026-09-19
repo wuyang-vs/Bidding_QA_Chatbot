@@ -852,3 +852,161 @@ class TestS3CertStorage:
             assert s.bucket == "from-settings-bucket"
         finally:
             cert_ocr.reset_cert_storage()
+
+
+# ==================== R12: 审计日志落库 ====================
+
+class _FakePg:
+    """记录 _run 调用的假 PG; 行为由属性/钩子配置。"""
+    def __init__(self, ready=True, rows=None, raise_on=None):
+        self.ready = ready
+        self._rows = rows or []
+        self.raise_on = raise_on
+        self.calls: list[tuple[str, dict]] = []
+
+    def _run(self, sql, params=None):
+        self.calls.append((sql, params or {}))
+        if self.raise_on and self.raise_on in sql:
+            raise RuntimeError("pg boom")
+        if "COUNT(*)" in sql:
+            return [{"cnt": len(self._rows)}]
+        if sql.lstrip().upper().startswith("SELECT"):
+            return list(self._rows)
+        return []
+
+
+class TestAuditLog:
+    def test_record_insert_params_and_never_values(self, monkeypatch):
+        import json
+        from src.tools import audit_log
+        fake = _FakePg()
+        monkeypatch.setattr("src.database.postgresql_client.postgresql_client", fake)
+        ok = audit_log.record_audit(
+            user_id=7, username="acpt_u_1", action=audit_log.ACTION_PROFILE_UPDATE,
+            target_type="company_profile", target_id="7",
+            changed_fields=["contact_phone", "bank_account"],
+            ip="127.0.0.1", user_agent="pytest-agent", detail="profile saved")
+        assert ok is True
+        sql, params = fake.calls[0]
+        assert "INSERT INTO audit_logs" in sql
+        assert params["action"] == "profile.update"
+        assert params["uid"] == 7 and params["uname"] == "acpt_u_1"
+        fields = json.loads(params["fields"])
+        assert fields == ["contact_phone", "bank_account"]
+        # 审计只存字段名: 绑定参数里不得出现任何"值"
+        blob = json.dumps(params, ensure_ascii=False)
+        assert "13812345678" not in blob and "6222" not in blob
+
+    def test_record_pg_not_ready_degrades(self, monkeypatch):
+        from src.tools import audit_log
+        fake = _FakePg(ready=False)
+        monkeypatch.setattr("src.database.postgresql_client.postgresql_client", fake)
+        assert audit_log.record_audit(
+            user_id=1, username="u", action="profile.update",
+            changed_fields=["x"]) is False
+        assert fake.calls == []  # 未就绪不触达 DB
+
+    def test_record_db_error_degrades(self, monkeypatch):
+        from src.tools import audit_log
+        fake = _FakePg(raise_on="INSERT INTO audit_logs")
+        monkeypatch.setattr("src.database.postgresql_client.postgresql_client", fake)
+        # 写库异常不得抛出 (审计不能阻断主业务)
+        assert audit_log.record_audit(
+            user_id=1, username="u", action="profile.update") is False
+
+    def test_clean_fields_and_clipping(self, monkeypatch):
+        import json
+        from src.tools import audit_log
+        fake = _FakePg()
+        monkeypatch.setattr("src.database.postgresql_client.postgresql_client", fake)
+        dirty = ["a", "a", "", " b ", 123, None, "x" * 100] + [f"f{i}" for i in range(99)]
+        assert audit_log.record_audit(
+            user_id=None, username="u" * 999, action="  ",
+            changed_fields=dirty, detail="d" * 5000, user_agent="ua" * 999) is False
+        assert fake.calls == []  # 空白 action 直接拒绝
+        ok = audit_log.record_audit(
+            user_id=None, username="u" * 999, action="cert.ocr",
+            changed_fields=dirty, detail="d" * 5000, user_agent="ua" * 999)
+        assert ok is True
+        _, p = fake.calls[0]
+        fields = json.loads(p["fields"])
+        assert fields[0] == "a" and fields[1] == "b"   # 去重/去空/非字符串剔除
+        assert all(len(f) <= audit_log._MAX_FIELD_LEN for f in fields)
+        assert len(fields) == audit_log._MAX_FIELDS    # 限量
+        assert len(p["detail"]) == audit_log._MAX_DETAIL_LEN
+        assert len(p["ua"]) == audit_log._MAX_TEXT_LEN
+        assert len(p["uname"]) == audit_log._MAX_TEXT_LEN
+
+    def test_list_filters_pagination_and_serialize(self, monkeypatch):
+        from datetime import datetime
+        from src.tools import audit_log
+        fake = _FakePg(rows=[{
+            "id": 3, "user_id": 7, "username": "acpt_u_1", "action": "profile.update",
+            "target_type": "company_profile", "target_id": "7",
+            "changed_fields": '["contact_phone"]', "ip": "127.0.0.1",
+            "user_agent": "pytest", "detail": "",
+            "created_at": datetime(2026, 9, 19, 10, 11, 12)}])
+        monkeypatch.setattr("src.database.postgresql_client.postgresql_client", fake)
+        out = audit_log.list_audit_logs(
+            user_id=7, action="profile.update", limit=99999, offset=5, order="desc")
+        sql_items, p_items = fake.calls[0]
+        assert "WHERE user_id = :uid AND action = :action" in sql_items
+        assert "ORDER BY id DESC LIMIT :limit OFFSET :offset" in sql_items
+        assert p_items["limit"] == audit_log._MAX_LIMIT  # 上限钳制
+        assert p_items["offset"] == 5
+        assert out["total"] == 1 and out["limit"] == audit_log._MAX_LIMIT
+        item = out["items"][0]
+        assert item["changed_fields"] == ["contact_phone"]   # JSONB 字符串已解析
+        assert item["created_at"] == "2026-09-19 10:11:12"   # datetime 已序列化
+        # 非法排序方向回落 DESC; 非法 limit/offset 回落默认
+        fake.calls.clear()
+        out2 = audit_log.list_audit_logs(order="; DROP TABLE", limit="x", offset="y")
+        assert "ORDER BY id DESC" in fake.calls[0][0]
+        assert out2["limit"] == audit_log._DEFAULT_LIMIT and out2["offset"] == 0
+
+    def test_list_pg_not_ready_empty(self, monkeypatch):
+        from src.tools import audit_log
+        fake = _FakePg(ready=False)
+        monkeypatch.setattr("src.database.postgresql_client.postgresql_client", fake)
+        out = audit_log.list_audit_logs(action="profile.update")
+        assert out == {"items": [], "total": 0, "limit": 50, "offset": 0}
+
+    def test_upsert_profile_emits_audit(self, monkeypatch):
+        import json
+        from src.tools import company_profile
+        fake = _FakePg()  # SELECT 均返回空行 → 空档案, INSERT 返回 []
+        monkeypatch.setattr("src.database.postgresql_client.postgresql_client", fake)
+        company_profile.upsert_profile(
+            99, {"company_name": "审计接入有限公司", "contact_phone": "13812345678"},
+            audit_meta={"username": "acpt_audit_1", "ip": "10.0.0.9",
+                        "user_agent": "pytest-ua"})
+        audit_calls = [(s, p) for s, p in fake.calls if "INSERT INTO audit_logs" in s]
+        assert len(audit_calls) == 1, "资料变更应落一条审计"
+        sql, p = audit_calls[0]
+        assert p["action"] == "profile.update" and p["uname"] == "acpt_audit_1"
+        assert p["ip"] == "10.0.0.9" and p["ua"] == "pytest-ua"
+        fields = json.loads(p["fields"])
+        assert "company_name" in fields and "contact_phone" in fields
+
+    def test_upsert_profile_skips_audit_when_no_change(self, monkeypatch):
+        """旧档与新档完全一致 → 不写审计。"""
+        from src.tools import company_profile
+        from src.tools.field_crypto import encrypt_sensitive
+
+        existing = encrypt_sensitive(company_profile._norm(
+            {"company_name": "不变有限公司", "contact_phone": "13812345678"}))
+
+        class _PgSame(_FakePg):
+            def _run(self, sql, params=None):
+                self.calls.append((sql, params or {}))
+                if sql.lstrip().upper().startswith("SELECT * FROM COMPANY_PROFILES"):
+                    return [dict(existing)]
+                return []
+
+        fake = _PgSame()
+        monkeypatch.setattr("src.database.postgresql_client.postgresql_client", fake)
+        company_profile.upsert_profile(
+            100, {"company_name": "不变有限公司", "contact_phone": "13812345678"},
+            audit_meta={"username": "u"})
+        assert not any("INSERT INTO audit_logs" in s for s, _ in fake.calls), \
+            "无字段变化不应写审计"

@@ -122,8 +122,12 @@ def get_profile(user_id: int) -> dict:
     return _norm(raw)
 
 
-def upsert_profile(user_id: int, data: dict) -> dict:
-    """全量更新档案 (未提供字段置空), 返回最新档案。敏感字段入库前加密。"""
+def upsert_profile(user_id: int, data: dict, audit_meta: dict | None = None) -> dict:
+    """全量更新档案 (未提供字段置空), 返回最新档案。敏感字段入库前加密。
+
+    audit_meta: R12 审计上下文 {username, ip, user_agent}, 由 API 层传入;
+    任一字段变化时写 audit_logs (只记字段名, 含 certs/past_projects 结构性变更)。
+    """
     from src.database.postgresql_client import postgresql_client
     from src.tools.field_crypto import encrypt_sensitive, SENSITIVE_FIELDS
     p = _norm(data)
@@ -135,8 +139,26 @@ def upsert_profile(user_id: int, data: dict) -> dict:
         if isinstance(p.get(f), str) and "*" in p[f] and old.get(f):
             p[f] = old[f]
     changed = [f for f in PROFILE_FIELDS if (p.get(f) or "") != (old.get(f) or "")]
-    if changed or (p.get("certs") != old.get("certs")) or (p.get("past_projects") != old.get("past_projects")):
+    certs_changed = p.get("certs") != old.get("certs")
+    projects_changed = p.get("past_projects") != old.get("past_projects")
+    if certs_changed:
+        changed.append("certs")
+    if projects_changed:
+        changed.append("past_projects")
+    if changed:
         logger.info("企业资料更新审计 user_id=%s changed_fields=%s", user_id, changed)
+        if audit_meta:
+            from src.tools.audit_log import record_audit, ACTION_PROFILE_UPDATE
+            record_audit(
+                user_id=user_id,
+                username=audit_meta.get("username", ""),
+                action=ACTION_PROFILE_UPDATE,
+                target_type="company_profile",
+                target_id=str(user_id),
+                changed_fields=changed,
+                ip=audit_meta.get("ip", ""),
+                user_agent=audit_meta.get("user_agent", ""),
+                detail=audit_meta.get("detail", ""))
     # R10: 敏感字段加密后入库
     p_enc = encrypt_sensitive(p)
     params: dict = {"uid": user_id}

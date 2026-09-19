@@ -243,6 +243,15 @@ def rotate_all_profiles(dry_run: bool = False) -> dict:
                 f"UPDATE company_profiles SET {sets}, updated_at=NOW() WHERE user_id=:uid",
                 params)
             logger.info("密钥轮换: user_id=%s 重加密字段=%s", uid, list(updates.keys()))
+    # R12: 实际轮换 (非 dry-run) 落一条 system 审计, 仅统计数字不含任何密文/明文
+    if not dry_run and result["rotated_fields"]:
+        from src.tools.audit_log import record_audit, ACTION_KEY_ROTATE
+        record_audit(
+            user_id=None, username="system", action=ACTION_KEY_ROTATE,
+            target_type="company_profiles",
+            detail=(f"scanned={result['scanned']};rotated_users="
+                    f"{result['rotated_users']};rotated_fields="
+                    f"{result['rotated_fields']};skipped={result['skipped']}"))
     return result
 
 

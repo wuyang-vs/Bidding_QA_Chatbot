@@ -186,6 +186,21 @@ class PostgreSQLClient:
                 certs JSONB DEFAULT '[]'::jsonb,
                 past_projects JSONB DEFAULT '[]'::jsonb,
                 updated_at TIMESTAMP DEFAULT NOW())""",
+            # ⑫ R12 审计留痕: 敏感操作落库 (只记字段名/动作, 绝不记字段值)
+            """CREATE TABLE IF NOT EXISTS audit_logs (
+                id BIGSERIAL PRIMARY KEY,
+                user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                username TEXT DEFAULT '',
+                action TEXT NOT NULL,
+                target_type TEXT DEFAULT '',
+                target_id TEXT DEFAULT '',
+                changed_fields JSONB DEFAULT '[]'::jsonb,
+                ip TEXT DEFAULT '',
+                user_agent TEXT DEFAULT '',
+                detail TEXT DEFAULT '',
+                created_at TIMESTAMP DEFAULT NOW())""",
+            "CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_logs (user_id, created_at DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs (action, created_at DESC)",
         ):
             try:
                 with self._engine.begin() as conn:

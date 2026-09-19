@@ -710,6 +710,7 @@ def get_profile(user: dict = Depends(get_current_user_required)):
 
 @app.put("/api/profile")
 def put_profile(req: CompanyProfileRequest,
+                request: Request,
                 user: dict = Depends(get_current_user_required)):
     """全量更新当前登录账号的企业资料档案。"""
     from src.tools.company_profile import (
@@ -720,8 +721,14 @@ def put_profile(req: CompanyProfileRequest,
     old_tokens = {c.get("file_token") for c in _get_profile(user["id"]).get("certs", [])
                   if isinstance(c, dict) and c.get("file_token")}
     data = req.model_dump()
+    # R12: 审计上下文 (只透传身份与来源, 字段名由 tool 层 diff 后落库)
+    audit_meta = {
+        "username": user.get("username", ""),
+        "ip": request.client.host if request.client else "",
+        "user_agent": request.headers.get("user-agent", ""),
+    }
     try:
-        profile = upsert_profile(user["id"], data)
+        profile = upsert_profile(user["id"], data, audit_meta=audit_meta)
     except Exception as e:
         logger.exception("企业资料保存失败")
         raise HTTPException(500, f"企业资料保存失败: {e}")
@@ -734,7 +741,8 @@ def put_profile(req: CompanyProfileRequest,
 
 
 @app.post("/api/profile/cert/ocr")
-def cert_ocr_upload(file: UploadFile = File(...),
+def cert_ocr_upload(request: Request,
+                    file: UploadFile = File(...),
                     user: dict = Depends(get_current_user_required)):
     """上传资质证书图片/PDF → 私有落盘 → OCR → 结构化四字段。
 
@@ -775,6 +783,15 @@ def cert_ocr_upload(file: UploadFile = File(...),
         "file_name": saved["file_name"],
         "ocr_text": text,
     }
+    # R12: 证书原件上传审计 (只记 token/格式/识别来源, 不记 OCR 文本内容)
+    from src.tools.audit_log import record_audit, ACTION_CERT_OCR
+    record_audit(
+        user_id=user["id"], username=user.get("username", ""),
+        action=ACTION_CERT_OCR, target_type="cert",
+        target_id=saved["file_token"],
+        ip=request.client.host if request.client else "",
+        user_agent=request.headers.get("user-agent", ""),
+        detail=f"ext={ext};source={result['source']};bytes={len(data)}")
     return {"cert": cert, "source": result["source"], "warnings": result["warnings"]}
 
 
@@ -812,6 +829,27 @@ def cert_file_view(token: str, user: dict = Depends(get_current_user_required)):
         raise HTTPException(404, "证书不存在或无权访问")
     return Response(content=data, media_type=media,
                     headers={"Content-Disposition": "inline"})
+
+
+@app.get("/api/audit/logs")
+def audit_logs(user_id: int | None = None,
+               username: str | None = None,
+               action: str | None = None,
+               target_type: str | None = None,
+               limit: int = 50,
+               offset: int = 0,
+               order: str = "desc",
+               user: dict = Depends(require_roles(ROLE_ADMIN, ROLE_AUDITOR,
+                                                   allow_anonymous=False))):
+    """R12 敏感操作审计查询: 仅 admin/auditor 可访问 (匿名 401, 其他角色 403)。
+
+    可按 user_id/username/action/target_type 过滤, limit 上限 200。
+    返回记录只含字段名与动作, 不含任何敏感字段值。
+    """
+    from src.tools.audit_log import list_audit_logs
+    return list_audit_logs(
+        user_id=user_id, username=username, action=action,
+        target_type=target_type, limit=limit, offset=offset, order=order)
 
 
 @app.post("/api/bid/generate")
