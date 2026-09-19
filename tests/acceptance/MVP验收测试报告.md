@@ -3,15 +3,26 @@
 | 项目 | 内容 |
 |---|---|
 | 系统名称 | 招投标采购智能问答与辅助评标系统（Bidding_QA_Chatbot） |
-| 报告版本 | V2.1（在 V2.0 58 项基线上落地增强项 R17 检测结果前端主动弹窗预警：合规/资格/废标/响应性/报价五类检测完成后发现不合格或风险项时主动弹出红色/琥珀色预警，列出不合格条目并支持一键定位结果面板，无异常时不弹窗；新增 ALERT-01 验收用例，全量 59 项） |
-| 测试日期 | 2026-09-20（V2.1 回归，PROFILE_ENC_KEYS 双密钥链环境，脚本与后端同密钥链启动） |
-| 测试执行人 | 自动化验收套件（tests/acceptance/run_acceptance.py）＋离线确定性测试＋浏览器 UI 实测 |
-| 基线代码 | V2.0 commit `b62acac`；V2.1 改动见第 5 章（R17 弹窗组件与五类检测接入，尚未提交） |
-| 报告依据 | 全量执行日志（本地留存）、evidence.json、离线测试输出、UI 截图 v21_alert_modal.png/v21_no_alert_pass.png（见第 7 章） |
+| 报告版本 | V2.2（验证补测版，无产品代码变更：V2.1 59 项全绿基线之上，完成 R11 遗留的"真实 MinIO/S3 连通实测"——以真实 MinIO server 对 S3CertStorage 做端到端实测 13/13 PASS，新增可复现手动实测脚本 manual_minio_live.py；R17 检测主动弹窗预警见 V2.1） |
+| 测试日期 | 2026-09-20（V2.1 全量回归＋V2.2 MinIO 真连通补测，均为 PROFILE_ENC_KEYS 双密钥链环境） |
+| 测试执行人 | 自动化验收套件（tests/acceptance/run_acceptance.py）＋离线确定性测试＋浏览器 UI 实测＋真实 MinIO 手动实测 |
+| 基线代码 | V2.1 commit `2727ff1`；V2.2 仅新增手动实测脚本并更新本报告（无产品代码改动） |
+| 报告依据 | V2.1 全量执行日志（59/59）、evidence.json、MinIO 真连通实测输出（13/13，见 4.5j）、UI 截图 v21_alert_modal.png/v21_no_alert_pass.png（见第 7 章） |
 
 ---
 
 ## 1. 验收结论
+
+**V2.2 为验证补测版（无产品代码变更）：在 V2.1 全量 59/59 基线上，完成 R11 自 V1.7 起遗留的"真实 MinIO/S3 连通实测"。以真实 MinIO server（RELEASE.2025-09-07，Windows 单文件、非 Docker）对 S3CertStorage 做端到端实测，13/13 PASS。至此证书对象存储从"Stubber 离线模拟"升级为"真实服务全链路实证"。**
+
+本轮（⑲ MinIO 真连通补测）关键结论：
+
+1. **环境获取绕开受限路径**：本机 Docker Hub 加速器免费节点繁忙、DaoCloud denied、1ms/dockerpull 不可达，且 dl.min.io 官方 Windows 开源二进制已 410 Gone（开源 server 归档）；改从 **GitHub Releases 归档前最后带二进制版本 RELEASE.2025-09-07T16-13-09Z** 直链下载 windows-amd64 单文件（107.9MB），`minio.exe server` 直接启动，/minio/health/live 200、9000 API/9001 控制台监听正常。
+2. **S3CertStorage 真实全链路 13/13 PASS**（脚本 tests/acceptance/manual_minio_live.py）：生产工厂 `get_cert_storage()` 在 CERT_STORAGE_TYPE=s3+MinIO 配置下构建为 S3CertStorage 并 auto_bucket 自动建桶；中文名证书 save；对象 key 路径隔离 `certs/{uid}/{token}`；**D18 中文原名 metadata URL 编码在真实服务侧复验可还原**；s3v4 预签名 URL 匿名 GET 200 且字节一致；read 回读一致；cleanup 列举+批量删除孤儿=1；delete 后 404/NoSuchKey→FileNotFoundError 映射正确；收尾清空并删除测试桶（测试数据零残留）。
+3. **与自动套件的分工**：tests/test_new_tools.py 的 TestS3CertStorage（7 项 botocore Stubber）继续承担 CI 可重复的离线断言；manual_minio_live.py 为需真实 MinIO 的手动实测（脚本头部含二进制下载地址、启动命令、运行命令），默认不属于自动套件，无 MinIO 环境不阻塞日常验收。
+4. **V2.1 质量底座不变**：R17 检测主动弹窗预警 59/59 全绿、tsc 0、硬闸门 44 断言均仍有效；本期未触碰任何产品代码。
+
+---
 
 **V2.1 验收套件共 59 项，全量回归 59 PASS / 0 FAIL / 0 ERROR（通过率 100%，PROFILE_ENC_KEYS 双密钥链环境，验收脚本与后端以同一密钥链启动）。本期落地增强项 R17「检测结果前端主动弹窗预警」：五类检测（合规/资格/废标/响应性/报价）完成后发现不合格或风险项时主动弹窗，无需用户翻阅结果面板。新增 ALERT-01 验收用例。**
 
@@ -23,7 +34,7 @@
 4. **ALERT-01 端到端实证（6.1s）**：报价 error 场景（分项合计 200 vs 投标总价 300）verdict=fail 且 anomalies 含 SUM_MISMATCH（level=error、带 message），构成前端红窗数据契约；大写金额"柒拾肆万元整"与数字 100 不符触发 CN_MISMATCH error；总价一致且无大写时 verdict=pass、无 error 级异常（不弹窗契约）。
 5. **浏览器 UI 实测三场景全过**：报价 SUM_MISMATCH+CN_MISMATCH 双错误红色弹窗实际渲染（标题/条目/双按钮齐全，截图 v21_alert_modal.png）、"查看详情"关闭弹窗并滚动至报价计算表面板、总价一致时不弹窗且面板显示"✅ 校验通过"（截图 v21_no_alert_pass.png），console 无错误。
 6. **零回退**：V2.0 及以前 58 项存量防线在 V2.1 全量回归中持续有效（PROFILE-03 双密钥链、BID-01~06 标书闭环、CERT-01、硬闸门、RBAC 等全过）；tsc 0 报错；本期仅改前端与验收脚本，后端无改动。
-7. **MinIO 真连通实测的环境受限说明**：本期尝试 Docker 拉取 minio/minio（经默认加速器/轩辕/DaoCloud/1ms/dockerpull 多源）均失败（免费节点繁忙/denied/镜像 not found/网络不可达），dl.min.io 官方 Windows 二进制已 410 Gone（开源版归档）；真实 MinIO 连通实测顺延，S3 链路仍由 V1.7 的 7 项 botocore Stubber 离线单测保障，R11 风险条更新见第 6 章。
+7. **MinIO 真连通实测的环境受限说明**：本期尝试 Docker 拉取 minio/minio（经默认加速器/轩辕/DaoCloud/1ms/dockerpull 多源）均失败（免费节点繁忙/denied/镜像 not found/网络不可达），dl.min.io 官方 Windows 二进制已 410 Gone（开源版归档）；真实 MinIO 连通实测顺延，S3 链路仍由 V1.7 的 7 项 botocore Stubber 离线单测保障，R11 风险条更新见第 6 章。**【V2.2 已闭环：经 GitHub Releases 归档版本 Windows 单文件完成真实 MinIO 端到端实测 13/13，详见 4.5j】**
 
 ---
 
@@ -174,7 +185,7 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 - 压力/并发性能、安全渗透（token 篡改/过期/水平越权穷举扫描）；
 - 移动端 H5/公众号、CA/USBKey 认证、敏感词过滤、平台对接（属后续二期，已在需求符合性评估中记录）；
 - OCR/Excel 未纳入 HTTP 自动验收（以离线实测＋META-01 上传链路间接覆盖 PDF 侧，证书 OCR 由 CERT-01 覆盖）；
-- 证书原件已支持 Local/S3 双后端（**V1.7 已接入 boto3 实际 S3/MinIO**，配置见 .env.example：CERT_STORAGE_TYPE/CERT_S3_*），S3 链路由 7 项 botocore Stubber 离线单测覆盖，**真实 MinIO 连通实测仍未完成**：V2.1 已尝试但受本机环境限制（Docker Hub 加速器免费节点繁忙、DaoCloud denied、1ms not found、dockerpull.org 网络不可达；dl.min.io 官方 Windows 开源二进制已 410 Gone 归档），待网络可用或改用商用 S3 测试桶时补测（部署时按 .env.example 配置即可，auto_bucket 自动建桶）；OCR 已加灰度+小图放大预处理，复杂版式/手写/印章遮挡场景仍需用户手工核对（系统提供可折叠 OCR 原文对照）；
+- 证书原件已支持 Local/S3 双后端（**V1.7 已接入 boto3 实际 S3/MinIO**，配置见 .env.example：CERT_STORAGE_TYPE/CERT_S3_*），S3 链路有双重保障——CI 侧 7 项 botocore Stubber 离线单测＋**V2.2 已补真实 MinIO server 端到端连通实测 13/13 PASS**（自动建桶/中文名 metadata D18/s3v4 预签名匿名 GET/read/cleanup 批删/404 映射/测试桶零残留，脚本 manual_minio_live.py，复现步骤见 4.5j/7.3；环境获取经 GitHub Releases 归档版本单文件，绕开 Docker 加速器与 dl.min.io 410 限制）；商用 AWS S3 尚未实测（MinIO 同为 S3v4+path-style 协议，风险低）；OCR 已加灰度+小图放大预处理，复杂版式/手写/印章遮挡场景仍需用户手工核对（系统提供可折叠 OCR 原文对照）；
 - 对照表已加行结构校验+缓存，仍为 LLM 抽取判定（带关键词回退），非确定性场景需人工复核；投标报价测算类参数仍需业务人员手工确认（系统显式黄色提示而非杜撰）；
 - 企业资料敏感字段已应用层加密+掩码，**V1.7 已支持多密钥链无停机轮换与批量重加密（PROFILE-03 全过）**；**V1.8 已支持敏感操作审计落库表（AUDIT-01 全过，admin/auditor 可按字段名查询且不含明文）**；数据库透明加密（TDE）仍待下一期。
 
@@ -370,6 +381,31 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 - HTTP 数据契约由 **ALERT-01** 覆盖（6.1s，fail+error 异常/CN_MISMATCH/pass 无 error 三断言）；
 - 浏览器实测三场景：①报价总价 300 vs 分项合计 200（叠加大写 740000 残留）→ 红色弹窗含 SUM_MISMATCH+CN_MISMATCH 两条、标题"发现不合格项，请及时处理"、双按钮齐全（v21_alert_modal.png）；②"查看详情"关闭弹窗并平滑滚动至报价计算表面板；③总价 200 一致、清空大写 → **不弹窗**、面板"✅ 校验通过"（v21_no_alert_pass.png）；console 全程无错误。
 
+### 4.5j V2.2 真实 MinIO/S3 连通实测（手动，13/13 PASS）
+
+- **环境**：MinIO RELEASE.2025-09-07T16-13-09Z windows-amd64 单文件（GitHub Releases 归档前最后带二进制版本之一，107.9MB），`minio.exe server <数据目录> --address :9000 --console-address :9001`，MINIO_ROOT_USER/PASSWORD=minioadmin；/minio/health/live 200。
+- **脚本**：[tests/acceptance/manual_minio_live.py]（非自动套件，需真实 MinIO；脚本内自带环境变量与收尾清桶）。
+- **13 项断言全过**：
+
+| # | 断言 | 实测结果 |
+|---|---|---|
+| 0 | MinIO 存活 | /minio/health/live 200 |
+| 1 | 生产工厂 CERT_STORAGE_TYPE=s3 构建 | 返回 S3CertStorage 实例 |
+| 2 | auto_bucket 自动建桶 | head_bucket 成功（bid-certs-live-test） |
+| 3 | save 中文名证书 | token 含 .jpg、size=69 |
+| 4 | key 路径隔离 | certs/999999/{token} |
+| 5 | D18 metadata 中文名 URL 编码 | x-amz-meta-original-name 百分号编码，unquote 还原"营业执照-真连通测试.jpg" |
+| 6 | 预签名 s3v4 | URL 含 X-Amz-Signature |
+| 7 | 预签名匿名 GET | 200 且 69 字节与原文一致 |
+| 8 | read 回读 | 字节一致 |
+| 9 | cleanup 孤儿批删 | removed=1 |
+| 10 | 孤儿对象不可读 | FileNotFoundError |
+| 11 | delete 后 404 映射 | FileNotFoundError（NoSuchKey） |
+| 12 | 收尾清桶零残留 | delete_bucket 后 head_bucket ClientError |
+| 合计 | **13/13 PASS** | 无测试数据残留 |
+
+- **意义**：V1.7 的 7 项 Stubber 验证的是"请求构造/响应解析正确性"（无真实网络与签名服务）；本次验证了真实服务侧的 TCP 连通、AWS SigV4 签名握手、path-style addressing、MinIO 对 metadata ASCII 约束的实际执行（D18 修复在真实服务再次确认）、预签名直链的跨进程匿名可达性与生命周期、list/delete 批处理分页语义——这些是 Stubber 无法覆盖的部署期风险点。
+
 ### 4.6 浏览器 UI 实测（V1.3：2026-09-18；V1.4 补测：2026-09-19，admin/admin123）
 
 | 验证点 | 结果 | 证据 |
@@ -428,6 +464,8 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 
 **V2.1（⑱ R17 检测主动预警）未发现产品缺陷**：前端 tsc、ALERT-01 契约、浏览器三场景（红窗/详情定位/无异常不弹）全部一次通过。验收过程两度受**测试环境**（非代码）干扰并已澄清：①接手时运行中的后端进程未带 `PROFILE_ENC_KEYS` 双密钥链（PROFILE-02/03 失败），且验收脚本进程同样需要该变量直连 PG 解密（脚本与后端必须同密钥链），两端补齐后恢复；②连续两轮全量间隔 <1 小时时 MATRIX-02 因 V1.6 内存 TTL 缓存（SHA256 键、1 小时 TTL、进程内存）首请命中旧缓存而失败，重启后端清空缓存后全绿——该现象符合缓存设计，非功能缺陷。另：BID-01/02/03/04、P8-01 在首轮曾失败（500/超时/LLM 未调工具/解析空），未改任何代码、后端重启后复跑全部 PASS，定性为 LLM 云端 API 当轮响应波动。
 
+**V2.2（⑲ MinIO 真连通补测）无代码改动、无产品缺陷**：V2.1 阶段 Docker/官方直链两路获取 MinIO 均受阻；本轮改用 GitHub Releases 归档版本 Windows 单文件一次启动成功，manual_minio_live.py 首轮 13/13 全过（未做任何代码修改即通过，反向印证 V1.7 S3 接入与 D18 修复的生产可用性）。实测后已停止 MinIO 进程释放 9000/9001 端口，脚本自动清空并删除测试桶，本地零数据残留；minio.exe 留存 C:\\Users\\DELL\\.local\\bin 供日后复测。
+
 ---
 
 ## 6. 风险评估与遗留事项
@@ -444,7 +482,7 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 | R8 | ~~标书生成当前为**单章流式**（5 章独立生成），企业资料库未接入，[公司全称]/[资质证书号] 等占位符需人工补；尚无整本合稿、逐条招标要求响应对照表与不合格项自动标红~~ **V1.4 已关闭**：企业资料库 1:1＋占位符双路径回填＋整本一键合稿 SSE＋响应对照表（🔴/🟡 标红，硬失败清单）＋docx 同色导出；**V1.5 进一步关闭"证书附件"**：图片/PDF 上传→OCR 四字段→私有原件→鉴权预览→整表保存→孤儿清理（CERT-01 全过） | 已实现"自动成册＋证书 OCR"，PROFILE-01/BID-04/05/06/CERT-01 与浏览器实测通过 | 剩余：业务测算类参数仍显式提示人工确认；证书原件未接入对象存储（见 R11） |
 | R9（新增） | ~~对照表要求抽取与响应判定依赖 LLM（带关键词回退），条款条数/分类可能随模型波动~~ **V1.6 已关闭**：`_validate_row` 行结构校验（空要求丢弃、非法 status→NO_RESPONSE、category 白名单、material 启发式校正防乱标）＋1 小时内存 TTL 缓存（相同 db_id+bid_hash 复用，cached=True 跳过 LLM） | 可能漏标/错标个别偏离项 | 已用校验+缓存+硬失败清单+红黄分级+导出前整改提示；剩余：非确定性 LLM 判定仍需人工最终复核（业务测算类参数显式黄色提示） |
 | R10（新增） | ~~企业资料按账号 1:1 明文存 PG（含银行账号等敏感字段），暂无字段级加密/脱敏~~ **V1.6 已关闭**：bank_account/contact_phone/contact_email/legal_person 应用层 Fernet 加密（PBKDF2 派生密钥）入库，GET 掩码展示（银行后 4/电话前 3 后 4/邮箱首字母+***/法人姓+**），PUT 掩码回传自动保留旧明文，upsert 字段级审计日志（不含值）。**V1.7 已支持多密钥链无停机轮换与批量重加密**。**V1.8 已支持审计落库表（audit_logs，admin/auditor 按字段名/动作/账号分页查询，AUDIT-01 全过无明文泄露）** | 多租户合规差距 | 已实现加密+掩码+密钥轮换+审计落库；剩余：TDE（数据库透明加密）待下一期 |
-| R11（新增 V1.5） | ~~证书原件存本地 `uploads/certs/{uid}/`，未接入对象存储/CDN；OCR 识别准确度依赖图片清晰度~~ **V1.6 部分关闭**：存储抽象为 `CertStorage` 基类＋`LocalCertStorage`（默认）＋`S3CertStorage`（接口占位）；OCR 前加灰度化+小图放大预处理。**V1.7 完全关闭对象存储**：boto3 实际接入 S3CertStorage（put/get/delete/list 批量清理、s3v4 预签名 307、MinIO endpoint+path-style 适配、auto_bucket 自动建桶、中文原名 URL 编码 D18），OCR 改字节流、预览双通道，7 项 Stubber 单测全过 | 多实例部署/生产可靠性、识别准确度 | Local/S3 双后端均已可用（CERT_STORAGE_TYPE 切换，.env.example 已补全部配置）；剩余：**真实 MinIO/S3 连通实测待补**——V2.1 尝试经 Docker 多镜像源拉取 minio/minio 与官方 Windows 二进制均受本机网络/归档限制未果（详见 2.2），建议在可联网部署环境或商用 S3 测试桶执行一次全链路（自动建桶/中文名/预签名/cleanup/404）；复杂版式/手写/印章遮挡仍需人工核对 |
+| R11（新增 V1.5） | ~~证书原件存本地 `uploads/certs/{uid}/`，未接入对象存储/CDN；OCR 识别准确度依赖图片清晰度~~ **V1.6 部分关闭**：存储抽象为 `CertStorage` 基类＋`LocalCertStorage`（默认）＋`S3CertStorage`（接口占位）；OCR 前加灰度化+小图放大预处理。**V1.7 完全关闭对象存储**：boto3 实际接入 S3CertStorage（put/get/delete/list 批量清理、s3v4 预签名 307、MinIO endpoint+path-style 适配、auto_bucket 自动建桶、中文原名 URL 编码 D18），OCR 改字节流、预览双通道，7 项 Stubber 单测全过。**V2.2 真实连通实测关闭**：真实 MinIO server 端到端 13/13 PASS（含 D18 metadata 真实服务复验、s3v4 预签名匿名 GET、批删/404 映射，manual_minio_live.py） | 多实例部署/生产可靠性、识别准确度 | Local/S3 双后端均已可用且经真实服务实证（CERT_STORAGE_TYPE 切换，.env.example 已补全部配置，复测步骤见 7.3）；剩余：商用 AWS S3 未实测（同 S3v4+path-style 协议，风险低）；复杂版式/手写/印章遮挡仍需人工核对 |
 | R12（新增 V1.9） | ~~智慧问答四类功能覆盖不完整~~ **V2.0 四类已全部关闭**：②范本智能推荐（R14，11 份静态范本库+中文分词匹配）、③异常预警问答（R13，12 code 原因/处置/法规解释层，检测能力 P4-P9 早已具备）、④异议投诉咨询（R15，11 主题专项库，工程招投标与政采两套渠道区分）、①操作智能引导（R16，7 流程 27 阶段，三角色阶段识别+前后衔接）。**V2.1 另关闭"检测结果前端主动弹窗预警"（R17）**：合规/资格/废标/响应性/报价五类检测完成即红/黄弹窗（ALERT-01+浏览器实测全过） | 面向交易平台用户的服务完整性 | 后续增强：范本/流程/异常知识库接运营后台动态维护、异常 code 与操作 stage 随业务扩展持续补录；弹窗阈值可随业务反馈分级调优 |
 
 ---
@@ -465,6 +503,7 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 | eval/test_page_chunking.py | 按页切分与元数据透传离线测试 |
 | eval/test_retrieval_access.py | RAG 召回行级隔离离线测试 |
 | eval/test_evidence_gate.py | **硬闸门纯函数离线测试（44 断言，无需 HTTP/LLM）** |
+| acceptance/manual_minio_live.py | **V2.2 真实 MinIO 端到端连通手动实测脚本（13 断言，需真实 MinIO server；非自动套件，脚本头部含下载/启动/运行步骤，自动收尾清桶）** |
 
 ### 7.2 UI 截图证据（acceptance/screenshots/）
 
@@ -506,3 +545,7 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
    - `.venv\Scripts\python.exe tests\eval\test_evidence_gate.py`（硬闸门 44 断言）
 4. 标书闭环：浏览器 http://localhost:3000/documents → 文档行钢笔按钮 → 选章节流式生成 → 复制/导出 Word；V1.4 另可访问 http://localhost:3000/profile 维护企业资料库，弹窗内"整本合稿＋响应对照"一键成册；接口侧见 BID-01~06、PROFILE-01 与 4.5b/4.5c。后端单测：`.venv\Scripts\python.exe -m pytest tests/test_new_tools.py -q`（85 项）；审计查询：admin/auditor 登录后 `GET /api/audit/logs?user_id=<uid>&action=profile.update`；异常解释：`POST /api/anomaly/explain {"code":"OVER_CONTROL_PRICE"}`；范本推荐：`POST /api/templates/recommend {"query":"工程施工"}`（V1.9 新增，均无需登录）。
 5. 浏览器：frontend 目录 `npm run dev` 后访问 http://localhost:3000/documents，按 4.6 节路径复测。
+6. **V2.2 真实 MinIO 连通复测（手动，约 3 分钟，无需 LLM/后端/PG）**：
+   - 获取二进制（开源 server 已从 dl.min.io 归档，用 GitHub Releases 归档版本）：https://github.com/minio/minio/releases/tag/RELEASE.2025-09-07T16-13-09Z 下载 `minio.windows-amd64.*.exe`；
+   - 启动：`$env:MINIO_ROOT_USER="minioadmin"; $env:MINIO_ROOT_PASSWORD="minioadmin"; minio.exe server <数据目录> --address ":9000" --console-address ":9001"`（health: http://127.0.0.1:9000/minio/health/live）；
+   - 执行：`.venv\Scripts\python.exe tests\acceptance\manual_minio_live.py`，预期末行 `13/13 PASS`；脚本自行设置 CERT_S3_* 环境变量并在结束时清空删除测试桶，无需改 .env。
