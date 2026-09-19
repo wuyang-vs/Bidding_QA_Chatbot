@@ -16,6 +16,8 @@ from src.tools.bid_service import row_to_tender
 from src.tools.company_profile import get_profile
 from src.tools.anomaly_catalog import get_anomaly_guidance, format_guidance_text
 from src.tools.templates_catalog import recommend_templates, get_template
+from src.tools.appeal_catalog import search_appeal_topics, format_appeal_text
+from src.tools.guide_catalog import recognize_stage, format_guide_text
 
 logger = logging.getLogger(__name__)
 
@@ -213,3 +215,79 @@ def _exec_recommend_template(args, question):
 
 BID_AGENT_TOOLS.append(RecommendTemplate())
 BID_AGENT_EXECUTORS["recommend_template"] = _exec_recommend_template
+
+
+# ============ R15: 异议投诉咨询 ============
+
+class ConsultAppeal(BaseTool):
+    name: str = "consult_appeal"
+    description: str = (
+        "咨询招标投标异议/投诉、政府采购质疑/投诉的渠道、时限、材料、流程与法律依据。"
+        "当用户问\"对中标结果不服怎么办/投诉找哪个部门/异议几天内提/投诉书怎么写/"
+        "质疑和投诉区别/不予受理/恶意投诉后果\"等问题时调用。"
+        "query 填用户问题原文或关键词（如\"中标候选人公示有异议\"、\"政府采购质疑\"）。")
+    parameters: dict = {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string", "description": "用户的问题或关键词，如\"对评标结果有异议怎么办\""},
+            "top_k": {"type": "integer", "description": "返回主题数, 默认3"},
+        },
+        "required": ["query"],
+    }
+
+
+def _exec_consult_appeal(args, question):
+    query = (args.get("query") or "").strip()
+    top_k = args.get("top_k") or 3
+    if not query:
+        return "请描述你要咨询的问题，例如\"对中标候选人公示有异议怎么办\"", []
+    results = search_appeal_topics(query, top_k=top_k)
+    if not results:
+        return ("未匹配到对应的异议投诉主题。可直接询问：对招标文件/开标/中标结果的异议、"
+                "投诉渠道与时限、投诉书材料、不予受理情形、政府采购质疑等。", [])
+    blocks = [f"为你找到 {len(results)} 个相关指引（按相关度排序）:"]
+    for i, r in enumerate(results, 1):
+        blocks.append(f"\n===== 指引 {i}：{r['title']}（code={r['code']}，相关度 {r['score']}）=====")
+        blocks.append(format_appeal_text(r))
+    blocks.append("\n提示：具体项目还须以招标文件载明的监督部门和当地公共资源交易平台要求为准。")
+    return "\n".join(blocks), []
+
+
+BID_AGENT_TOOLS.append(ConsultAppeal())
+BID_AGENT_EXECUTORS["consult_appeal"] = _exec_consult_appeal
+
+
+# ============ R16: 操作智能引导 ============
+
+class GuideOperation(BaseTool):
+    name: str = "guide_operation"
+    description: str = (
+        "识别用户在电子交易平台上的操作阶段，给出针对性分步指引。"
+        "覆盖投标人（注册账号/实名认证/CA办理/下载标书/上传投标文件/开标解密/评标澄清）、"
+        "招标人（项目登记/招标文件编制/公告发布/开评标组织/定标公示）、"
+        "评标专家（抽取回避/签到/评审打分/签署报告）。"
+        "当用户问\"怎么注册/CA怎么用/标书怎么上传/解密失败怎么办/专家怎么评标/"
+        "公告怎么发布\"等操作类问题时调用，query 用用户问题原文。")
+    parameters: dict = {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string", "description": "用户的操作问题原文，如\"投标文件上传失败怎么办\"、\"开标怎么在线解密\""},
+        },
+        "required": ["query"],
+    }
+
+
+def _exec_guide_operation(args, question):
+    query = (args.get("query") or "").strip()
+    if not query:
+        return "请描述你正在进行的操作，例如\"投标文件怎么上传\"、\"CA 证书怎么办理\"", []
+    rec = recognize_stage(query)
+    if not rec:
+        return ("暂未识别出对应的操作流程。支持的指引包括：账号注册与实名认证、"
+                "CA 数字证书办理、投标文件制作与上传、开标解密、评标澄清（投标人）；"
+                "项目登记与公告发布（招标人）；专家抽取、评审打分与签署报告（评标专家）。", [])
+    return format_guide_text(rec), []
+
+
+BID_AGENT_TOOLS.append(GuideOperation())
+BID_AGENT_EXECUTORS["guide_operation"] = _exec_guide_operation

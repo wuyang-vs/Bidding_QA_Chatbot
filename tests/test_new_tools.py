@@ -1115,3 +1115,172 @@ class TestTemplatesCatalog:
         # 列表
         rl = c.get("/api/templates")
         assert rl.json()["categories"] == ["业务表单", "合同范本", "招标文件"]
+
+
+# ========== R15 异议投诉咨询 ==========
+
+class TestAppealCatalog:
+    def test_catalog_required_fields(self):
+        from src.tools.appeal_catalog import APPEAL_CATALOG
+        assert len(APPEAL_CATALOG) >= 10
+        for code, e in APPEAL_CATALOG.items():
+            for f in ("category", "title", "summary", "channel", "deadline",
+                      "materials", "steps", "legal_basis"):
+                assert e.get(f), f"{code} 缺 {f}"
+            assert isinstance(e["materials"], list) and isinstance(e["steps"], list)
+
+    def test_get_topic_exact_and_case_insensitive(self):
+        from src.tools.appeal_catalog import get_appeal_topic
+        t = get_appeal_topic("COMPLAINT_PROCESS")
+        assert t and "行政监督部门" in t["channel"]
+        assert get_appeal_topic("complaint_process")["code"] == "COMPLAINT_PROCESS"
+        assert get_appeal_topic("NOPE") is None
+        assert get_appeal_topic("") is None
+
+    def test_search_result_objection_ranks_first(self):
+        from src.tools.appeal_catalog import search_appeal_topics
+        res = search_appeal_topics("中标候选人公示有异议怎么办")
+        assert res and res[0]["code"] == "APPEAL_RESULT"
+        assert "公示" in res[0]["deadline"] and "3 日" in res[0]["deadline"]
+
+    def test_search_materials_and_gov_channel(self):
+        from src.tools.appeal_catalog import search_appeal_topics
+        m = search_appeal_topics("投诉书需要什么材料")
+        assert m[0]["code"] == "COMPLAINT_MATERIALS"
+        assert any("投诉书" in x for x in m[0]["materials"])
+        g = search_appeal_topics("政府采购质疑")
+        assert g[0]["code"] == "GOV_CHALLENGE"
+        assert "财政" in g[0]["channel"] and "7 个工作日" in g[0]["deadline"]
+
+    def test_search_tender_doc_and_no_match(self):
+        from src.tools.appeal_catalog import search_appeal_topics
+        assert search_appeal_topics("招标文件条款有倾向性歧视")[0]["code"] == "APPEAL_TENDER_DOC"
+        assert search_appeal_topics("量子加密通信卫星") == []
+
+    def test_format_text_sections(self):
+        from src.tools.appeal_catalog import get_appeal_topic, format_appeal_text
+        text = format_appeal_text(get_appeal_topic("COMPLAINT_PROCESS"))
+        for sec in ("【提出渠道】", "【法定时限】", "【所需材料】", "【操作步骤】", "【法规依据】"):
+            assert sec in text
+        assert "第六十条" in text
+
+    def test_consult_appeal_tool_executor(self):
+        from src.tools.bid_agent_tools import _exec_consult_appeal
+        text, srcs = _exec_consult_appeal({"query": "对评标结果不服怎么投诉"}, "")
+        assert "APPEAL_RESULT" in text and "法定时限" in text
+        # 空 query
+        t2, _ = _exec_consult_appeal({"query": "  "}, "")
+        assert "请描述" in t2
+        # 无匹配
+        t3, _ = _exec_consult_appeal({"query": "量子加密卫星轨道参数"}, "")
+        assert "未匹配" in t3
+
+    def test_endpoints_appeal(self):
+        from fastapi.testclient import TestClient
+        from api.server import app
+        c = TestClient(app)
+        # 咨询检索
+        r = c.post("/api/appeal/consult", json={"query": "中标候选人公示有异议"})
+        assert r.status_code == 200
+        assert r.json()["items"][0]["code"] == "APPEAL_RESULT"
+        # 主题列表
+        rl = c.get("/api/appeal/topics")
+        assert rl.json()["total"] >= 10
+        assert {"异议", "投诉", "通用", "政府采购"} <= set(rl.json()["categories"])
+        # 详情 200/404
+        rd = c.get("/api/appeal/topics/COMPLAINT_TIMELINE")
+        assert rd.status_code == 200 and "30 个工作日" in rd.json()["deadline"]
+        assert c.get("/api/appeal/topics/NOPE").status_code == 404
+        # 政采质疑走财政渠道
+        rg = c.post("/api/appeal/consult", json={"query": "政府采购供应商质疑"})
+        assert rg.json()["items"][0]["code"] == "GOV_CHALLENGE"
+
+
+# ========== R16 操作智能引导 ==========
+
+class TestGuideCatalog:
+    def test_workflows_completeness(self):
+        from src.tools.guide_catalog import GUIDE_WORKFLOWS
+        roles = {w["role"] for w in GUIDE_WORKFLOWS}
+        assert roles == {"投标人", "招标人", "评标专家"}
+        assert len(GUIDE_WORKFLOWS) >= 7
+        for w in GUIDE_WORKFLOWS:
+            assert w["stages"], f"{w['id']} 无阶段"
+            for st in w["stages"]:
+                for f in ("id", "name", "purpose", "prerequisites",
+                          "actions", "common_errors"):
+                    assert st.get(f), f"{w['id']}/{st['id']} 缺 {f}"
+
+    def test_recognize_upload_stage(self):
+        from src.tools.guide_catalog import recognize_stage
+        r = recognize_stage("投标文件上传失败怎么办")
+        assert r["workflow"]["id"] == "GW-BID-UPLOAD"
+        assert r["stage"]["id"] == "up-3" and r["stage_locked"] is True
+        assert r["prev_stage"] and r["next_stage"]
+        assert any("回执" in a or "上传成功" in a for a in r["stage"]["actions"])
+
+    def test_recognize_decrypt_and_register(self):
+        from src.tools.guide_catalog import recognize_stage
+        d = recognize_stage("开标时怎么在线解密")
+        assert d["workflow"]["id"] == "GW-DECRYPT" and d["stage"]["id"] == "dec-2"
+        r = recognize_stage("怎么注册账号")
+        assert r["workflow"]["id"] == "GW-REGISTER" and r["stage_index"] == 0
+        assert r["prev_stage"] is None
+
+    def test_recognize_tenderer_and_expert(self):
+        from src.tools.guide_catalog import recognize_stage
+        t = recognize_stage("怎么发布招标公告")
+        assert t["workflow"]["id"] == "GW-TENDER" and t["stage"]["id"] == "tdr-3"
+        e = recognize_stage("评标专家")
+        assert e["workflow"]["id"] == "GW-EXPERT"
+        assert e["stage_locked"] is False and e["stage_index"] == 0
+
+    def test_recognize_ca_and_no_match(self):
+        from src.tools.guide_catalog import recognize_stage
+        ca = recognize_stage("CA证书怎么办理")
+        assert ca["workflow"]["id"] == "GW-CA" and ca["stage"]["id"] == "ca-1"
+        assert recognize_stage("今天天气不错适合吃火锅") is None
+        assert recognize_stage("") is None
+
+    def test_get_workflow_and_list(self):
+        from src.tools.guide_catalog import get_workflow, list_workflows_brief
+        assert get_workflow("GW-DECRYPT")["role"] == "投标人"
+        assert get_workflow("NOPE") is None
+        brief = list_workflows_brief()
+        assert len(brief) >= 7
+        assert all(b["stage_count"] >= 2 for b in brief)
+
+    def test_format_guide_text(self):
+        from src.tools.guide_catalog import recognize_stage, format_guide_text
+        text = format_guide_text(recognize_stage("开标时怎么在线解密"))
+        for sec in ("【识别结果】", "【操作步骤】", "【常见错误/坑】", "【上一阶段】"):
+            assert sec in text
+
+    def test_guide_operation_tool_executor(self):
+        from src.tools.bid_agent_tools import _exec_guide_operation
+        text, _ = _exec_guide_operation({"query": "投标文件怎么加密上传"}, "")
+        assert "GW-BID-UPLOAD" in text and "操作步骤" in text
+        t2, _ = _exec_guide_operation({"query": ""}, "")
+        assert "请描述" in t2
+        t3, _ = _exec_guide_operation({"query": "火星基地建设规范"}, "")
+        assert "暂未识别" in t3
+
+    def test_endpoints_guide(self):
+        from fastapi.testclient import TestClient
+        from api.server import app
+        c = TestClient(app)
+        r = c.post("/api/guide/recognize", json={"query": "开标时怎么在线解密"})
+        assert r.status_code == 200
+        d = r.json()
+        assert d["workflow"]["id"] == "GW-DECRYPT" and d["stage"]["id"] == "dec-2"
+        assert d["prev_stage"] and d["next_stage"]
+        # 无法识别 404
+        assert c.post("/api/guide/recognize", json={"query": "xyz123"}).status_code == 404
+        # 流程列表三类角色
+        rl = c.get("/api/guide/workflows")
+        assert rl.json()["roles"] == ["投标人", "招标人", "评标专家"]
+        assert rl.json()["total"] >= 7
+        # 流程详情 200/404
+        rd = c.get("/api/guide/workflows/GW-EXPERT")
+        assert rd.status_code == 200 and len(rd.json()["stages"]) == 5
+        assert c.get("/api/guide/workflows/NOPE").status_code == 404

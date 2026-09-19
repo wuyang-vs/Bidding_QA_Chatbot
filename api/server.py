@@ -239,6 +239,15 @@ class TemplateRecommendRequest(BaseModel):
     top_k: int = 5
 
 
+class AppealConsultRequest(BaseModel):
+    query: str
+    top_k: int = 3
+
+
+class GuideRecognizeRequest(BaseModel):
+    query: str
+
+
 class VisionRequest(BaseModel):
     image_base64: str
     prompt: str = "请详细描述这张图片的内容"
@@ -346,6 +355,60 @@ def templates_detail(tid: str):
 def templates_list():
     from src.tools.templates_catalog import TEMPLATES, list_categories
     return {"categories": list_categories(), "items": TEMPLATES}
+
+
+# ============ R15 异议投诉咨询 ============
+
+@app.post("/api/appeal/consult")
+def appeal_consult(req: AppealConsultRequest):
+    from src.tools.appeal_catalog import search_appeal_topics
+    items = search_appeal_topics(req.query, top_k=req.top_k)
+    return {"query": req.query, "items": items, "total": len(items)}
+
+
+@app.get("/api/appeal/topics")
+def appeal_topics_list():
+    from src.tools.appeal_catalog import list_topics_brief
+    items = list_topics_brief()
+    categories = sorted({i["category"] for i in items})
+    return {"categories": categories, "items": items, "total": len(items)}
+
+
+@app.get("/api/appeal/topics/{code}")
+def appeal_topic_detail(code: str):
+    from src.tools.appeal_catalog import get_appeal_topic
+    topic = get_appeal_topic(code)
+    if not topic:
+        raise HTTPException(404, f"未找到异议投诉主题 {code}")
+    return topic
+
+
+# ============ R16 操作智能引导 ============
+
+@app.post("/api/guide/recognize")
+def guide_recognize(req: GuideRecognizeRequest):
+    from src.tools.guide_catalog import recognize_stage
+    rec = recognize_stage(req.query)
+    if not rec:
+        raise HTTPException(404, f"未识别出与「{req.query}」对应的操作流程")
+    return rec
+
+
+@app.get("/api/guide/workflows")
+def guide_workflows_list():
+    from src.tools.guide_catalog import list_workflows_brief
+    items = list_workflows_brief()
+    roles = sorted({i["role"] for i in items})
+    return {"roles": roles, "items": items, "total": len(items)}
+
+
+@app.get("/api/guide/workflows/{wid}")
+def guide_workflow_detail(wid: str):
+    from src.tools.guide_catalog import get_workflow
+    wf = get_workflow(wid)
+    if not wf:
+        raise HTTPException(404, f"未找到操作流程 {wid}")
+    return wf
 
 
 MAX_IMAGE_BASE64_CHARS = 4_000_000
