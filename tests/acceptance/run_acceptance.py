@@ -852,7 +852,8 @@ def t():
     assert d["completeness"]["certs_count"] == 1
     assert d["completeness"]["projects_count"] == 1
     s, d = http("GET", "/api/profile", token=tok, timeout=15)
-    assert d["profile"]["legal_person"] == "李四"
+    # R10: 敏感字段掩码展示 (法人→姓+*, 电话→前3后4)
+    assert d["profile"]["legal_person"] == "李*", f"法人应掩码, 实际 {d['profile']['legal_person']}"
     assert d["profile"]["certs"][0]["cert_no"] == "HX-2025-001"
     return {"note": f"company={company}, 完整度={d['completeness']['filled_fields']}/12, 匿名={s0}"}
 
@@ -1054,6 +1055,65 @@ def t():
     return {"note": f"字体={Path(font_file).name}, source={ocr_source}, "
                     f"编号={cert.get('cert_no')}, 有效期={cert.get('valid_until')}, "
                     f"匿名={s0}/越权={s2}/穿越={s3}/非法格式={sx}/孤儿={s4}"}
+
+
+@case("V16加密脱敏", "PROFILE-02", "敏感字段Fernet加密入库+GET掩码+掩码回传保护")
+def t():
+    _u, tok, _ = t_auth_common("profile_enc", "accept123", role="bidder")
+    # PUT 含敏感字段
+    payload = {
+        "company_name": "加密脱敏测试有限公司", "legal_person": "张三丰",
+        "contact_phone": "13812345678", "contact_email": "zhangsan@example.com",
+        "bank_account": "6222021234567890",
+    }
+    s, d = http("PUT", "/api/profile", payload, token=tok, timeout=15)
+    assert s == 200, f"PUT 失败 {s} {str(d)[:200]}"
+    # GET 掩码
+    s, d = http("GET", "/api/profile", token=tok, timeout=15)
+    p = d["profile"]
+    assert p["bank_account"] == "************7890", f"银行账号应掩码, 实际 {p['bank_account']}"
+    assert p["contact_phone"] == "138****5678", f"电话应掩码, 实际 {p['contact_phone']}"
+    assert p["contact_email"] == "z***@example.com", f"邮箱应掩码, 实际 {p['contact_email']}"
+    assert p["legal_person"] == "张**", f"法人应掩码, 实际 {p['legal_person']}"
+    assert p["company_name"] == "加密脱敏测试有限公司"  # 非敏感字段明文
+    # 直连 PG 确认密文 (应用层加密, 不暴露明文)
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from src.database.postgresql_client import postgresql_client
+    postgresql_client.initialize()
+    rows = postgresql_client._run(
+        "SELECT bank_account FROM company_profiles WHERE user_id = "
+        "(SELECT id FROM users WHERE username=:u)", {"u": _u})
+    enc = rows[0]["bank_account"]
+    assert enc.startswith("gAAAAA"), f"银行账号未加密入库: {enc[:20]}"
+    assert "6222" not in enc, "密文不应包含明文片段"
+    # 掩码回传保护: 提交掩码值不应改变明文
+    masked = dict(payload)
+    masked["bank_account"] = p["bank_account"]  # 掩码值
+    http("PUT", "/api/profile", masked, token=tok, timeout=15)
+    rows2 = postgresql_client._run(
+        "SELECT bank_account FROM company_profiles WHERE user_id = "
+        "(SELECT id FROM users WHERE username=:u)", {"u": _u})
+    from src.tools.field_crypto import decrypt_field
+    plain2 = decrypt_field(rows2[0]["bank_account"])
+    assert plain2 == "6222021234567890", f"掩码回传改变了明文: {plain2}"
+    return {"note": f"PG密文={enc[:16]}..., 掩码回传保护OK, 脱敏字段=bank/phone/email/legal"}
+
+
+@case("V16对照表缓存", "MATRIX-02", "相同招标+投标稿二次请求命中缓存(cached=True)")
+def t():
+    body = {"db_id": DB_ID, "markdown": "我方资质齐全，特级资质，工期满足，质保三年。"}
+    s1, d1 = http("POST", "/api/bid/matrix", body, timeout=300)
+    assert s1 == 200, f"首次 matrix 失败 {s1}"
+    assert d1.get("cached") is False, "首次不应命中缓存"
+    s2, d2 = http("POST", "/api/bid/matrix", body, timeout=60)
+    assert s2 == 200, f"二次 matrix 失败 {s2}"
+    assert d2.get("cached") is True, "二次相同输入应命中缓存"
+    # 缓存结果与首次一致
+    assert d2["summary"]["total"] == d1["summary"]["total"]
+    assert d2["verdict"] == d1["verdict"]
+    return {"note": f"首次cached=False 二次cached=True, 共{d2['summary']['total']}条 verdict={d2['verdict']}"}
 
 
 # ================= main =================

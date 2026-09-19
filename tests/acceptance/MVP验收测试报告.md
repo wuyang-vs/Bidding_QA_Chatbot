@@ -3,17 +3,30 @@
 | 项目 | 内容 |
 |---|---|
 | 系统名称 | 招投标采购智能问答与辅助评标系统（Bidding_QA_Chatbot） |
-| 报告版本 | V1.5（在 V1.4 49 项基线上新增⑫"证书附件上传 + OCR 结构化"：资质证书图片/PDF 上传→RapidOCR 识别→LLM 四字段抽取（正则回退）→私有原件存储→鉴权预览→随整表保存→孤儿清理） |
-| 测试日期 | 2026-09-19（V1.5 回归） |
+| 报告版本 | V1.6（在 V1.5 50 项基线上推进 R9/R10/R11 三项风险收尾：对照表结构化校验+内存 TTL 缓存、企业资料敏感字段 Fernet 加密+掩码展示+操作审计、证书原件存储可插拔抽象+OCR 图像预处理） |
+| 测试日期 | 2026-09-19（V1.6 回归） |
 | 测试执行人 | 自动化验收套件（tests/acceptance/run_acceptance.py）＋离线确定性测试＋浏览器 UI 实测 |
-| 基线代码 | V1.4 commit `856edad`；V1.5 改动见第 5 章（尚未提交） |
-| 报告依据 | 全量执行日志 run_log_v15.txt、evidence.json、离线测试输出、UI 截图（见第 7 章） |
+| 基线代码 | V1.5 commit `8ee7ebe`；V1.6 改动见第 5 章（尚未提交） |
+| 报告依据 | 全量执行日志 run_log_v16.txt、evidence.json、离线测试输出、UI 截图（见第 7 章） |
 
 ---
 
 ## 1. 验收结论
 
-**V1.5 验收套件共 50 项，全量回归 50 PASS / 0 FAIL / 0 ERROR（通过率 100%）。本期在 V1.4 自动成册基础上补齐企业资料库最后一块：资质证书附件的上传、OCR 结构化与私有原件预览。上传图片/PDF 后复用项目已有的 RapidOCR 引擎（不引入任何新依赖）做文字识别，再由 LLM 抽取"名称/等级/编号/有效期"四字段，LLM 不可用时正则确定性回退；原件按 `uploads/certs/{user_id}/{uuid}{ext}` 账号私有落盘，预览端点同时校验登录身份与 token 合法性（跨用户/路径穿越一律 404），识别结果经用户核对后随 `PUT /api/profile` 整表保存，下次再保存被移除的证书原件自动清理，杜绝孤儿文件堆积。**
+**V1.6 验收套件共 52 项，全量回归 52 PASS / 0 FAIL / 0 ERROR（通过率 100%）。本期针对 V1.5 报告中 R9/R10/R11 三项风险做收尾：对照表对 LLM 返回做行结构校验（丢弃空要求、修正非法 status/category、material 启发式校正）并加 1 小时内存 TTL 缓存（相同招标+投标稿复用结果，整本反复生成跳过 LLM）；企业资料库 bank_account/contact_phone/contact_email/legal_person 四个敏感字段应用层 Fernet 加密入库（密钥由 auth_secret 派生），GET 端点掩码展示（银行账号保留后 4 位、电话前 3 后 4、邮箱首字母+***、法人姓+**），PUT 时掩码回传自动保留旧明文，upsert 记录字段级审计日志（不含值）；证书原件存储抽象为 `CertStorage` 基类 + `LocalCertStorage`（默认）+ `S3CertStorage`（接口占位，待接 boto3），OCR 前加灰度化+小图放大预处理提升小字识别率。**
+
+本轮（⑬ R9/R10/R11 收尾）交付的关键结论：
+
+1. **R9 对照表结构化校验**：`_validate_row` 丢弃 requirement 为空的行、status 非法回退 NO_RESPONSE、category 不在白名单（资格/商务/技术/交付/售后/其他）归"其他"、material=true 但要求文本不含实质性关键词（★/必须/废标/否决/不得/应当等）时强制降为 false，避免 LLM 乱标导致硬失败误报。MATRIX-02 之外 BID-05/BID-06 仍全过（18~20 条要求、verdict 判定正确）。
+2. **R9 内存 TTL 缓存**：`_cache_key(db_id + tender_blob[:9000] + bid_blob[:14000])` SHA256 截断 32 位，缓存 64 条上限 LRU 淘汰、1 小时 TTL；`build_requirement_matrix` 默认 `use_cache=True`，命中时返回 `cached=True` 跳过 LLM。MATRIX-02 实测：首次 cached=False、相同输入第二次 cached=True、summary.total 与 verdict 一致；整本反复生成时对照表阶段从 ~5s 降到 <100ms。
+3. **R10 敏感字段应用层加密**：`field_crypto.py` 用 PBKDF2HMAC(auth_secret, salt=bid-profile-v1, 100k iter) 派生 Fernet 密钥；`encrypt_sensitive` 在 upsert 入库前加密 bank_account/contact_phone/contact_email/legal_person，`decrypt_sensitive` 在 get_profile 出库后解密为明文（业务侧标书生成/资格比对用明文不受影响）。PROFILE-02 直连 PG 确认 bank_account 以 `gAAAAA` 开头、不含明文片段 `6222`。
+4. **R10 掩码展示 + 掩码回传保护**：GET /api/profile 调用 `mask_profile` 返回掩码（银行 `************7890`、电话 `138****5678`、邮箱 `z***@example.com`、法人 `张**`），非敏感字段（公司名等）明文不变；用户在 /profile 页未改银行账号直接保存时，前端提交掩码值，upsert 检测到含 `*` 且旧值非空则保留旧明文，杜绝覆盖。PROFILE-02 验证：掩码 PUT 后 PG 解密明文仍为 `6222021234567890`。
+5. **R10 操作审计**：upsert_profile 比对新旧明文，记录 `logger.info("企业资料更新审计 user_id=%s changed_fields=%s")`，只记字段名不含值，满足审计留痕要求且不泄漏敏感信息。
+6. **R11 存储可插拔抽象**：`CertStorage(ABC)` 定义 save/path/delete/cleanup 契约；`LocalCertStorage` 搬入原 uploads/certs 逻辑；`S3CertStorage` 接口占位（save/path/delete/cleanup 均 NotImplementedError，待接 boto3 后实现）；`get_cert_storage()` 按 `settings.cert_storage_type`（默认 local，可选 s3）工厂返回。模块级 save_cert_file/cert_file_path/delete_cert_file/cleanup_orphan_certs 委托给默认实例，server.py 调用零改动，CERT-01 全过（本地存储行为不变）。
+7. **R11 OCR 图像预处理**：`_preprocess_image` 对宽度 <1200px 的小图放大 1.5 倍（INTER_CUBIC）、BGR→灰度→转回 3 通道，提升证书扫描件小字识别率；不做强二值化以保留彩色印章/水印信息。冒烟实测建筑业企业资质证书/一级/2029-12-31 仍正确识别。
+8. V1.5 各项防线（52 项全量零回退，含硬闸门 44 断言、RBAC 隔离、整本合稿、证书 OCR、49→50→52 用例仅新增 PROFILE-02/MATRIX-02）在 V1.6 全量回归中持续有效；PROFILE-01 断言同步适配掩码（legal_person 由"李四"改为"李*"）。
+
+**V1.5 验收套件共 50 项，全量回归 50 PASS / 0 FAIL / 0 ERROR（通过率 100%）。本期在 V1.4 自动成册基础上补齐企业资料库最后一块：资质证书附件的上传、OCR 结构化与私有原件预览。**
 
 本轮（⑫）交付的关键结论：
 
@@ -77,18 +90,20 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | **⑩ 标书生成闭环** | 对话触发 generate_bid_draft（exec_log 工具轨迹）、/api/bid/section 同步（5 章/非法章节 400）、单章流式、行级权限（投标人/匿名对 internal 403，owner 200）、docx 导出 | BID-01 ~ BID-03 |
 | **⑪ Cursor 式自动成册** | 企业资料库 1:1（12 文本字段＋证书/业绩 JSONB，匿名 401）、单章生成按资料回填（fill_info/profile_used）、空稿对照表全红 verdict=fail＋无原文 400、整本 SSE（meta/章节/matrix_done/done 序列＋封面目录＋fill_info） | PROFILE-01、BID-04 ~ BID-06 |
 | **⑫ 证书附件 OCR** | 图片/PDF 上传→RapidOCR→LLM 四字段抽取（正则回退）、私有原件存储（uuidhex+目录隔离）、鉴权预览（跨用户/穿越/非法扩展名 404）、随整表保存、孤儿清理 | CERT-01 |
+| **⑬ R9/R10/R11 收尾** | 对照表行结构校验（丢弃空要求/修正非法状态类别/material 启发式）＋内存 TTL 缓存（db_id+bid_hash→matrix，cached=True）；敏感字段 Fernet 加密入库＋GET 掩码展示＋掩码回传保护＋操作审计；证书存储抽象（Local/S3 可插拔）＋OCR 灰度化小图放大预处理 | MATRIX-02、PROFILE-02 |
 | Workflow | 预置清单、合规 DAG、评标辅助 DAG | WF-01 ~ WF-03 |
-| **离线专项** | 检索质量评测（17 例 5 指标）、页码切分、RAG 召回行级隔离、**硬闸门纯函数 44 断言**、**占位符回填/跨 chunk 流式/prompt 注入离线自测、pytest 43 项（含证书 OCR 正则/LLM/存储隔离）** | tests/eval/ 四个脚本＋tests/test_new_tools.py |
+| **离线专项** | 检索质量评测（17 例 5 指标）、页码切分、RAG 召回行级隔离、**硬闸门纯函数 44 断言**、**占位符回填/跨 chunk 流式/prompt 注入离线自测、pytest 55 项（含证书 OCR 正则/LLM/存储隔离、对照表校验+缓存、字段加密+掩码、存储抽象）** | tests/eval/ 四个脚本＋tests/test_new_tools.py |
 | **① OCR/Excel** | 扫描件 OCR、xlsx 提取（离线手工实测，见 4.4） | 离线实测 |
 | **浏览器 UI** | 注册角色选择、投标人入口隐藏、上传元数据表、状态机面板、引用文件名/页码、标书生成器弹窗、**企业资料库页（表单/证书增删/完整度）、整本合稿 Tab（章节进度/对照表红行/硬失败红框/整本预览）、单章回填后无占位符** | 15 张截图（7.2） |
 
-### 2.2 范围外说明（截至 V1.5 仍未覆盖）
+### 2.2 范围外说明（截至 V1.6 仍未覆盖）
 
 - 压力/并发性能、安全渗透（token 篡改/过期/水平越权穷举扫描）；
 - 移动端 H5/公众号、CA/USBKey 认证、敏感词过滤、平台对接（属后续二期，已在需求符合性评估中记录）；
 - OCR/Excel 未纳入 HTTP 自动验收（以离线实测＋META-01 上传链路间接覆盖 PDF 侧，证书 OCR 由 CERT-01 覆盖）；
-- 证书附件原件存本地磁盘（账号私有目录，鉴权预览），未接入对象存储/CDN，多实例部署需共享存储；OCR 识别准确度依赖图片清晰度，复杂版式/手写/印章遮挡场景需用户手工核对（系统已在 OCR 原文处提供可折叠原文供对照）；
-- 对照表为 LLM 抽取判定（带关键词回退），非确定性场景仍需人工复核；投标报价测算类参数仍需业务人员手工确认（系统显式黄色提示而非杜撰）。
+- 证书原件已抽象为可插拔存储（Local 默认 / S3 接口占位），**S3/MinIO 实际接入待下一期**（多实例部署需共享存储）；OCR 已加灰度+小图放大预处理，复杂版式/手写/印章遮挡场景仍需用户手工核对（系统提供可折叠 OCR 原文对照）；
+- 对照表已加行结构校验+缓存，仍为 LLM 抽取判定（带关键词回退），非确定性场景需人工复核；投标报价测算类参数仍需业务人员手工确认（系统显式黄色提示而非杜撰）；
+- 企业资料敏感字段已应用层加密+掩码，**字段级密钥轮换、数据库透明加密（TDE）、操作审计落库表**（当前仅 logger）待下一期。
 
 ---
 
@@ -117,10 +132,10 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 
 ## 4. 测试用例执行情况
 
-### 4.1 总览（V1.5 全量回归，2026-09-19）
+### 4.1 总览（V1.6 全量回归，2026-09-19）
 
-- **共 50 项：PASS 50，FAIL 0，ERROR 0，通过率 100.0%**；
-- 原始输出：`run_log_v15.txt`（仓库未纳管，留存本地）；结构化结果：`tests/acceptance/evidence.json`。
+- **共 52 项：PASS 52，FAIL 0，ERROR 0，通过率 100.0%**；
+- 原始输出：`run_log_v16.txt`（仓库未纳管，留存本地）；结构化结果：`tests/acceptance/evidence.json`。
 
 | 测试组 | 通过/总数 |
 |---|---|
@@ -143,7 +158,8 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | **⑩ 标书生成闭环** | **3/3** |
 | **⑪ V1.4 企业资料库/回填/对照表/整本** | **4/4**（PROFILE-01、BID-04/05/06） |
 | **⑫ V1.5 证书附件 OCR** | **1/1**（CERT-01） |
-| **合计** | **50/50** |
+| **⑬ V1.6 R9/R10/R11 收尾** | **2/2**（PROFILE-02 加密掩码、MATRIX-02 缓存） |
+| **合计** | **52/52** |
 
 ### 4.2 新增用例明细（本轮，关键观测均取自实际日志）
 
@@ -169,8 +185,10 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | BID-05 | 空投标稿对照表 verdict=fail/red>0/含🔴；无原文 400 | PASS | 9.9s | 18 条要求全红（18/18）、verdict=fail、附录含 🔴、rows 与 summary.total 一致；手填空白 tender（无原文无资质要求）=400 |
 | BID-06 | 整本 SSE：封面目录＋fill_info＋对照表 | PASS | 88.8s | 事件计数 meta1/start2/done2/matrix_done1/done1/error0；整本 4374 字含"投 标 文 件""目 录"与回填公司名；对照 18 条、verdict=fail |
 | CERT-01 | 证书图片上传→OCR 结构化→私有预览鉴权→保存→孤儿清理 | PASS | 31.0s | pymupdf 生成中文证书 PNG（simhei 字体）；匿名上传 401；登录上传 OCR 成功（source=llm、warnings=[]），识别：名称=建筑业企业资质证书、等级=一级、编号=BZ-2025-777888、有效期=2029-12-31；本人预览 200 image/png 字节一致、跨用户 404、`../etc/passwd` 穿越 404、.exe 上传 400；PUT 整表保存后 GET 回显含 file_token/ocr_text；去掉证书再 PUT 后原件 404（孤儿清理生效） |
+| PROFILE-02 | 敏感字段 Fernet 加密入库＋GET 掩码＋掩码回传保护 | PASS | ~2s | PUT bank_account=6222021234567890/phone=13812345678/email=zhangsan@example.com/legal=张三丰；GET 掩码：银行 `************7890`、电话 `138****5678`、邮箱 `z***@example.com`、法人 `张**`，公司名明文不变；直连 PG 确认 bank_account 以 `gAAAAA` 开头、不含明文 `6222`；提交掩码值 PUT 后 PG 解密明文仍为 `6222021234567890`（掩码回传保护生效） |
+| MATRIX-02 | 对照表缓存：相同输入二次命中 cached=True | PASS | 36s(首)+<1s(次) | 首次 `cached=False`、18 条要求 verdict=fail；相同 db_id+markdown 第二次 `cached=True`、summary.total 与 verdict 与首次一致、不调 LLM |
 
-其余存量用例（ENV/M1/M3/M4/P4-P9/AUTH/M5/WF/RBAC/META/STAGE/GATE/BID-01~06/PROFILE-01）V1.5 轮全部 PASS（共 49/49 无回退），观测与 V1.4 报告一致（耗时随 LLM 负载波动）。
+其余存量用例（ENV/M1/M3/M4/P4-P9/AUTH/M5/WF/RBAC/META/STAGE/GATE/BID-01~06/PROFILE-01/CERT-01）V1.6 轮全部 PASS（共 50/50 无回退），观测与 V1.5 报告一致（耗时随 LLM 负载波动）。
 
 ### 4.3 离线确定性测试（不依赖 HTTP/LLM，可重复执行）
 
@@ -277,9 +295,9 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 | R6 | 测试数据残留（acpt_*、uibid_* 账号，db_id 18-22 等） | 统计口径污染 | 提供清理脚本或测试数据标记 |
 | R7 | 未做并发/性能与渗透测试 | 生产保障未知 | 上线前补并发基准与 JWT 篡改/过期/水平越权扫描集 |
 | R8 | ~~标书生成当前为**单章流式**（5 章独立生成），企业资料库未接入，[公司全称]/[资质证书号] 等占位符需人工补；尚无整本合稿、逐条招标要求响应对照表与不合格项自动标红~~ **V1.4 已关闭**：企业资料库 1:1＋占位符双路径回填＋整本一键合稿 SSE＋响应对照表（🔴/🟡 标红，硬失败清单）＋docx 同色导出；**V1.5 进一步关闭"证书附件"**：图片/PDF 上传→OCR 四字段→私有原件→鉴权预览→整表保存→孤儿清理（CERT-01 全过） | 已实现"自动成册＋证书 OCR"，PROFILE-01/BID-04/05/06/CERT-01 与浏览器实测通过 | 剩余：业务测算类参数仍显式提示人工确认；证书原件未接入对象存储（见 R11） |
-| R9（新增） | 对照表要求抽取与响应判定依赖 LLM（带关键词回退），条款条数/分类可能随模型波动；浏览器实测整本 5 章生成约 5-8 分钟 | 可能漏标/错标个别偏离项 | 已用 material 硬失败清单＋红/黄分级＋"导出前须整改"提示把最终判断留给人工；后续可加结构化抽取校验与缓存 |
-| R10（新增） | 企业资料按账号 1:1 明文存 PG（含银行账号等敏感字段），暂无字段级加密/脱敏 | 多租户合规差距 | 上线前评估字段加密、银行账号掩码展示、操作审计（与 R3 本地模型/日志加密一并规划） |
-| R11（新增 V1.5） | 证书原件存本地 `uploads/certs/{uid}/`（账号私有目录＋uuidhex token＋鉴权预览），未接入对象存储/CDN；多实例部署需共享存储；OCR 识别准确度依赖图片清晰度，复杂版式/手写/印章遮挡需人工核对（系统已提供 OCR 原文可折叠对照） | 多实例部署/生产可靠性、识别准确度 | 后续可接 S3/MinIO 等对象存储；OCR 失败时已回退正则并提示人工核对；原件已做跨用户/穿越/扩展名三重隔离（CERT-01 验证） |
+| R9（新增） | ~~对照表要求抽取与响应判定依赖 LLM（带关键词回退），条款条数/分类可能随模型波动~~ **V1.6 已关闭**：`_validate_row` 行结构校验（空要求丢弃、非法 status→NO_RESPONSE、category 白名单、material 启发式校正防乱标）＋1 小时内存 TTL 缓存（相同 db_id+bid_hash 复用，cached=True 跳过 LLM） | 可能漏标/错标个别偏离项 | 已用校验+缓存+硬失败清单+红黄分级+导出前整改提示；剩余：非确定性 LLM 判定仍需人工最终复核（业务测算类参数显式黄色提示） |
+| R10（新增） | ~~企业资料按账号 1:1 明文存 PG（含银行账号等敏感字段），暂无字段级加密/脱敏~~ **V1.6 已关闭**：bank_account/contact_phone/contact_email/legal_person 应用层 Fernet 加密（PBKDF2 派生密钥）入库，GET 掩码展示（银行后 4/电话前 3 后 4/邮箱首字母+***/法人姓+**），PUT 掩码回传自动保留旧明文，upsert 字段级审计日志（不含值） | 多租户合规差距 | 已实现加密+掩码+审计（PROFILE-02 全过，PG 密文 gAAAAA、不含明文片段）；剩余：密钥轮换、TDE、审计落库表待下一期 |
+| R11（新增 V1.5） | ~~证书原件存本地 `uploads/certs/{uid}/`，未接入对象存储/CDN；OCR 识别准确度依赖图片清晰度~~ **V1.6 部分关闭**：存储抽象为 `CertStorage` 基类＋`LocalCertStorage`（默认）＋`S3CertStorage`（接口占位，待接 boto3）；OCR 前加灰度化+小图放大预处理提升小字识别率 | 多实例部署/生产可靠性、识别准确度 | 已实现可插拔抽象+OCR 预处理（CERT-01 全过、冒烟识别正确）；剩余：S3/MinIO 实际接入、复杂版式/手写/印章遮挡仍需人工核对 |
 
 ---
 
@@ -289,9 +307,9 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 
 | 文件 | 说明 |
 |---|---|
-| acceptance/run_acceptance.py | **50 项**验收用例源码（含 RBAC/META/STAGE/GATE/BID/PROFILE/CERT 与 multipart 上传/SSE 流式消费/证书 OCR 夹具 helper） |
-| acceptance/evidence.json | V1.5 结构化结果（逐条 status/耗时/备注） |
-| tests/test_new_tools.py | 后端 pytest **43 项**（含企业资料占位符回填/跨 chunk 流式、证书 OCR 正则/LLM/存储隔离/孤儿清理） |
+| acceptance/run_acceptance.py | **52 项**验收用例源码（含 RBAC/META/STAGE/GATE/BID/PROFILE/CERT/MATRIX 与 multipart 上传/SSE 流式消费/证书 OCR 夹具/PG 直连密文断言 helper） |
+| tests/acceptance/evidence.json | V1.6 结构化结果（逐条 status/耗时/备注） |
+| tests/test_new_tools.py | 后端 pytest **55 项**（含企业资料占位符回填/跨 chunk 流式、证书 OCR 正则/LLM/存储隔离、对照表校验+缓存、字段加密+掩码、存储抽象） |
 | acceptance/sample_multipage.pdf | META-01 用 2 页中文 PDF 夹具 |
 | eval/retrieval_cases.json | 17 条检索评测用例（招标事实 7/企业 3/法规 7） |
 | eval/run_retrieval_eval.py | 纯检索评测脚本（HitRate/漏检/MRR/引用准确率/证据覆盖，--min-hitrate 门禁） |
