@@ -1192,6 +1192,71 @@ def t():
     return {"note": f"首次cached=False 二次cached=True, 共{d2['summary']['total']}条 verdict={d2['verdict']}"}
 
 
+# ================= V18 R12 审计落库 =================
+
+@case("V18审计留痕", "AUDIT-01", "敏感操作审计落库: 资料变更→admin按字段名可查(不含值)→RBAC 401/403")
+def t():
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from src.database.postgresql_client import postgresql_client
+
+    # 1) 投标人建档+改档 (产生 profile.update 审计; 第二次 PUT 制造多字段变更)
+    _u, tok, _ = t_auth_common("audit01", "accept123", role="bidder")
+    p1 = {"company_name": "审计验收有限公司", "contact_phone": "13700007777"}
+    s, d = http("PUT", "/api/profile", p1, token=tok, timeout=15)
+    assert s == 200, f"首次 PUT 失败 {s} {str(d)[:200]}"
+    p2 = dict(p1, contact_phone="13700008888", bank_account="6222000088889999",
+              legal_person="赵六")
+    s, d = http("PUT", "/api/profile", p2, token=tok, timeout=15)
+    assert s == 200, f"二次 PUT 失败 {s} {str(d)[:200]}"
+
+    postgresql_client.initialize()
+    rows = postgresql_client._run("SELECT id FROM users WHERE username=:u", {"u": _u})
+    assert rows, "验收账号未查到"
+    uid = rows[0]["id"]
+
+    # 2) admin 登录, 按 user_id+action 过滤查询
+    s, d = http("POST", "/auth/login",
+                {"username": "admin", "password": "admin123"}, timeout=15)
+    assert s == 200 and d.get("access_token"), f"admin 登录失败 {s}"
+    admin_tok = d["access_token"]
+    s, d = http("GET", f"/api/audit/logs?user_id={uid}&action=profile.update&limit=10",
+                token=admin_tok, timeout=15)
+    assert s == 200, f"审计查询失败 {s} {str(d)[:200]}"
+    assert d["total"] >= 2, f"两次变更至少 2 条审计, 实际 {d['total']}"
+    items = d["items"]
+    assert items[0]["action"] == "profile.update"
+    assert items[0]["username"] == _u
+    assert items[0]["target_type"] == "company_profile"
+    latest_fields = items[0]["changed_fields"]
+    assert "contact_phone" in latest_fields and "bank_account" in latest_fields \
+        and "legal_person" in latest_fields, f"字段名清单不符: {latest_fields}"
+    # 3) 审计记录只含字段名, 绝不含敏感值 (整条 JSON 搜明文)
+    blob = json.dumps(items, ensure_ascii=False)
+    assert "13700008888" not in blob, "审计记录泄露手机号明文"
+    assert "6222000088889999" not in blob, "审计记录泄露银行账号明文"
+    assert "赵六" not in blob, "审计记录泄露法人姓名明文"
+
+    # 4) RBAC: 投标人 403 / 匿名 401
+    s, _ = http("GET", "/api/audit/logs", token=tok, timeout=15)
+    assert s == 403, f"投标人查询审计应 403, 实际 {s}"
+    s, _ = http("GET", "/api/audit/logs", timeout=15)
+    assert s == 401, f"匿名查询审计应 401, 实际 {s}"
+
+    # 5) PG 直连实证落库 + 不存在 action 过滤为空
+    rows = postgresql_client._run(
+        "SELECT changed_fields FROM audit_logs "
+        "WHERE user_id=:uid AND action='profile.update' ORDER BY id DESC LIMIT 1",
+        {"uid": uid})
+    assert rows and "contact_phone" in rows[0]["changed_fields"], \
+        f"PG 审计行异常: {rows}"
+    s, d = http("GET", "/api/audit/logs?action=not.exist.action&limit=5",
+                token=admin_tok, timeout=15)
+    assert s == 200 and d["total"] == 0 and d["items"] == [], "不存在的 action 应过滤为空"
+    return {"note": "admin按user_id+action可查≥2条字段名审计/无明文泄露/bidder403/anon401/PG实证/过滤空"}
+
+
 # ================= main =================
 
 def main():
