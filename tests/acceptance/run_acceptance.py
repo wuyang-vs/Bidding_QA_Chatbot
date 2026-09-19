@@ -19,6 +19,7 @@ import sys
 import time
 import traceback
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime
 from pathlib import Path
@@ -931,6 +932,128 @@ def t():
     total = (done.get("matrix_summary") or {}).get("total", 0)
     assert total > 0, f"对照表要求数应>0: {done.get('matrix_summary')}"
     return {"note": f"事件={counts}, 整本{len(md)}字, 对照{total}条, verdict={done.get('verdict')}"}
+
+
+# ================= V1.5 证书附件上传 + OCR 结构化 =================
+
+def _make_cert_png() -> tuple[bytes, str]:
+    """生成一张中文资质证书 PNG (pymupdf 排版 + Windows 中文字体), 返回 (png字节, 字体路径)。"""
+    import pymupdf
+    font_file = ""
+    for fp in ("C:/Windows/Fonts/simhei.ttf", "C:/Windows/Fonts/msyh.ttc",
+               "C:/Windows/Fonts/simsun.ttc"):
+        if Path(fp).exists():
+            font_file = fp
+            break
+    assert font_file, "未找到中文字体, 无法生成 OCR 验收夹具"
+    doc = pymupdf.open()
+    page = doc.new_page(width=595, height=842)
+    for text, size, y in (
+        ("建筑业企业资质证书", 34, 170),
+        ("企业名称：华信OCR验收有限公司", 22, 300),
+        ("资质等级：一级", 22, 380),
+        ("证书编号：BZ-2025-777888", 22, 460),
+        ("有效期至：2029年12月31日", 22, 540),
+    ):
+        page.insert_text((90, y), text, fontname="certfont",
+                         fontfile=font_file, fontsize=size)
+    png = page.get_pixmap(dpi=200).tobytes("png")
+    doc.close()
+    return png, font_file
+
+
+def _post_cert_ocr(content: bytes, token: str | None, filename: str = "qual_cert.png",
+                   content_type: str = "image/png", timeout: int = 300):
+    boundary = "----certOcrBoundary7MA4YWxk"
+    body = (
+        f"--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; "
+        f"filename=\"{filename}\"\r\nContent-Type: {content_type}\r\n\r\n"
+    ).encode("utf-8") + content + f"\r\n--{boundary}--\r\n".encode("utf-8")
+    headers = {"Content-Type": f"multipart/form-data; boundary={boundary}"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(
+        f"{BASE}/api/profile/cert/ocr", data=body, method="POST", headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return r.status, json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        raw = e.read()
+        try:
+            return e.code, json.loads(raw)
+        except Exception:
+            return e.code, {"raw": raw.decode("utf-8", "ignore")[:300]}
+
+
+def _get_cert_file(auth_token: str, file_token: str):
+    req = urllib.request.Request(
+        f"{BASE}/api/profile/cert/file?token={urllib.parse.quote(file_token)}",
+        headers={"Authorization": f"Bearer {auth_token}"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return r.status, r.headers.get("Content-Type", ""), r.read()
+    except urllib.error.HTTPError as e:
+        return e.code, e.headers.get("Content-Type", ""), e.read()
+
+
+@case("V15证书OCR", "CERT-01", "证书图片上传→OCR结构化→私有预览鉴权→保存→孤儿清理")
+def t():
+    _u, tok, _ = t_auth_common("certocr", "accept123", role="bidder")
+    _u2, tok2, _ = t_auth_common("certocr2", "accept123", role="bidder")
+    png, font_file = _make_cert_png()
+    assert len(png) > 50_000, f"证书 PNG 异常过小: {len(png)}"
+
+    # 1) 匿名上传 → 401
+    s0, _ = _post_cert_ocr(png, None, timeout=30)
+    assert s0 in (401, 403), f"匿名应401/403, 实际 {s0}"
+
+    # 2) 登录上传 → OCR + 结构化
+    s, d = _post_cert_ocr(png, tok)
+    assert s == 200, f"OCR 上传失败 {s} {str(d)[:300]}"
+    ocr_source = d.get("source")
+    cert = d.get("cert") or {}
+    ocr_text = cert.get("ocr_text") or ""
+    assert len(ocr_text) > 20, f"OCR 文本为空/过短: {ocr_text!r}"
+    norm_no = (cert.get("cert_no") or "").replace(" ", "").upper()
+    assert "777888" in norm_no, f"证书编号未识别: {cert.get('cert_no')!r} OCR={ocr_text[:120]!r}"
+    assert "2029" in (cert.get("valid_until") or ""), f"有效期未识别: {cert.get('valid_until')!r}"
+    assert (cert.get("name") or "").strip(), "证书名称为空"
+    ftoken = cert.get("file_token") or ""
+    assert ftoken.endswith(".png"), f"file_token 异常: {ftoken}"
+
+    # 3) 原件预览: 本人 200 image/png; 跨用户/非法 token 404
+    s1, ctype, blob = _get_cert_file(tok, ftoken)
+    assert s1 == 200 and ctype.startswith("image/") and blob == png, \
+        f"本人预览异常 {s1} {ctype} {len(blob)}!={len(png)}"
+    s2, _ct, _b = _get_cert_file(tok2, ftoken)
+    assert s2 == 404, f"跨用户访问应404, 实际 {s2}"
+    s3, _ct, _b = _get_cert_file(tok, "../../../etc/passwd")
+    assert s3 == 404, f"路径穿越应404, 实际 {s3}"
+
+    # 4) 非法格式 → 400
+    sx, _ = _post_cert_ocr(b"MZbad", tok, filename="evil.exe",
+                           content_type="application/octet-stream", timeout=30)
+    assert sx == 400, f"exe 应400, 实际 {sx}"
+
+    # 5) 随整表保存 → GET 回显附件信息
+    company = f"华信OCR验收有限公司{int(time.time()) % 100000}"
+    s, d = http("PUT", "/api/profile",
+                {"company_name": company, "certs": [cert]}, token=tok, timeout=15)
+    assert s == 200, f"档案保存失败 {s} {str(d)[:200]}"
+    s, d = http("GET", "/api/profile", token=tok, timeout=15)
+    certs = d["profile"].get("certs") or []
+    assert any(c.get("file_token") == ftoken and c.get("ocr_text") for c in certs), \
+        f"回显证书缺附件信息: {certs}"
+
+    # 6) 去掉证书再保存 → 孤儿原件被清理 → 404
+    s, _ = http("PUT", "/api/profile", {"company_name": company}, token=tok, timeout=15)
+    assert s == 200
+    s4, _ct, _b = _get_cert_file(tok, ftoken)
+    assert s4 == 404, f"孤儿文件应被清理(404), 实际 {s4}"
+
+    return {"note": f"字体={Path(font_file).name}, source={ocr_source}, "
+                    f"编号={cert.get('cert_no')}, 有效期={cert.get('valid_until')}, "
+                    f"匿名={s0}/越权={s2}/穿越={s3}/非法格式={sx}/孤儿={s4}"}
 
 
 # ================= main =================
