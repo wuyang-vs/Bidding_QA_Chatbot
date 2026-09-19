@@ -56,6 +56,19 @@ class Settings:
     auth_enabled: bool = field(default_factory=lambda: os.getenv("AUTH_ENABLED", "false").lower() in ("true", "1", "yes"))
     # 受控问答硬闸门: 知识类问题无权威证据时禁止LLM自由生成; LLM未调工具时强制补检索1次
     evidence_gate_enabled: bool = field(default_factory=lambda: os.getenv("EVIDENCE_GATE_ENABLED", "true").lower() in ("true", "1", "yes"))
+    # R11: 证书原件存储 (local | s3); s3 兼容 AWS S3 / MinIO (endpoint_url)
+    cert_storage_type: str = field(default_factory=lambda: os.getenv("CERT_STORAGE_TYPE", "local").lower())
+    cert_s3_bucket: str = field(default_factory=lambda: os.getenv("CERT_S3_BUCKET", "bid-certs"))
+    cert_s3_prefix: str = field(default_factory=lambda: os.getenv("CERT_S3_PREFIX", "certs/").rstrip("/") + "/")
+    cert_s3_endpoint: str = field(default_factory=lambda: os.getenv("CERT_S3_ENDPOINT", ""))  # MinIO: http://host:9000
+    cert_s3_region: str = field(default_factory=lambda: os.getenv("CERT_S3_REGION", ""))
+    cert_s3_access_key: str = field(default_factory=lambda: os.getenv("CERT_S3_ACCESS_KEY", ""))
+    cert_s3_secret_key: str = field(default_factory=lambda: os.getenv("CERT_S3_SECRET_KEY", ""))
+    cert_s3_auto_bucket: bool = field(default_factory=lambda: os.getenv("CERT_S3_AUTO_BUCKET", "true").lower() in ("true", "1", "yes"))
+    cert_s3_presign_min: int = field(default_factory=lambda: int(os.getenv("CERT_S3_PRESIGN_MIN", "10")))
+    # R10: 企业资料敏感字段加密密钥列表 (逗号分隔 Fernet keys, 第一个=当前加密密钥, 其余=历史密钥仅解密)
+    # 未配置时回退由 AUTH_SECRET 派生的单一密钥 (存量密文零迁移)
+    profile_enc_keys: str = field(default_factory=lambda: os.getenv("PROFILE_ENC_KEYS", ""))
 
     @property
     def cors_origin_list(self):

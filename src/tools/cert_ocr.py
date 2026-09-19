@@ -183,7 +183,7 @@ def _ocr_image_bytes(data: bytes) -> str:
 
 
 def ocr_cert_file(path: str, ext: str) -> str:
-    """对证书附件执行 OCR, 返回拼接文本。
+    """对磁盘上的证书文件执行 OCR, 返回拼接文本 (本地存储用)。
 
     - 图片: 直接解码识别
     - PDF: 复用 document_parser 按页提取 (文本层/扫描页自动处理), 仅前 2 页
@@ -199,6 +199,33 @@ def ocr_cert_file(path: str, ext: str) -> str:
     raise ValueError(f"不支持的证书格式: {ext}")
 
 
+def ocr_cert_bytes(data: bytes, ext: str) -> str:
+    """直接对上传字节执行 OCR (存储后端无关, S3 场景不落临时盘)。
+
+    - 图片: 内存解码识别
+    - PDF: 写系统临时文件供 pymupdf 提取, 完成后立即删除
+    """
+    ext = (ext or "").lower()
+    if ext in IMAGE_EXTS:
+        return _ocr_image_bytes(data)
+    if ext == ".pdf":
+        import tempfile
+        from src.tools.document_parser import extract_pages_pdf
+        tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+        try:
+            tmp.write(data)
+            tmp.flush()
+            tmp.close()
+            pages, _ocr_pages, _meta = extract_pages_pdf(tmp.name)
+            return "\n".join(p["text"] for p in pages[:_MAX_PDF_PAGES])
+        finally:
+            try:
+                Path(tmp.name).unlink(missing_ok=True)
+            except OSError:
+                pass
+    raise ValueError(f"不支持的证书格式: {ext}")
+
+
 # ---- 附件私有存储 (uploads/certs/{user_id}/{uuid}{ext}) ----
 
 # 仓库根/uploads (与 data/ 同级), 已在 .gitignore 忽略
@@ -211,14 +238,29 @@ def _user_dir(user_id: int) -> Path:
     return d
 
 
+def _validate_token(file_token: str) -> str:
+    """token 白名单校验 (uuidhex+扩展名); 非法抛 FileNotFoundError。"""
+    if not re.fullmatch(r"[0-9a-f]{32}(?:\.[a-z0-9]+)?", file_token or ""):
+        raise FileNotFoundError(file_token)
+    ext = os.path.splitext(file_token)[1].lower()
+    if ext and ext not in CERT_EXTS:
+        raise FileNotFoundError(file_token)
+    return file_token
+
+
 def save_cert_file(user_id: int, filename: str, data: bytes) -> dict:
-    """落盘证书原件, 返回 {file_token, file_name, ext, size}。委托给默认 CertStorage。"""
+    """存储证书原件, 返回 {file_token, file_name, ext, size}。委托给默认 CertStorage。"""
     return get_cert_storage().save(user_id, filename, data)
 
 
 def cert_file_path(user_id: int, file_token: str) -> Path:
-    """解析某用户证书文件的绝对路径; 非法 token / 越权访问一律抛 FileNotFoundError。"""
+    """解析本地证书文件的绝对路径; 非本地存储/非法 token/越权 → FileNotFoundError。"""
     return get_cert_storage().path(user_id, file_token)
+
+
+def read_cert_file(user_id: int, file_token: str) -> bytes:
+    """读取证书原件字节 (本地/S3 统一接口, 已做用户目录隔离校验)。"""
+    return get_cert_storage().read(user_id, file_token)
 
 
 def delete_cert_file(user_id: int, file_token: str) -> None:
@@ -233,11 +275,16 @@ def cleanup_orphan_certs(user_id: int, keep_tokens: set[str]) -> int:
 # ============ R11: 证书存储抽象层 (可插拔: 本地/S3) ============
 from abc import ABC, abstractmethod
 
+_CERT_CONTENT_TYPES = {
+    ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png",
+    ".bmp": "image/bmp", ".webp": "image/webp", ".pdf": "application/pdf",
+}
+
 
 class CertStorage(ABC):
     """证书原件存储抽象基类。实现需保证:
     - file_token = uuidhex+扩展名, 不暴露真实文件名;
-    - path() 校验 token 合法性与用户目录隔离 (防穿越/越权);
+    - read()/path() 校验 token 合法性与用户目录隔离 (防穿越/越权);
     - cleanup() 整表保存后清理孤儿文件。
     """
 
@@ -246,8 +293,12 @@ class CertStorage(ABC):
         ...
 
     @abstractmethod
-    def path(self, user_id: int, file_token: str) -> Path:
+    def read(self, user_id: int, file_token: str) -> bytes:
         ...
+
+    def path(self, user_id: int, file_token: str) -> Path:
+        """仅本地存储支持; 对象存储无本地路径, 抛 NotImplementedError。"""
+        raise NotImplementedError(f"{type(self).__name__} 无本地路径, 请用 read()")
 
     @abstractmethod
     def delete(self, user_id: int, file_token: str) -> None:
@@ -256,6 +307,11 @@ class CertStorage(ABC):
     @abstractmethod
     def cleanup(self, user_id: int, keep_tokens: set[str]) -> int:
         ...
+
+    def presigned_url(self, user_id: int, file_token: str,
+                      expires_min: int = 10) -> str | None:
+        """对象存储可返回限时预签名 URL; 本地存储返回 None (走应用鉴权代理)。"""
+        return None
 
 
 class LocalCertStorage(CertStorage):
@@ -272,16 +328,15 @@ class LocalCertStorage(CertStorage):
         return {"file_token": token, "file_name": filename, "ext": ext, "size": len(data)}
 
     def path(self, user_id: int, file_token: str) -> Path:
-        if not re.fullmatch(r"[0-9a-f]{32}(?:\.[a-z0-9]+)?", file_token or ""):
-            raise FileNotFoundError(file_token)
-        ext = os.path.splitext(file_token)[1].lower()
-        if ext and ext not in CERT_EXTS:
-            raise FileNotFoundError(file_token)
+        _validate_token(file_token)
         base = _user_dir(user_id).resolve()
         p = (base / file_token).resolve()
         if p.parent != base or not p.is_file():
             raise FileNotFoundError(file_token)
         return p
+
+    def read(self, user_id: int, file_token: str) -> bytes:
+        return self.path(user_id, file_token).read_bytes()
 
     def delete(self, user_id: int, file_token: str) -> None:
         try:
@@ -305,42 +360,163 @@ class LocalCertStorage(CertStorage):
 
 
 class S3CertStorage(CertStorage):
-    """对象存储实现占位 (生产多实例部署时接入 S3/MinIO)。
+    """S3 兼容对象存储 (AWS S3 / MinIO): key = {prefix}{user_id}/{uuidhex+ext}。
 
-    本期不引入 boto3 依赖, 仅定义接口契约; 接入时实现 save/path/delete/cleanup,
-    并把 get_cert_storage() 工厂的默认实现切换为 S3 (保留本地 fallback)。
+    - boto3 懒加载 (仅 storage_type=s3 时需要);
+    - MinIO/自建网关通过 endpoint_url + path-style addressing 适配;
+    - auto_bucket=true 时启动自动建桶 (需有 ListAllMyBuckets/CreateBucket 权限);
+    - read 走 get_object 由应用鉴权代理内联返回; 也可用 presigned_url 重定向直传。
     """
 
-    def __init__(self, bucket: str = "", prefix: str = "certs/"):
+    def __init__(self, bucket: str, prefix: str = "certs/", endpoint_url: str = "",
+                 region: str = "", access_key: str = "", secret_key: str = "",
+                 auto_bucket: bool = True, presign_min: int = 10,
+                 client=None):
         self.bucket = bucket
-        self.prefix = prefix
+        self.prefix = prefix if prefix.endswith("/") else prefix + "/"
+        self.endpoint_url = endpoint_url
+        self.region = region
+        self.access_key = access_key
+        self.secret_key = secret_key
+        self.auto_bucket = auto_bucket
+        self.presign_min = presign_min
+        self._client = client  # 测试可注入 Stubber 包装的 client
 
-    def save(self, user_id, filename, data):
-        raise NotImplementedError("S3CertStorage 待接入 boto3 后实现")
+    def _s3(self):
+        if self._client is not None:
+            return self._client
+        import boto3
+        from botocore.config import Config
+        cfg = Config(s3={"addressing_style": "path"}, signature_version="s3v4")
+        kw = {"config": cfg}
+        if self.endpoint_url:
+            kw["endpoint_url"] = self.endpoint_url
+        if self.region:
+            kw["region_name"] = self.region
+        if self.access_key:
+            kw["aws_access_key_id"] = self.access_key
+            kw["aws_secret_access_key"] = self.secret_key
+        self._client = boto3.client("s3", **kw)
+        if self.auto_bucket:
+            self._ensure_bucket(self._client)
+        return self._client
 
-    def path(self, user_id, file_token):
-        raise NotImplementedError("S3CertStorage 待接入 boto3 后实现")
+    def _ensure_bucket(self, client) -> None:
+        from botocore.exceptions import ClientError
+        try:
+            client.head_bucket(Bucket=self.bucket)
+        except ClientError as e:
+            code = e.response.get("Error", {}).get("Code", "")
+            if code in ("404", "NoSuchBucket"):
+                create_kw = {"Bucket": self.bucket}
+                if self.region and not self.endpoint_url:
+                    create_kw["CreateBucketConfiguration"] = {
+                        "LocationConstraint": self.region}
+                client.create_bucket(**create_kw)
+                logger.info("已自动创建证书存储桶 %s", self.bucket)
+            else:
+                raise
 
-    def delete(self, user_id, file_token):
-        raise NotImplementedError("S3CertStorage 待接入 boto3 后实现")
+    def _key(self, user_id: int, file_token: str) -> str:
+        _validate_token(file_token)
+        return f"{self.prefix}{int(user_id)}/{file_token}"
 
-    def cleanup(self, user_id, keep_tokens):
-        raise NotImplementedError("S3CertStorage 待接入 boto3 后实现")
+    def save(self, user_id: int, filename: str, data: bytes) -> dict:
+        ext = os.path.splitext(filename or "")[1].lower()
+        if ext not in CERT_EXTS:
+            raise ValueError(f"不支持的证书格式 {ext}")
+        if len(data) > MAX_CERT_BYTES:
+            raise ValueError(f"证书文件超过 {MAX_CERT_BYTES // 1024 // 1024}MB 上限")
+        token = f"{uuid.uuid4().hex}{ext}"
+        # S3 用户元数据只接受 ASCII: 中文原名 URL 编码后存放 (读取方 unquote 还原)
+        from urllib.parse import quote
+        self._s3().put_object(
+            Bucket=self.bucket, Key=self._key(user_id, token), Body=data,
+            ContentType=_CERT_CONTENT_TYPES.get(ext, "application/octet-stream"),
+            Metadata={"original_name": quote(filename[:128], safe="")})
+        return {"file_token": token, "file_name": filename, "ext": ext, "size": len(data)}
+
+    def read(self, user_id: int, file_token: str) -> bytes:
+        from botocore.exceptions import ClientError
+        try:
+            resp = self._s3().get_object(
+                Bucket=self.bucket, Key=self._key(user_id, file_token))
+            return resp["Body"].read()
+        except ClientError as e:
+            code = e.response.get("Error", {}).get("Code", "")
+            if code in ("404", "NoSuchKey"):
+                raise FileNotFoundError(file_token)
+            raise
+
+    def delete(self, user_id: int, file_token: str) -> None:
+        from botocore.exceptions import ClientError
+        try:
+            self._s3().delete_object(
+                Bucket=self.bucket, Key=self._key(user_id, file_token))
+        except (FileNotFoundError, ClientError):
+            pass
+
+    def cleanup(self, user_id: int, keep_tokens: set[str]) -> int:
+        """列举该用户前缀下的对象, 删除不在保留集合中的, 批量 1000/批。"""
+        from botocore.exceptions import ClientError
+        prefix = f"{self.prefix}{int(user_id)}/"
+        removed = 0
+        token_to_key: dict[str, str] = {}
+        try:
+            paginator = self._s3().get_paginator("list_objects_v2")
+            for page in paginator.paginate(Bucket=self.bucket, Prefix=prefix):
+                for item in page.get("Contents") or []:
+                    name = item["Key"].rsplit("/", 1)[-1]
+                    if name and name not in keep_tokens:
+                        token_to_key[name] = item["Key"]
+        except ClientError as e:
+            logger.warning("S3 列举孤儿证书失败 user=%s: %s", user_id, e)
+            return 0
+        keys = list(token_to_key.values())
+        for i in range(0, len(keys), 1000):
+            batch = keys[i:i + 1000]
+            try:
+                self._s3().delete_objects(Bucket=self.bucket, Delete={
+                    "Objects": [{"Key": k} for k in batch], "Quiet": True})
+                removed += len(batch)
+            except ClientError as e:
+                logger.warning("S3 批量删除失败: %s", e)
+        return removed
+
+    def presigned_url(self, user_id: int, file_token: str,
+                      expires_min: int | None = None) -> str | None:
+        _validate_token(file_token)
+        return self._s3().generate_presigned_url(
+            "get_object",
+            Params={"Bucket": self.bucket, "Key": self._key(user_id, file_token)},
+            ExpiresIn=(expires_min or self.presign_min) * 60)
 
 
 _default_storage: CertStorage | None = None
 
 
+def _build_default_storage() -> CertStorage:
+    from src.config import settings
+    if settings.cert_storage_type == "s3":
+        return S3CertStorage(
+            bucket=settings.cert_s3_bucket, prefix=settings.cert_s3_prefix,
+            endpoint_url=settings.cert_s3_endpoint, region=settings.cert_s3_region,
+            access_key=settings.cert_s3_access_key, secret_key=settings.cert_s3_secret_key,
+            auto_bucket=settings.cert_s3_auto_bucket,
+            presign_min=settings.cert_s3_presign_min)
+    return LocalCertStorage()
+
+
 def get_cert_storage() -> CertStorage:
-    """获取默认证书存储实现 (本期为 LocalCertStorage, 可按配置切换)。"""
+    """获取默认证书存储实现 (CERT_STORAGE_TYPE=local|s3, 默认 local)。"""
     global _default_storage
     if _default_storage is None:
-        from src.config import settings
-        storage_type = getattr(settings, "cert_storage_type", "local")
-        if storage_type == "s3":
-            bucket = getattr(settings, "cert_s3_bucket", "")
-            _default_storage = S3CertStorage(bucket=bucket)
-        else:
-            _default_storage = LocalCertStorage()
+        _default_storage = _build_default_storage()
     return _default_storage
+
+
+def reset_cert_storage() -> None:
+    """重置缓存的默认存储 (配置变更/测试用)。"""
+    global _default_storage
+    _default_storage = None
 

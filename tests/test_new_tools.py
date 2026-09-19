@@ -624,8 +624,13 @@ class TestFieldCrypto:
 
 class TestCertStorage:
     def test_default_storage_is_local(self):
-        from src.tools.cert_ocr import get_cert_storage, LocalCertStorage
-        assert isinstance(get_cert_storage(), LocalCertStorage)
+        from src.tools.cert_ocr import (
+            get_cert_storage, LocalCertStorage, reset_cert_storage)
+        reset_cert_storage()
+        try:
+            assert isinstance(get_cert_storage(), LocalCertStorage)
+        finally:
+            reset_cert_storage()
 
     def test_local_storage_save_path_cleanup(self, tmp_path):
         from src.tools.cert_ocr import LocalCertStorage
@@ -639,12 +644,211 @@ class TestCertStorage:
             token = saved["file_token"]
             assert token.endswith(".png")
             assert s.path(1, token).read_bytes() == b"hello"
+            assert s.read(1, token) == b"hello"  # 统一 read() 接口
             # 穿越校验
             import pytest
             with pytest.raises(FileNotFoundError):
                 s.path(1, "../etc/passwd")
+            with pytest.raises(FileNotFoundError):
+                s.read(1, "../etc/passwd")
             # cleanup 孤儿
             assert s.cleanup(1, {token}) == 0
             assert s.cleanup(1, set()) == 1
         finally:
             co.CERT_UPLOAD_DIR = old
+
+
+# ==================== R10: 多版本密钥轮换 ====================
+
+class TestFieldCryptoRotation:
+    """PROFILE_ENC_KEYS=新key,旧key 时: 旧密文可解/可识别/可重加密到新 key。"""
+
+    @pytest.fixture
+    def two_keys(self, monkeypatch):
+        from cryptography.fernet import Fernet
+        from src.config import settings
+        from src.tools import field_crypto
+        new_key = Fernet.generate_key().decode("utf-8")
+        old_key = Fernet.generate_key().decode("utf-8")
+        monkeypatch.setattr(settings, "profile_enc_keys", f"{new_key},{old_key}")
+        field_crypto.reload_keys()
+        try:
+            yield Fernet(new_key.encode("utf-8")), Fernet(old_key.encode("utf-8"))
+        finally:
+            # 恢复默认 (无 PROFILE_ENC_KEYS → auth_secret 派生密钥), 避免污染其他用例
+            monkeypatch.setattr(settings, "profile_enc_keys", "")
+            field_crypto.reload_keys()
+
+    def test_historical_ciphertext_still_decryptable(self, two_keys):
+        _new_f, old_f = two_keys
+        from src.tools.field_crypto import decrypt_field, is_encrypted
+        ct = old_f.encrypt(b"6222021234567890").decode("utf-8")
+        assert is_encrypted(ct)
+        assert decrypt_field(ct) == "6222021234567890"
+
+    def test_needs_rotation_and_rotate_value(self, two_keys):
+        new_f, old_f = two_keys
+        from src.tools import field_crypto
+        ct_old = old_f.encrypt(b"13800138000").decode("utf-8")
+        assert field_crypto.key_index(ct_old) == 1
+        assert field_crypto.needs_rotation(ct_old)
+        new_ct, changed = field_crypto.rotate_value(ct_old)
+        assert changed is True
+        assert field_crypto.key_index(new_ct) == 0
+        assert new_f.decrypt(new_ct.encode("utf-8")).decode("utf-8") == "13800138000"
+        # 已是当前密钥的密文不再重加密
+        again, changed2 = field_crypto.rotate_value(new_ct)
+        assert changed2 is False
+        assert again == new_ct
+
+    def test_encrypt_uses_current_key(self, two_keys):
+        from src.tools.field_crypto import encrypt_field, decrypt_field, key_index
+        ct = encrypt_field("secret@example.com")
+        assert key_index(ct) == 0
+        assert decrypt_field(ct) == "secret@example.com"
+
+    def test_plaintext_passthrough_under_keychain(self, two_keys):
+        from src.tools.field_crypto import needs_rotation, rotate_value
+        # 明文/空串不参与轮换判定
+        assert needs_rotation("普通明文") is False
+        val, changed = rotate_value("普通明文")
+        assert (val, changed) == ("普通明文", False)
+
+    def test_invalid_key_falls_back_to_derived(self, monkeypatch):
+        from src.config import settings
+        from src.tools import field_crypto
+        monkeypatch.setattr(settings, "profile_enc_keys", "not-a-valid-fernet-key")
+        try:
+            assert field_crypto.reload_keys() == 1  # 非法 key 被跳过, 回退派生密钥
+            ct = field_crypto.encrypt_field("6222")
+            assert field_crypto.decrypt_field(ct) == "6222"
+        finally:
+            monkeypatch.setattr(settings, "profile_enc_keys", "")
+            field_crypto.reload_keys()
+
+
+# ==================== R11: S3 兼容对象存储 (botocore Stubber) ====================
+
+class TestS3CertStorage:
+    BUCKET = "bid-certs-test"
+
+    def _make(self):
+        import boto3
+        from botocore.config import Config
+        from botocore.stub import Stubber
+        from src.tools.cert_ocr import S3CertStorage
+        # 与生产 _s3() 一致: path-style + s3v4 签名 (预签名 URL 才带 X-Amz-Signature)
+        client = boto3.client(
+            "s3", region_name="us-east-1",
+            aws_access_key_id="test-key", aws_secret_access_key="test-secret",
+            config=Config(s3={"addressing_style": "path"},
+                          signature_version="s3v4"))
+        stubber = Stubber(client)
+        storage = S3CertStorage(bucket=self.BUCKET, prefix="certs/",
+                                client=client, auto_bucket=False)
+        return storage, stubber
+
+    def test_save_key_format_and_put_object(self):
+        from urllib.parse import quote
+        from botocore.stub import ANY
+        storage, stubber = self._make()
+        payload = b"\x89PNG fake cert bytes"
+        stubber.add_response(
+            "put_object", {},
+            expected_params={"Bucket": self.BUCKET, "Key": ANY,
+                             "Body": payload, "ContentType": "image/png",
+                             "Metadata": {"original_name":
+                                          quote("营业执照.png", safe="")}})
+        stubber.activate()
+        saved = storage.save(7, "营业执照.png", payload)
+        token = saved["file_token"]
+        import re
+        assert re.fullmatch(r"[0-9a-f]{32}\.png", token)
+        assert saved["size"] == len(payload)
+        # key 含用户目录隔离前缀
+        assert storage._key(7, token) == f"certs/7/{token}"
+        stubber.assert_no_pending_responses()
+
+    def test_read_roundtrip_and_404(self):
+        import io
+        storage, stubber = self._make()
+        token = "a" * 32 + ".pdf"
+        key = f"certs/9/{token}"
+        payload = b"%PDF-1.4 fake"
+        stubber.add_response(
+            "get_object",
+            {"Body": io.BytesIO(payload), "ContentType": "application/pdf"},
+            expected_params={"Bucket": self.BUCKET, "Key": key})
+        stubber.add_client_error("get_object", service_error_code="NoSuchKey",
+                                 expected_params={"Bucket": self.BUCKET, "Key": key})
+        stubber.activate()
+        assert storage.read(9, token) == payload
+        with pytest.raises(FileNotFoundError):
+            storage.read(9, token)
+        stubber.assert_no_pending_responses()
+
+    def test_delete_object(self):
+        storage, stubber = self._make()
+        token = "b" * 32 + ".jpg"
+        stubber.add_response(
+            "delete_object", {},
+            expected_params={"Bucket": self.BUCKET, "Key": f"certs/3/{token}"})
+        stubber.activate()
+        storage.delete(3, token)  # 不抛异常即可
+        stubber.assert_no_pending_responses()
+
+    def test_cleanup_lists_and_batch_deletes(self):
+        storage, stubber = self._make()
+        keep = "c" * 32 + ".png"
+        orphan = "d" * 32 + ".jpg"
+        stubber.add_response(
+            "list_objects_v2",
+            {"Contents": [
+                {"Key": f"certs/5/{keep}"},
+                {"Key": f"certs/5/{orphan}"},
+            ]},
+            expected_params={"Bucket": self.BUCKET, "Prefix": "certs/5/"})
+        stubber.add_response(
+            "delete_objects",
+            {"Deleted": [{"Key": f"certs/5/{orphan}"}]},
+            expected_params={
+                "Bucket": self.BUCKET,
+                "Delete": {"Objects": [{"Key": f"certs/5/{orphan}"}],
+                           "Quiet": True}})
+        stubber.activate()
+        assert storage.cleanup(5, {keep}) == 1
+        stubber.assert_no_pending_responses()
+
+    def test_invalid_token_rejected_without_api_call(self):
+        # 不注册任何桩响应: 一旦真的发起 API 调用 Stubber 会抛错
+        storage, _stubber = self._make()
+        with pytest.raises(FileNotFoundError):
+            storage.read(7, "../../etc/passwd")
+        with pytest.raises(FileNotFoundError):
+            storage.read(7, "x" * 32 + ".exe")  # 扩展名白名单
+        with pytest.raises(FileNotFoundError):
+            storage.presigned_url(7, "../evil.png")
+        with pytest.raises(ValueError):
+            storage.save(7, "evil.exe", b"xx")
+
+    def test_presigned_url_contains_bucket_and_key(self):
+        storage, _stubber = self._make()
+        token = "e" * 32 + ".png"
+        url = storage.presigned_url(9, token, expires_min=5)
+        assert isinstance(url, str) and url.startswith("http")
+        assert self.BUCKET in url
+        assert token in url
+        assert "X-Amz-Signature=" in url  # s3v4 预签名
+
+    def test_build_s3_storage_from_settings(self, monkeypatch):
+        from src.config import settings
+        from src.tools import cert_ocr
+        monkeypatch.setattr(settings, "cert_storage_type", "s3")
+        monkeypatch.setattr(settings, "cert_s3_bucket", "from-settings-bucket")
+        cert_ocr.reset_cert_storage()
+        try:
+            s = cert_ocr.get_cert_storage()
+            assert isinstance(s, cert_ocr.S3CertStorage)
+            assert s.bucket == "from-settings-bucket"
+        finally:
+            cert_ocr.reset_cert_storage()

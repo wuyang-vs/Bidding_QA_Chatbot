@@ -7,7 +7,7 @@ from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Depends, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from src.config import settings
@@ -759,10 +759,8 @@ def cert_ocr_upload(file: UploadFile = File(...),
         raise HTTPException(400, str(e))
 
     try:
-        text = cert_ocr.ocr_cert_file(
-            str(cert_ocr.cert_file_path(user["id"], saved["file_token"])), ext)
-    except FileNotFoundError:
-        raise HTTPException(500, "证书文件落盘失败")
+        # R11: 直接对上传字节 OCR (本地/S3 存储后端无关, 对象存储无本地路径)
+        text = cert_ocr.ocr_cert_bytes(data, ext)
     except Exception as e:
         logger.exception("证书 OCR 失败")
         # OCR 失败: 原件未被任何档案引用, 立即删除避免孤儿, 由用户改手工录入
@@ -788,16 +786,32 @@ _CERT_MEDIA = {
 
 @app.get("/api/profile/cert/file")
 def cert_file_view(token: str, user: dict = Depends(get_current_user_required)):
-    """按登录身份内联返回证书原件 (只能访问本人目录; token 非法/越权 → 404)。"""
+    """按登录身份返回证书原件 (只能访问本人目录; token 非法/越权 → 404)。
+
+    R11: 对象存储优先 307 跳转限时预签名 URL; 本地存储/预签名失败时由应用鉴权代理
+    读取字节内联返回, 保证两种存储后端下访问语义一致。
+    """
     import os
-    from src.tools.cert_ocr import cert_file_path
+    from fastapi.responses import Response, RedirectResponse
+    from src.tools import cert_ocr
+    ext = os.path.splitext(token)[1].lower()
+    media = _CERT_MEDIA.get(ext, "application/octet-stream")
+    storage = cert_ocr.get_cert_storage()
     try:
-        path = cert_file_path(user["id"], token)
+        url = storage.presigned_url(user["id"], token)
     except FileNotFoundError:
         raise HTTPException(404, "证书不存在或无权访问")
-    ext = os.path.splitext(token)[1].lower()
-    return FileResponse(str(path), media_type=_CERT_MEDIA.get(ext, "application/octet-stream"),
-                        content_disposition_type="inline")
+    except Exception:
+        logger.exception("预签名 URL 生成失败, 降级为应用代理读取")
+        url = None
+    if url:
+        return RedirectResponse(url, status_code=307)
+    try:
+        data = cert_ocr.read_cert_file(user["id"], token)
+    except FileNotFoundError:
+        raise HTTPException(404, "证书不存在或无权访问")
+    return Response(content=data, media_type=media,
+                    headers={"Content-Disposition": "inline"})
 
 
 @app.post("/api/bid/generate")
