@@ -17,6 +17,12 @@ def test_detect_dsml():
     assert _looks_like_tool_call("<【DSML】tool_calls>")
 
 
+def test_detect_dsml_fullwidth_variant():
+    # 实测 DeepSeek 风格: 全角竖线控制令牌
+    assert _looks_like_tool_call(
+        "<｜｜DSML｜｜ calls>\n<｜｜DSML｜｜ invoke name=\"search_web\">")
+
+
 def test_detect_bare_function_name():
     assert _looks_like_tool_call("search_bidding_knowledge(query='x')")
 
@@ -51,6 +57,20 @@ def test_parse_json():
 
 def test_parse_no_tool():
     assert _parse_text_tool_calls("普通回答") is None
+
+
+def test_parse_dsml_fullwidth_invoke():
+    # 实测线上 payload 的全角竖线形态, 归一化后必须能解析出工具名与参数
+    text = (
+        "<｜｜DSML｜｜ calls>\n"
+        "<｜｜DSML｜｜ invoke name=\"search_bidding_knowledge\">\n"
+        "<｜｜DSML｜｜ parameter name=\"query\" string=\"true\">投标保证金比例 2%</｜｜DSML｜｜ parameter>\n"
+        "</｜｜DSML｜｜ invoke>\n"
+        "<｜｜DSML｜｜/calls>"
+    )
+    calls = _parse_text_tool_calls(text)
+    assert calls and calls[0]["name"] == "search_bidding_knowledge"
+    assert "2%" in calls[0]["arguments"]["query"]
 
 
 def test_fake_tool_calls_structure():

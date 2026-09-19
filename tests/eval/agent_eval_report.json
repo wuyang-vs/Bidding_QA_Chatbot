@@ -1,0 +1,692 @@
+{
+  "fact_threshold": 0.6,
+  "summary": {
+    "overall": {
+      "cases": 12,
+      "passed": 11,
+      "pass_rate": 0.9167,
+      "tool_selection_rate": 1.0,
+      "fact_group_hit_rate": 0.9091,
+      "required_tool_recall": null
+    },
+    "by_category": {
+      "cross_domain": {
+        "cases": 4,
+        "passed": 4,
+        "pass_rate": 1.0,
+        "tool_selection_rate": 1.0,
+        "fact_group_hit_rate": 1.0,
+        "required_tool_recall": null
+      },
+      "multi_hop": {
+        "cases": 4,
+        "passed": 3,
+        "pass_rate": 0.75,
+        "tool_selection_rate": 1.0,
+        "fact_group_hit_rate": 0.6667,
+        "required_tool_recall": null
+      },
+      "single_hop": {
+        "cases": 4,
+        "passed": 4,
+        "pass_rate": 1.0,
+        "tool_selection_rate": 1.0,
+        "fact_group_hit_rate": 1.0,
+        "required_tool_recall": null
+      }
+    }
+  },
+  "results": [
+    {
+      "id": "E2E-01",
+      "category": "single_hop",
+      "answer_chars": 701,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "any",
+            "expected": [
+              "单一来源"
+            ],
+            "matched": [
+              "单一来源"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 11787,
+      "answer_head": "# 单一来源采购\n\n**单一来源采购**是我国《政府采购法》规定的六种法定采购方式之一（《政府采购法》第二十六条：公开招标、邀请招标、竞争性谈判、**单一来源采购**、询价、国务院政府采购监督管理部门"
+    },
+    {
+      "id": "E2E-02",
+      "category": "single_hop",
+      "answer_chars": 433,
+      "tool": {
+        "actual": [
+          "list_bid_documents",
+          "search_bidding_knowledge"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "any",
+            "expected": [
+              "2025年12月15日",
+              "2025-12-15",
+              "12月15日"
+            ],
+            "matched": [
+              "2025年12月15日",
+              "12月15日"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 21283,
+      "answer_head": "**XX市智慧园区信息化建设项目（二期）**的投标截止时间为：\n\n**2025年12月15日 14:00**\n\n相关信息补充：\n\n| 项目 | 内容 |\n|---|---|\n| 项目名称 | XX市智"
+    },
+    {
+      "id": "E2E-03",
+      "category": "single_hop",
+      "answer_chars": 242,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_postgresql"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "any",
+            "expected": [
+              "860万",
+              "8,600,000",
+              "8600000",
+              "860.0万",
+              "860.00万"
+            ],
+            "matched": [
+              "8,600,000"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 19925,
+      "answer_head": "XX市智慧园区信息化建设项目（二期）的预算金额为 **人民币 8,600,000.00 元**（即 860 万元）。\n\n补充信息（同来源于该项目招标文件）：\n- 项目编号：ZB-2025-0088\n-"
+    },
+    {
+      "id": "E2E-04",
+      "category": "single_hop",
+      "answer_chars": 1260,
+      "tool": {
+        "actual": [
+          "consult_appeal",
+          "search_bidding_knowledge"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "any",
+            "expected": [
+              "投诉",
+              "异议"
+            ],
+            "matched": [
+              "投诉",
+              "异议"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 15554,
+      "answer_head": "# 对资格预审文件有异议的救济渠道\n\n投标人（潜在投标人）对资格预审文件有异议时，**不能直接投诉，必须遵循\"先异议、后投诉\"的异议前置程序**。\n\n## 一、第一步：向招标人提出异议（前置程序）\n\n"
+    },
+    {
+      "id": "E2E-05",
+      "category": "multi_hop",
+      "answer_chars": 321,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_knowledge_graph",
+          "search_bidding_knowledge"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 2,
+        "hit": 2,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "any",
+            "expected": [
+              "北京交通大学"
+            ],
+            "matched": [
+              "北京交通大学"
+            ],
+            "hit": true
+          },
+          {
+            "group": 1,
+            "mode": "any",
+            "expected": [
+              "中央国家机关政府采购中心",
+              "政府采购中心"
+            ],
+            "matched": [
+              "中央国家机关政府采购中心",
+              "政府采购中心"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 9966,
+      "answer_head": "根据检索结果，该项目（对应名称为\"北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目\"）的相关主体如下：\n\n| 角色 | 名称 |\n|------|------|\n| **采"
+    },
+    {
+      "id": "E2E-06",
+      "category": "multi_hop",
+      "answer_chars": 287,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 2,
+        "hit": 2,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "any",
+            "expected": [
+              "2025年12月15日",
+              "2025-12-15",
+              "12月15日"
+            ],
+            "matched": [
+              "2025年12月15日",
+              "12月15日"
+            ],
+            "hit": true
+          },
+          {
+            "group": 1,
+            "mode": "any",
+            "expected": [
+              "860万",
+              "8,600,000",
+              "8600000",
+              "860.0万"
+            ],
+            "matched": [
+              "8,600,000"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 22065,
+      "answer_head": "根据检索到的《XX市智慧园区建设项目招标文件》（项目编号：ZB-2025-0088），两个事实如下：\n\n| 事实项 | 内容 |\n|---|---|\n| **投标截止时间** | 2025年12月15"
+    },
+    {
+      "id": "E2E-07",
+      "category": "multi_hop",
+      "answer_chars": 155,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 2,
+        "hit": 0,
+        "hit_rate": 0.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "any",
+            "expected": [
+              "大陆",
+              "内地",
+              "中国大陆"
+            ],
+            "matched": [],
+            "hit": false
+          },
+          {
+            "group": 1,
+            "mode": "any",
+            "expected": [
+              "香港"
+            ],
+            "matched": [],
+            "hit": false
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": false,
+      "answer_ok": true,
+      "passed": false,
+      "gated": true,
+      "elapsed_ms": 66101,
+      "answer_head": "抱歉，我未在本地权威知识库中检索到与您问题直接相关的资料。为避免给出无依据或错误的信息，我不能凭空作答。\n\n您可以：\n1. 补充项目全称、招标文件名称或条款关键词后再提问；\n2. 换用更具体的表述（如"
+    },
+    {
+      "id": "E2E-08",
+      "category": "multi_hop",
+      "answer_chars": 155,
+      "tool": {
+        "actual": [
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_postgresql",
+          "search_knowledge_graph"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 0,
+        "hit": 0,
+        "hit_rate": null,
+        "details": []
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": true,
+      "elapsed_ms": 6259,
+      "answer_head": "抱歉，我未在本地权威知识库中检索到与您问题直接相关的资料。为避免给出无依据或错误的信息，我不能凭空作答。\n\n您可以：\n1. 补充项目全称、招标文件名称或条款关键词后再提问；\n2. 换用更具体的表述（如"
+    },
+    {
+      "id": "E2E-09",
+      "category": "cross_domain",
+      "answer_chars": 763,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 3,
+        "hit": 3,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "any",
+            "expected": [
+              "保证金"
+            ],
+            "matched": [
+              "保证金"
+            ],
+            "hit": true
+          },
+          {
+            "group": 1,
+            "mode": "any",
+            "expected": [
+              "2%",
+              "2％",
+              "百分之二",
+              "2 %"
+            ],
+            "matched": [
+              "2%",
+              "百分之二"
+            ],
+            "hit": true
+          },
+          {
+            "group": 2,
+            "mode": "any",
+            "expected": [
+              "退还"
+            ],
+            "matched": [
+              "退还"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 37386,
+      "answer_head": "根据检索到的法规内容，回答如下：\n\n## 一、投标保证金的比例上限\n\n**不得超过招标项目估算价的 2%（百分之二）。**\n\n- **法律依据**：《招标投标法实施条例》第二十六条。\n- 投标保证金有"
+    },
+    {
+      "id": "E2E-10",
+      "category": "cross_domain",
+      "answer_chars": 665,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 2,
+        "hit": 2,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "any",
+            "expected": [
+              "2%",
+              "2％",
+              "百分之二",
+              "2 %"
+            ],
+            "matched": [
+              "2%",
+              "百分之二"
+            ],
+            "hit": true
+          },
+          {
+            "group": 1,
+            "mode": "any",
+            "expected": [
+              "17.2万",
+              "172000",
+              "172,000",
+              "17.2 万"
+            ],
+            "matched": [
+              "17.2 万"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 38565,
+      "answer_head": "## 结论：依法最多为 **17.2 万元**\n\n### 计算依据\n\n**法律上限**（《招标投标法实施条例》第二十六条）：\n> 招标人在招标文件中要求投标人提交投标保证金的，**投标保证金不得超过招"
+    },
+    {
+      "id": "E2E-11",
+      "category": "cross_domain",
+      "answer_chars": 982,
+      "tool": {
+        "actual": [
+          "consult_appeal",
+          "search_bidding_knowledge"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 3,
+        "hit": 3,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "any",
+            "expected": [
+              "中标候选人",
+              "公示"
+            ],
+            "matched": [
+              "中标候选人",
+              "公示"
+            ],
+            "hit": true
+          },
+          {
+            "group": 1,
+            "mode": "any",
+            "expected": [
+              "招标人"
+            ],
+            "matched": [
+              "招标人"
+            ],
+            "hit": true
+          },
+          {
+            "group": 2,
+            "mode": "any",
+            "expected": [
+              "3日",
+              "三日",
+              "3 日",
+              "3天",
+              "三天"
+            ],
+            "matched": [
+              "3 日"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 29350,
+      "answer_head": "## 结论（针对 XX市智慧园区信息化建设项目（二期），项目编号 ZB-2025-0088）\n\n**一、在什么期间提出**\n- 应当在**中标候选人公示期间内**提出（不是\"知道结果后几天\"）。\n- "
+    },
+    {
+      "id": "E2E-12",
+      "category": "cross_domain",
+      "answer_chars": 839,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 2,
+        "hit": 2,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "any",
+            "expected": [
+              "2025年12月15日",
+              "2025-12-15",
+              "12月15日"
+            ],
+            "matched": [
+              "2025年12月15日",
+              "12月15日"
+            ],
+            "hit": true
+          },
+          {
+            "group": 1,
+            "mode": "any",
+            "expected": [
+              "拒收",
+              "拒绝",
+              "不予受理",
+              "不得接收"
+            ],
+            "matched": [
+              "拒收"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 25122,
+      "answer_head": "两个问题都已检索到权威依据，回答如下：\n\n## 一、投标截止时间\n\n**XX市智慧园区信息化建设项目（二期）**\n\n| 项目 | 内容 |\n|---|---|\n| 项目编号 | ZB-2025-008"
+    }
+  ]
+}

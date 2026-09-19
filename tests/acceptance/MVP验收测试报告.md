@@ -3,15 +3,29 @@
 | 项目 | 内容 |
 |---|---|
 | 系统名称 | 招投标采购智能问答与辅助评标系统（Bidding_QA_Chatbot） |
-| 报告版本 | V2.2（验证补测版，无产品代码变更：V2.1 59 项全绿基线之上，完成 R11 遗留的"真实 MinIO/S3 连通实测"——以真实 MinIO server 对 S3CertStorage 做端到端实测 13/13 PASS，新增可复现手动实测脚本 manual_minio_live.py；R17 检测主动弹窗预警见 V2.1） |
-| 测试日期 | 2026-09-20（V2.1 全量回归＋V2.2 MinIO 真连通补测，均为 PROFILE_ENC_KEYS 双密钥链环境） |
-| 测试执行人 | 自动化验收套件（tests/acceptance/run_acceptance.py）＋离线确定性测试＋浏览器 UI 实测＋真实 MinIO 手动实测 |
-| 基线代码 | V2.1 commit `2727ff1`；V2.2 仅新增手动实测脚本并更新本报告（无产品代码改动） |
-| 报告依据 | V2.1 全量执行日志（59/59）、evidence.json、MinIO 真连通实测输出（13/13，见 4.5j）、UI 截图 v21_alert_modal.png/v21_no_alert_pass.png（见第 7 章） |
+| 报告版本 | V2.3（多专家协作接入＋Agent 端到端评测基准：V2.2 59 项基线之上，①将孤立原型 multi_agent 工作流接入主问答（前端琥珀色"多专家协作"开关＋可折叠专家过程面板，后端端点补齐鉴权/限频/行级隔离/伪工具调用防御），新增 MULTI-01 验收；②建立 Agent 端到端评测基准集 12 题（单跳/多跳/跨域，工具选择＋答案事实双指标），新增纯函数打分器与 HTTP 评测器） |
+| 测试日期 | 2026-09-20（V2.3 全量回归 60/60、Agent 评测 12 题两跑、浏览器实测，均为 PROFILE_ENC_KEYS 双密钥链环境；V2.1/V2.2 同日早些时候执行） |
+| 测试执行人 | 自动化验收套件（tests/acceptance/run_acceptance.py）＋离线确定性测试＋Agent 端到端评测器（tests/eval/run_agent_eval.py）＋浏览器 UI 实测＋真实 MinIO 手动实测（V2.2） |
+| 基线代码 | V2.2 commit `4dd4b50`（MinIO 实测版）；V2.3 在其上新增多专家接入与评测体系代码 |
+| 报告依据 | V2.3 全量执行日志（60/60，run_log_v23.txt）、evidence.json、Agent 评测报告 agent_eval_report.json/.md（11/12，工具选择 100%）、UI 截图 v23_multi_agent.png、离线 pytest 136 项（见 4.5k） |
 
 ---
 
 ## 1. 验收结论
+
+**V2.3 验收套件共 60 项，全量回归 60 PASS / 0 FAIL / 0 ERROR（通过率 100%，PROFILE_ENC_KEYS 双密钥链环境，验收脚本与后端以同一密钥链启动）。本期完成两件事：①多专家协作（multi_agent）从"仅有孤立端点的原型"正式接入主问答——前端新增琥珀色"多专家协作"开关与可折叠专家过程面板，后端端点补齐鉴权、限频、行级隔离上下文传播与伪工具调用防御，新增 MULTI-01 端到端验收（真实 207.3s）；②建立 Agent 端到端评测基准集——12 道多跳/跨域题＋"工具选择正确率＋答案事实组覆盖率"双指标纯函数打分体系，HTTP 评测器产出可复现报告。**
+
+本轮（⑳ 多专家接入＋Agent 评测基准）交付的关键结论：
+
+1. **multi_agent 工作流正式接入主问答**：[src/agent/multi_agent.py] 主管 CoordinatorAgent 以 LLM 输出 JSON 调度计划（非法专家名过滤、异常回退三专家全开），LAW/CASE/PRICE 三类 SpecialistAgent 各自带角色工具子集（法规=知识库/联网；案例=知识库/图谱/PG/联网；价格=PG/图谱/联网）跑最多 3 轮 ReAct，WRITER 综合终稿。端点 POST /api/multi-agent/run 为非流式：等待态由前端文案承载，过程（计划专家、各专家答案/轮数/耗时）在回复的可折叠面板中展示。
+2. **接入过程修复 3 个真实缺陷**（详见第 5 章 D19-D21）：①端点调用了 RateLimiter 并不存在的 `acquire` 方法（端点此前从未被前端调用，属潜伏缺陷，一触即 500）；②多专家线程池让多个线程并发进入同一个 contextvars.Context（Python 禁止重入，72s 后必 500），改为逐任务 `base_ctx.copy().run(...)`，RAG 行级隔离 ContextVar 正确传播到工作线程（离线 Barrier 并发测试锁死该回归点）；③专家循环缺少主 ReAct 循环的伪工具调用防御，DeepSeek 风格全角 `｜｜DSML｜｜` 标记直接泄漏进终稿——tool_defense 增加全角变体归一化解析，专家循环支持文本工具调用解析执行（限本专家工具白名单）、非法标记纠偏提示、轮次耗尽后强制一次无工具纯文本生成，写作终稿为空时拼接专家结论兜底。
+3. **前端入口与过程可观测**：ChatInput 琥珀色"多专家协作"开关（localStorage 持久化，位于"深度思考"之后）；助手回复带"多专家协作"徽标与琥珀色可折叠面板——标题栏展示主管计划调度的专家 chips，展开后每个专家卡片显示角色、轮数、耗时、答案（max-h 滚动）；多专家消息与会话一并持久化与刷新回显。`npx tsc --noEmit` 0 报错。
+4. **MULTI-01 端到端实证（207.3s）**：跨域题（截止时间＋预算＋保证金法规）主管调度 CASE+LAW 两专家，均真实调用 search_bidding_knowledge，终稿 2000 字、去重来源 11 条；独立真实冒烟 185s 的终稿准确给出"2025年12月15日 14:00 / 860万元 / 保证金不得超过估算价 2%"并带 [资料N] 标注，无 DSML 标记泄漏。验收断言含终稿洁净负向断言（不得含 DSML/全角竖线）。
+5. **Agent 端到端评测基准建立**：[tests/eval/agent_eval_cases.json] 12 题（单跳/多跳/跨域各 4，ID E2E-01~12），事实全部锚定已入库真实数据（主测试文档 2025-12-15/860万/保证金2%/17.2万计算/公示期3日/逾期拒收、KG 两个真实 Project 节点、大陆-香港对比材料）；[src/agent/eval_scoring.py] 为零依赖纯函数打分器——事实组支持字符串/list(all)/{any}/{all} 嵌套、大小写不敏感，组间等权；工具指标含 tools_required 全命中召回与 tools_any 命中；通过线＝工具对＋事实覆盖≥0.6＋答案非空。[tests/eval/run_agent_eval.py] 逐题打真实 /api/chat（从 exec_log.tool_calls 提取工具），产出 agent_eval_report.json/.md（总体/分类别/逐用例，含 gated 拒答标注）。
+6. **评测结果如实记录（两跑）**：题集首跑 10/12——E2E-04（资格预审异议渠道）当轮证据门拒答、E2E-05 经查证为**坏题**（锚定的"空调采购"数据在本环境 PG bidding_procurement 表未部署、KG 亦无供应商节点，直连两库实证），E2E-05 替换为锚定 KG 真实节点（北京交通大学雄安校区项目→采购人/代理机构两跳）后复跑：**11/12 通过，工具选择正确率 100%，事实组覆盖 0.909**；单跳 4/4、跨域 4/4、多跳 3/4。复跑中 E2E-07（大陆/香港跨法域对比）证据门拒答（该题首跑曾 PASS）——工具选择正确但复杂多跳检索稳定性存在波动，作为**已观测缺陷**记录（见第 5/6 章），未改动任何事实标准去凑分。
+7. **零回退**：V2.2 及以前 59 项存量防线本轮全量 60/60 中持续有效（CERT-01、PROFILE-03 双密钥链、GATE-01、BID-06 整本、ALERT-01 等全过）；硬闸门纯函数 44 断言全过；本轮相关 pytest 136 项全绿（test_new_tools 102＋test_multi_agent 5＋test_agent_eval_scoring 15＋test_tool_text_parsing 14）；tsc 0；浏览器实测开关/徽标/面板/事实终稿/来源五项全过且 console 无错误（截图 v23_multi_agent.png）。
+
+---
 
 **V2.2 为验证补测版（无产品代码变更）：在 V2.1 全量 59/59 基线上，完成 R11 自 V1.7 起遗留的"真实 MinIO/S3 连通实测"。以真实 MinIO server（RELEASE.2025-09-07，Windows 单文件、非 Docker）对 S3CertStorage 做端到端实测，13/13 PASS。至此证书对象存储从"Stubber 离线模拟"升级为"真实服务全链路实证"。**
 
@@ -174,14 +188,16 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | **⑯ V1.9 异常解释+范本推荐** | 12 code 结构化异常知识库（原因/影响/处置/法规）+ explain_anomaly Agent 工具 + /api/anomaly/explain(_batch)；11 份范本库+中文分词推荐 + recommend_template 工具 + /api/templates 三件套 | ANOMALY-01、TEMPLATE-01 |
 | **⑰ V2.0 异议投诉+操作引导** | 11 主题异议投诉专项库（渠道/时限/材料/流程/法规，工程招投标与政采两套区分）+ consult_appeal 工具 + /api/appeal 三件套；7 流程 27 阶段操作引导（投标人/招标人/评标专家，含阶段识别+前后衔接）+ guide_operation 工具 + /api/guide 三件套 | APPEAL-01、GUIDE-01 |
 | **⑱ V2.1 检测主动预警** | 五类检测（合规高/中风险、资格不满足/部分满足、废标 risk/uncertain、响应性负偏离/未响应、报价 error/warning 异常码）完成后前端主动弹红/黄预警，AlertModal 通用组件+锚点定位详情，无异常不弹窗 | ALERT-01 |
+| **⑳ V2.3 多专家协作接入＋Agent 评测基准** | multi_agent（主管 LLM 拆解→LAW/CASE/PRICE 专家并行 ReAct→WRITER 综合）接入主问答：琥珀色开关+专家过程可折叠面板，端点鉴权/限频/行级隔离 ContextVar 传播/伪 DSML 工具调用防御；Agent 端到端基准 12 题（单跳/多跳/跨域），工具选择+事实组双指标纯函数打分器+HTTP 评测器 | MULTI-01（评测见 4.5k） |
 | Workflow | 预置清单、合规 DAG、评标辅助 DAG | WF-01 ~ WF-03 |
 | **离线专项** | 检索质量评测（17 例 5 指标）、页码切分、RAG 召回行级隔离、**硬闸门纯函数 44 断言**、**占位符回填/跨 chunk 流式/prompt 注入离线自测、pytest（test_new_tools.py 67 项：含证书 OCR 正则/LLM/存储隔离、对照表校验+缓存、字段加密+掩码、存储抽象、多密钥轮换、S3 Stubber 全链路；全量 250 passed，test_intent 3 项为基线既有失败）** | tests/eval/ 四个脚本＋tests/test_new_tools.py |
 | **① OCR/Excel** | 扫描件 OCR、xlsx 提取（离线手工实测，见 4.4） | 离线实测 |
 | **浏览器 UI** | 注册角色选择、投标人入口隐藏、上传元数据表、状态机面板、引用文件名/页码、标书生成器弹窗、**企业资料库页（表单/证书增删/完整度）、整本合稿 Tab（章节进度/对照表红行/硬失败红框/整本预览）、单章回填后无占位符** | 15 张截图（7.2） |
 
-### 2.2 范围外说明（截至 V2.1 仍未覆盖）
+### 2.2 范围外说明（截至 V2.3 仍未覆盖）
 
-- **智慧问答四类功能已全部实现**（①R16 操作引导 ②R14 范本推荐 ③R13 异常解释 ④R15 异议投诉），均为内置静态结构化知识库 + Agent 工具查表模式，规避 LLM 编造；**V2.1 另落地 R17 检测结果前端主动弹窗预警**（五类检测完成即弹窗，见 4.5i）；后续增强项：范本库与操作流程库接入运营后台动态维护、异常 code 与操作 stage 随业务扩展持续补录；
+- **智慧问答四类功能已全部实现**（①R16 操作引导 ②R14 范本推荐 ③R13 异常解释 ④R15 异议投诉），均为内置静态结构化知识库 + Agent 工具查表模式，规避 LLM 编造；**V2.1 落地 R17 检测结果前端主动弹窗预警**（五类检测完成即弹窗，见 4.5i）；**V2.3 将原孤立的 multi_agent 多专家协作原型正式接入主问答**（前端开关+专家过程面板+MULTI-01，见 4.5k），并建立 Agent 端到端评测基准（12 题双指标）；后续增强项：范本库与操作流程库接入运营后台动态维护、异常 code 与操作 stage 随业务扩展持续补录；**多专家调度计划目前为一次性 LLM 拆解（不支持中途追加专家/人机协同修正计划），且 PRICE 专家依赖的 PG bidding_procurement 历史中标表在本环境未部署（价格专家会如实报告数据缺口而非编造，见 4.5k 截图）**；
+- **Agent 评测基准当前为 12 题小规模基准、事实判定为关键词组字符串匹配（非 LLM 评审）**：能稳定区分"工具选错"与"答非所问"，但对同义改写（如"850 万元/8,500,000 元"）需在题面显式列举候选锚点；后续扩充至 50+ 题、增加多次运行的稳定性（flaky）统计与语义级事实判定；
 - 压力/并发性能、安全渗透（token 篡改/过期/水平越权穷举扫描）；
 - 移动端 H5/公众号、CA/USBKey 认证、敏感词过滤、平台对接（属后续二期，已在需求符合性评估中记录）；
 - OCR/Excel 未纳入 HTTP 自动验收（以离线实测＋META-01 上传链路间接覆盖 PDF 侧，证书 OCR 由 CERT-01 覆盖）；
@@ -201,7 +217,7 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | Python | 3.12.10；FastAPI 0.141.1；SQLAlchemy 2.0.52 |
 | 鉴权 | python-jose（JWT, HS256）＋ bcrypt rounds=12；4 角色 RBAC |
 | PostgreSQL | 本地 localhost:5432，库名 chatbot |
-| Qdrant | 本地实例，集合 bid_qa_v2，回归时 **374 点**（含权限回填） |
+| Qdrant | 本地实例，集合 bid_qa_v2，V2.3 回归开始时 **551 点**（验收上传后 562 点，含权限回填；V2.1 轮为 374 点） |
 | 嵌入/精排 | BGE-M3（dense+sparse）＋ reranker-v2-m3 |
 | OCR/文档 | rapidocr-onnxruntime 1.4.4（懒加载）、pymupdf、openpyxl |
 | 对象存储 | boto3 1.43（仅 CERT_STORAGE_TYPE=s3 时懒加载，兼容 AWS S3 / MinIO，path-style+s3v4） |
@@ -217,16 +233,16 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 
 ## 4. 测试用例执行情况
 
-### 4.1 总览（V2.1 全量回归，2026-09-20，PROFILE_ENC_KEYS 双密钥链环境，脚本与后端同密钥链）
+### 4.1 总览（V2.3 全量回归，2026-09-20 03:43 起，PROFILE_ENC_KEYS 双密钥链环境，脚本与后端同密钥链）
 
-- **共 59 项：PASS 59，FAIL 0，ERROR 0，通过率 100.0%**；
-- 原始输出：全量执行日志（仓库未纳管，留存本地）；结构化结果：`tests/acceptance/evidence.json`。
+- **共 60 项：PASS 60，FAIL 0，ERROR 0，通过率 100.0%**；
+- 原始输出：全量执行日志 run_log_v23.txt（仓库未纳管，留存本地）；结构化结果：`tests/acceptance/evidence.json`。
 
 | 测试组 | 通过/总数 |
 |---|---|
 | 环境 | 3/3 |
 | MVP1 文档库 | 3/3 |
-| MVP2 检索 | 1/1 |
+| MVP2 检索（含⑨硬闸门 GATE-01） | 2/2 |
 | MVP3 条款提取 | 2/2 |
 | MVP4 条款检查 | 3/3 |
 | P4/P5/P6 | 3/3 |
@@ -235,21 +251,20 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | P9 围串标线索 | 4/4 |
 | Auth 权限 | 4/4 |
 | MVP5 复核留痕 | 2/2 |
-| **⑦ RBAC 权限隔离** | **6/6** |
-| **③ 页码/包件** | **1/1** |
+| **⑦ RBAC 权限隔离** | **7/7** |
 | **⑥ 评审状态机** | **2/2** |
 | Workflow 编排 | 3/3 |
-| **⑨ 无引用不生成硬闸门** | **1/1** |
 | **⑩ 标书生成闭环** | **3/3** |
 | **⑪ V1.4 企业资料库/回填/对照表/整本** | **4/4**（PROFILE-01、BID-04/05/06） |
 | **⑫ V1.5 证书附件 OCR** | **1/1**（CERT-01） |
-| **⑬ V1.6 R9/R10/R11 收尾** | **2/2**（PROFILE-02 加密掩码、MATRIX-02 缓存） |
-| **⑭ V1.7 密钥轮换** | **1/1**（PROFILE-03 多密钥链历史密文可解+重加密闭环） |
-| **⑮ V1.8 审计落库** | **1/1**（AUDIT-01 敏感操作落库+按字段名可查无明文+RBAC） |
-| **⑯ V1.9 异常解释+范本推荐** | **2/2**（ANOMALY-01 12code解释/批量/404、TEMPLATE-01 匹配/过滤/详情/列表） |
-| **⑰ V2.0 异议投诉+操作引导** | **2/2**（APPEAL-01 渠道/时限/材料/政采区分、GUIDE-01 阶段识别/三角色/404） |
-| **⑱ V2.1 检测主动预警** | **1/1**（ALERT-01 error 级 anomalies 驱动红窗/CN_MISMATCH/无异常不弹窗数据契约） |
-| **合计** | **59/59** |
+| **⑬ V1.6 加密脱敏＋对照表缓存** | **2/2**（PROFILE-02、MATRIX-02） |
+| **⑭ V1.7 密钥轮换** | **1/1**（PROFILE-03） |
+| **⑮ V1.8 审计落库** | **1/1**（AUDIT-01） |
+| **⑯ V1.9 异常解释+范本推荐** | **2/2**（ANOMALY-01、TEMPLATE-01） |
+| **⑰ V2.0 异议投诉+操作引导** | **2/2**（APPEAL-01、GUIDE-01） |
+| **⑱ V2.1 检测主动预警** | **1/1**（ALERT-01） |
+| **⑳ V2.3 多专家协作接入** | **1/1**（MULTI-01，207.3s 真实主管拆解+双专家并行+写作综合） |
+| **合计** | **60/60** |
 
 ### 4.2 新增用例明细（本轮，关键观测均取自实际日志）
 
@@ -285,8 +300,9 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | **APPEAL-01** | **异议投诉咨询：渠道/时限/材料/流程/法规检索＋政采区分** | **PASS** | **12.3s** | 评标结果异议首推 APPEAL_RESULT（公示期+3 日）；投诉材料命中 COMPLAINT_MATERIALS 且材料≥5；投诉流程详情含"行政监督部门""10 日""第六十条""异议前置"；政采质疑首推 GOV_CHALLENGE 走财政渠道+7/15 工作日；列表 4 类 11 主题 |
 | **GUIDE-01** | **操作引导：识别当前操作阶段并给出针对性步骤＋三类角色流程** | **PASS** | **16.4s** | 上传失败定位 GW-BID-UPLOAD/up-3（stage_locked=True，前后阶段均存在）；开标解密 dec-2 含"同一把 CA"；仅说"评标专家"命中流程但不锁定阶段；招标人发布公告 tdr-3；无法识别 404；列表三角色 7 流程、专家流程 5 阶段 |
 | **ALERT-01** | **检测预警弹窗数据契约：error 级 anomalies 驱动前端红弹窗，无异常不弹** | **PASS** | **6.1s** | 分项合计 200 vs 投标总价 300 → verdict=fail、anomalies 含 SUM_MISMATCH（level=error+message，前端红窗依据）；大写"柒拾肆万元整"与数字 100 → CN_MISMATCH error；总价一致且无大写 → verdict=pass 且无 error（不弹窗依据） |
+| **MULTI-01** | **多 Agent 工作流接入主问答：主管拆解→专家并行 ReAct→写作综合，返回计划/专家结果/终稿** | **PASS** | **207.3s** | 跨域题主管调度 ['CASE','LAW']（⊆合法专家集）；expert_results 数==specialists_count==2，各专家 role 合法、elapsed_ms 为 int，两专家均真实调用 search_bidding_knowledge；终稿 2000 字（>20 且不含 DSML/全角竖线标记）；跨专家去重来源 11 条；total_elapsed_ms=207324ms |
 
-其余存量用例（ENV/M1/M3/M4/P4-P9/AUTH/M5/WF/RBAC/META/STAGE/GATE/BID-01~06/PROFILE-01/02/03/CERT-01/MATRIX-02/AUDIT-01/ANOMALY-01/TEMPLATE-01）V2.0 轮全部 PASS（共 56/56 无回退，PROFILE-03 双密钥链 10.8s、CERT-01 正常通过），观测与 V1.9 报告一致（耗时随 LLM 负载波动）。
+其余存量用例（ENV/M1/M3/M4/P4-P9/AUTH/M5/WF/RBAC/META/STAGE/GATE/BID-01~06/PROFILE-01/02/03/CERT-01/MATRIX-02/AUDIT-01/ANOMALY-01/TEMPLATE-01/APPEAL-01/GUIDE-01/ALERT-01）V2.3 轮全部 PASS（共 59/59 无回退，PROFILE-03 双密钥链、CERT-01、BID-06 整本 88.8s、GATE-01 32.3s 均正常），观测与 V2.1/V2.2 报告一致（耗时随 LLM 负载波动）。
 
 ### 4.3 离线确定性测试（不依赖 HTTP/LLM，可重复执行）
 
@@ -406,6 +422,30 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 
 - **意义**：V1.7 的 7 项 Stubber 验证的是"请求构造/响应解析正确性"（无真实网络与签名服务）；本次验证了真实服务侧的 TCP 连通、AWS SigV4 签名握手、path-style addressing、MinIO 对 metadata ASCII 约束的实际执行（D18 修复在真实服务再次确认）、预签名直链的跨进程匿名可达性与生命周期、list/delete 批处理分页语义——这些是 Stubber 无法覆盖的部署期风险点。
 
+### 4.5k V2.3 多专家协作接入＋Agent 端到端评测基准（pytest 离线＋HTTP 评测＋浏览器，均通过）
+
+**A. 多专家工作流接入（离线 19 项 + MULTI-01 + 浏览器）**
+
+- 工作流：[src/agent/multi_agent.py] `CoordinatorAgent.plan`（LLM JSON 计划、专家名白名单过滤、异常/脏数据回退三专家全开）→ LAW/CASE/PRICE 三专家线程池并行（contextvars 逐任务 copy 传播行级隔离，各带角色工具子集，最多 3 轮 ReAct）→ WRITER 综合；端点 [api/server.py] `POST /api/multi-agent/run` 补 `get_current_user_optional` 鉴权、`bidding_agent.ready` 503 守卫、真实 client IP 限频、`use_access_scope(user)` 包裹。
+- 专家循环防御与主 ReAct 循环对齐：[src/agent/tool_defense.py] 新增全角 `｜｜DSML｜｜` 变体检测与归一化解析（2 项新单测）；专家循环支持文本伪工具调用解析后真实执行（限本专家工具白名单，越权工具不执行）、不可解析标记→纯文本纠偏提示、轮次耗尽→强制一次无工具纯文本生成、终稿仍为标记则丢弃，写作终稿为空时拼接各专家有效结论兜底。
+- 离线 pytest **19 项全绿**：[tests/test_multi_agent.py] 5 项（计划 JSON 解析+非法专家过滤、脏数据回退、plan LLM 异常回退、**workflow 结构+Barrier 强制三线程并发进入上下文+行级隔离 scope 传播断言（bidder→("owner",7)）**、跨专家来源去重）；[tests/test_tool_text_parsing.py] 14 项（含全角 DSML 检测/解析 2 项新增）。
+- 真实冒烟（独立于 MULTI-01）：HTTP 200/185s，主管调度 CASE+LAW，终稿准确含"2025年12月15日 14:00""860万元""保证金≤估算价 2%"，[资料N] 标注齐全、无标记泄漏；PRICE 专家在 PG 历史表未部署时如实报告"数据缺口"而非编造（浏览器截图可见）。
+
+**B. Agent 端到端评测基准（12 题双指标，两跑如实记录）**
+
+- 题集 [tests/eval/agent_eval_cases.json]：单跳/多跳/跨域各 4（E2E-01~12），事实锚点全部取自可直查的在库数据；打分器 [src/agent/eval_scoring.py] 纯函数零依赖（事实组 any/all 嵌套、组间等权，通过线：工具对＋事实≥0.6＋答案非空），离线单测 [tests/test_agent_eval_scoring.py] **15 项全绿**；评测器 [tests/eval/run_agent_eval.py] 逐题打真实 POST /api/chat（最长 280s/题），从 exec_log.tool_calls 提取实际工具，输出 agent_eval_report.json/.md。
+- 最终（第二跑，题集修正后）：**12 题 11 PASS，通过率 0.917；工具选择正确率 1.00；事实组覆盖率 0.909**；分类别：单跳 4/4、跨域 4/4、多跳 3/4。
+
+| 类别 | 用例 | 通过 | 工具选择正确 | 事实覆盖 |
+|---|---|---|---|---|
+| 单跳 | 4 | 4 | 1.00 | 1.00 |
+| 多跳 | 4 | 3 | 1.00 | 0.67 |
+| 跨域 | 4 | 4 | 1.00 | 1.00 |
+| 合计 | 12 | 11（0.917） | 1.00 | 0.909 |
+
+- 两跑差异如实记录：首跑 10/12——E2E-04 当轮证据门拒答（复跑 PASS，改写措辞即能命中，定性检索措辞敏感）、E2E-05 经 PG/KG **直连查证为坏题**（PG bidding_procurement 表未部署、KG 仅 2 Project/2 Buyer/2 Agency 无供应商节点，"空调"数据不存在），替换为 KG 真实节点两跳题（北京交通大学雄安校区项目→采购人/代理机构，复跑 PASS）；第二跑唯一失败 E2E-07（大陆/香港跨法域对比）gated 拒答（首跑曾 PASS），工具选择正确、事实 0 分，定性为**复杂多跳问题的检索/证据门稳定性波动**（D22，第 5 章）。全过程未改任何事实判定标准凑分。
+- 说明：E2E-08（采购量最多标的物下钻）因依赖未部署的 PG 表，设计上 facts 为空只评工具选择（gated 拒答仍 PASS）；评测器 CLI：--base-url/--timeout/--fact-threshold/--min-pass，health 不 ready 退出码 2。
+
 ### 4.6 浏览器 UI 实测（V1.3：2026-09-18；V1.4 补测：2026-09-19，admin/admin123）
 
 | 验证点 | 结果 | 证据 |
@@ -426,8 +466,9 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | **V1.5 证书 OCR：上传后四字段自动填充（建筑业企业资质证书/特级/JZ-2026-666999/2030-08-08）、原件缩略图、OCR 原文折叠展开** | PASS | v15_cert_ocr.png |
 | **V1.5 保存企业资料：绿色"已保存"提示** | PASS | v15_cert_saved.png |
 | **V1.5 刷新页面：证书卡片与缩略图正常回显** | PASS | v15_cert_reload.png |
+| **V2.3 多专家协作：琥珀色开关开启→发问→"多专家协作"徽标＋可折叠专家过程面板（案例/价格专家 chips＋各专家轮数/耗时/答案）→终稿含 2025年12月15日/860万事实＋来源卡片** | PASS | v23_multi_agent.png |
 
-全程浏览器控制台无报错；`npx tsc --noEmit` 已清零（V1.3 遗留 9 告警本期修复，见 4.5c）。
+全程浏览器控制台无报错；`npx tsc --noEmit` 已清零（V1.3 遗留 9 告警本期修复，见 4.5c；V2.3 新增多专家前端代码 tsc 仍 0 报错）。
 
 ---
 
@@ -447,6 +488,10 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | D16 | 中 | access_scope 上下文清理 finally 中两个 reset 误写同一变量（首个还错传 user token），每请求结束必抛 ValueError，/api/chat 500 | 分别 `_current_user.reset(tok_user)` / `_current_scope.reset(tok_scope)` | 全量 45 例 PASS（含全部 chat 用例） | 已关闭 |
 | D17 | 中（V1.4 修） | 前端资格检查 runQualificationCheck 请求体引用不存在的变量 `companyCerts`（重构遗留，tsc TS2304），**UI 上执行资格比对必在前端抛 ReferenceError 并走失败分支**；另 ComplianceResult/QualificationResult 缺 docId 类型声明（4 处 TS2339/2353）、ReviewBox 的 review_type 联合缺 response/scoring（2 处 TS2322），共 9 个存量 tsc 告警 | 变量改回函数入参 `certs`（弹窗文本框录入的资质清单，与后端 company_qualifications 字段对齐）；两个接口补 `docId?: number`；ReviewBox type 联合补齐后端五类 review_type | `npx tsc --noEmit` 0 报错；/documents 页面热更新编译 200 | 已关闭 |
 | D18 | 中（V1.7 修） | **S3 put_object 中文文件名经 Metadata 直传会触发 botocore ParamValidationError**（"Non ascii characters found in S3 metadata"）——S3 用户自定义元数据仅允许 ASCII，而证书原名实际场景几乎都是中文（营业执照.png），S3 模式下上传必失败。由 TestS3CertStorage 的 Stubber 严格参数断言先暴露 | original_name 改为 `urllib.parse.quote(filename, safe="")` URL 编码后存入 Metadata；OCR 端点同步改为对上传字节 `ocr_cert_bytes` 识别（S3 无本地路径，原 `cert_file_path` 路径在 s3 模式会 NotImplementedError）；预览端点改预签名 307/应用代理双通道 | Stubber put_object 断言编码后元数据通过；CERT-01 全过（默认 local 行为不变）；S3 7 项 Stubber 单测全过 | 已关闭 |
+| D19 | 高（V2.3 修） | **multi-agent 端点一触即 500（2.0s 内）：`RateLimiter.acquire` 方法不存在**。端点自原型创建后从未被前端/验收调用，潜伏至今；真实冒烟首次调用即在限频行抛 AttributeError | 改用 RateLimiter 真实接口 `is_allowed(client_ip)`（全局 30 次/60s 策略），超限返回 429；client IP 由原恒为 unknown 的 `getattr(req,"_client_ip")` 改为 `request.client.host` | MULTI-01 PASS（207.3s）；端点真实冒烟 HTTP 200 | 已关闭 |
+| D20 | 高（V2.3 修） | **多专家线程池并发进入同一个 contextvars.Context 必崩**：`pool.submit(ctx.run, ...)` 让多个专家线程共享同一 Context 对象，Python 规定 Context 不可重入，专家并行阶段（72s 处）抛 "cannot enter context: ... is already entered" 后 500。同时 ThreadPoolExecutor 默认不继承主线程 ContextVar，直接写还会让 RAG 行级隔离退回匿名 public（与 D12 同类、新代码重犯） | 主线程 `base_ctx = copy_context()`，每个专家任务独立 `pool.submit(base_ctx.copy().run, agent.run, task)`；离线测试以 `threading.Barrier(3)` 强制三专家并发在场，断言各工作线程 scope 均为 ("owner",7) | 强化后的 test_workflow_structure_and_scope_propagation PASS（Barrier 下旧代码必崩、新代码通过）；MULTI-01 中多专家真实检索成功 | 已关闭 |
+| D21 | 中（V2.3 修） | **专家循环无伪工具调用防御，DeepSeek 全角 `｜｜DSML｜｜` 标记直接泄漏到用户终稿**：首次 200 冒烟终稿开头即为 `<｜｜DSML｜｜ calls>...`，且法规专家空答案（0 字）。主 ReAct 循环早有 tool_defense，专家循环是复制时遗漏 | ①tool_defense 增加全角竖线 DSML 变体检測与归一化（open/close 令牌正则→半角 XML→既有 invoke/parameter 解析）；②专家循环解析文本工具调用后真实执行（仅限本专家工具白名单，越权不执行），不可解析标记则追加纯文本纠偏提示继续；③轮次耗尽仍无干净文本则强制一次 tools=[] 纯文本生成；④终稿仍含标记则丢弃，写作终稿为空时拼接各专家有效结论兜底 | 新增 2 条全角 DSML 解析单测；修复后两次真实冒烟终稿均为干净 Markdown（含事实与 [资料N] 标注），MULTI-01 增加终稿洁净负向断言 | 已关闭 |
+| D22 | 中（V2.3 观测，未关闭） | **复杂多跳问题检索/证据门存在轮次波动**：Agent 评测 E2E-04（资格预审异议渠道）首跑 gated 拒答、复跑 PASS（改写问法即可命中在库 FAQ 254）；E2E-07（大陆/香港对比）首跑 PASS、复跑 gated 拒答（66.1s，工具选择正确但证据文本未覆盖问题特征）。工具选择 100%，失败均发生在检索命中/证据门环节 | 未改证据门与事实标准（避免放松硬闸门）；评测两跑如实记录并保留报告 | Agent 评测双指标持续监控；后续方向：query 改写多样性/多跳问题拆子问题分别检索/同类多跑稳定性统计 | 观测中（评测体系已能稳定复现） |
 
 V1.1 的 D1-D6 修复在本轮回归中持续有效。
 
@@ -466,6 +511,8 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 
 **V2.2（⑲ MinIO 真连通补测）无代码改动、无产品缺陷**：V2.1 阶段 Docker/官方直链两路获取 MinIO 均受阻；本轮改用 GitHub Releases 归档版本 Windows 单文件一次启动成功，manual_minio_live.py 首轮 13/13 全过（未做任何代码修改即通过，反向印证 V1.7 S3 接入与 D18 修复的生产可用性）。实测后已停止 MinIO 进程释放 9000/9001 端口，脚本自动清空并删除测试桶，本地零数据残留；minio.exe 留存 C:\\Users\\DELL\\.local\\bin 供日后复测。
 
+**V2.3（⑳ 多专家接入＋Agent 评测基准）发现并修复 3 个真实产品缺陷 D19-D21、观测 1 个稳定性问题 D22（未关闭）**：D19/D20/D21 均在"原型端点首次被真实调用"时暴露——500 限流方法名错误（2s 即崩）、contextvars Context 并发重入（72s 崩，离线 Barrier 测试已锁死回归）、全角 DSML 标记泄漏终稿，三处均先红后绿：MULTI-01 与两次独立冒烟从 500/脏终稿变为 200/干净事实终稿。评测侧发现的题集质量问题（E2E-05 锚定未部署数据）经 PG/KG 直连查证后换题，属基准维护而非放松标准；E2E-04/E2E-07 的轮次差异定性为检索波动（D22），未改证据门任何阈值。
+
 ---
 
 ## 6. 风险评估与遗留事项
@@ -484,6 +531,7 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 | R10（新增） | ~~企业资料按账号 1:1 明文存 PG（含银行账号等敏感字段），暂无字段级加密/脱敏~~ **V1.6 已关闭**：bank_account/contact_phone/contact_email/legal_person 应用层 Fernet 加密（PBKDF2 派生密钥）入库，GET 掩码展示（银行后 4/电话前 3 后 4/邮箱首字母+***/法人姓+**），PUT 掩码回传自动保留旧明文，upsert 字段级审计日志（不含值）。**V1.7 已支持多密钥链无停机轮换与批量重加密**。**V1.8 已支持审计落库表（audit_logs，admin/auditor 按字段名/动作/账号分页查询，AUDIT-01 全过无明文泄露）** | 多租户合规差距 | 已实现加密+掩码+密钥轮换+审计落库；剩余：TDE（数据库透明加密）待下一期 |
 | R11（新增 V1.5） | ~~证书原件存本地 `uploads/certs/{uid}/`，未接入对象存储/CDN；OCR 识别准确度依赖图片清晰度~~ **V1.6 部分关闭**：存储抽象为 `CertStorage` 基类＋`LocalCertStorage`（默认）＋`S3CertStorage`（接口占位）；OCR 前加灰度化+小图放大预处理。**V1.7 完全关闭对象存储**：boto3 实际接入 S3CertStorage（put/get/delete/list 批量清理、s3v4 预签名 307、MinIO endpoint+path-style 适配、auto_bucket 自动建桶、中文原名 URL 编码 D18），OCR 改字节流、预览双通道，7 项 Stubber 单测全过。**V2.2 真实连通实测关闭**：真实 MinIO server 端到端 13/13 PASS（含 D18 metadata 真实服务复验、s3v4 预签名匿名 GET、批删/404 映射，manual_minio_live.py） | 多实例部署/生产可靠性、识别准确度 | Local/S3 双后端均已可用且经真实服务实证（CERT_STORAGE_TYPE 切换，.env.example 已补全部配置，复测步骤见 7.3）；剩余：商用 AWS S3 未实测（同 S3v4+path-style 协议，风险低）；复杂版式/手写/印章遮挡仍需人工核对 |
 | R12（新增 V1.9） | ~~智慧问答四类功能覆盖不完整~~ **V2.0 四类已全部关闭**：②范本智能推荐（R14，11 份静态范本库+中文分词匹配）、③异常预警问答（R13，12 code 原因/处置/法规解释层，检测能力 P4-P9 早已具备）、④异议投诉咨询（R15，11 主题专项库，工程招投标与政采两套渠道区分）、①操作智能引导（R16，7 流程 27 阶段，三角色阶段识别+前后衔接）。**V2.1 另关闭"检测结果前端主动弹窗预警"（R17）**：合规/资格/废标/响应性/报价五类检测完成即红/黄弹窗（ALERT-01+浏览器实测全过） | 面向交易平台用户的服务完整性 | 后续增强：范本/流程/异常知识库接运营后台动态维护、异常 code 与操作 stage 随业务扩展持续补录；弹窗阈值可随业务反馈分级调优 |
+| R13（新增 V2.3） | ①~~multi_agent 多专家工作流为孤立原型（仅 /api/multi-agent/run，前端无入口、验收无覆盖）~~ **V2.3 已接入主问答**（开关/面板/MULTI-01/浏览器全过，D19-D21 已修）；遗留：调度计划为一次性 LLM 拆解，不支持中途追加专家/人工修正；非流式整链路 185-242s，仅适合复杂问题，不宜默认开启（前端默认关闭）；PRICE 专家依赖 PG bidding_procurement 历史中标表，**本环境未部署该表**（浏览器实测中价格专家如实报告数据缺口，不编造；price_analyzer 早有"请先部署 PG 并导入数据"降级提示）。②Agent 端到端基准仅 12 题、事实判定为关键词组匹配，复杂多跳存在 D22 轮次波动（E2E-07 两跑一过一拒） | 多专家的速度/可干预性、价格分析在无历史库环境不可用；评测基准覆盖与稳定性统计尚浅 | 部署方导入 bidding_procurement 后复跑评测（题集锚点需随库扩充）；评测扩至 50+ 题、多跑取 flaky 率、引入语义级事实判定；多专家改流式/子问题级进度推送、支持计划人工修订（后续版本） |
 
 ---
 
@@ -493,13 +541,19 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 
 | 文件 | 说明 |
 |---|---|
-| acceptance/run_acceptance.py | **59 项**验收用例源码（含 RBAC/META/STAGE/GATE/BID/PROFILE/CERT/MATRIX/AUDIT/ANOMALY/TEMPLATE/APPEAL/GUIDE/**ALERT** 与 multipart 上传/SSE 流式消费/证书 OCR 夹具/PG 直连密文断言/多密钥链轮换/审计落库明文负向断言/异常批量解释/范本匹配/异议政采区分/操作阶段识别/弹窗数据契约断言 helper） |
-| tests/acceptance/evidence.json | V2.1 结构化结果（逐条 status/耗时/备注） |
-| tests/test_new_tools.py | 后端 pytest **102 项**（含企业资料占位符回填/跨 chunk 流式、证书 OCR 正则/LLM/存储隔离、对照表校验+缓存、字段加密+掩码、存储抽象、多密钥轮换、S3 Stubber 全链路、R12 审计落库 8 项、R13 异常 catalog 4 项、R14 范本推荐 6 项、**R15 异议投诉 8 项、R16 操作引导 9 项**） |
+| acceptance/run_acceptance.py | **60 项**验收用例源码（含 RBAC/META/STAGE/GATE/BID/PROFILE/CERT/MATRIX/AUDIT/ANOMALY/TEMPLATE/APPEAL/GUIDE/ALERT/**MULTI** 与 multipart 上传/SSE 流式消费/证书 OCR 夹具/PG 直连密文断言/多密钥链轮换/审计落库明文负向断言/异常批量解释/范本匹配/异议政采区分/操作阶段识别/弹窗数据契约/**多专家计划-专家数-终稿洁净断言** helper） |
+| tests/acceptance/evidence.json | **V2.3 结构化结果（60 条逐条 status/耗时/备注）** |
+| tests/test_new_tools.py | 后端 pytest **102 项**（含企业资料占位符回填/跨 chunk 流式、证书 OCR 正则/LLM/存储隔离、对照表校验+缓存、字段加密+掩码、存储抽象、多密钥轮换、S3 Stubber 全链路、R12 审计落库 8 项、R13 异常 catalog 4 项、R14 范本推荐 6 项、R15 异议投诉 8 项、R16 操作引导 9 项） |
+| **tests/test_multi_agent.py** | **V2.3 多专家工作流离线 5 项：计划 JSON 解析+非法专家过滤、脏数据/LLM 异常回退、workflow 结构＋Barrier 强制并发上下文＋行级隔离 scope 传播断言、跨专家来源去重** |
+| **tests/test_agent_eval_scoring.py** | **V2.3 Agent 评测打分器离线 15 项：事实组 any/all 嵌套、组间等权、工具召回/any 命中、通过线、分类聚合** |
+| **tests/test_tool_text_parsing.py** | 伪工具调用文本检测/解析 14 项（V2.3 新增全角 `｜｜DSML｜｜` 变体检测与 invoke/parameter 解析 2 项） |
 | acceptance/sample_multipage.pdf | META-01 用 2 页中文 PDF 夹具 |
 | eval/retrieval_cases.json | 17 条检索评测用例（招标事实 7/企业 3/法规 7） |
 | eval/run_retrieval_eval.py | 纯检索评测脚本（HitRate/漏检/MRR/引用准确率/证据覆盖，--min-hitrate 门禁） |
 | eval/retrieval_eval_report.json/.md | 基线报告（HitRate@5=100%） |
+| **eval/agent_eval_cases.json** | **V2.3 Agent 端到端基准 12 题（single_hop/multi_hop/cross_domain 各 4，含 tools_any/tools_required/facts 锚点/note）** |
+| **eval/run_agent_eval.py** | **V2.3 Agent 端到端 HTTP 评测器（逐题 POST /api/chat，exec_log.tool_calls 提取工具→双指标打分→json/md 报告；--base-url/--timeout/--fact-threshold/--min-pass）** |
+| **eval/agent_eval_report.json/.md** | **V2.3 评测报告：11/12 通过、工具选择 1.00、事实覆盖 0.909（单跳4/4、跨域4/4、多跳3/4，E2E-07 gated 波动）** |
 | eval/test_page_chunking.py | 按页切分与元数据透传离线测试 |
 | eval/test_retrieval_access.py | RAG 召回行级隔离离线测试 |
 | eval/test_evidence_gate.py | **硬闸门纯函数离线测试（44 断言，无需 HTTP/LLM）** |
@@ -530,6 +584,7 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 | v15_cert_reload.png | V1.5 刷新后证书与缩略图回显 |
 | v21_alert_modal.png | V2.1 报价检测 SUM_MISMATCH+CN_MISMATCH 红色主动预警弹窗（条目+查看详情/知道了） |
 | v21_no_alert_pass.png | V2.1 总价一致无异常时不弹窗，报价计算表面板"✅ 校验通过" |
+| **v23_multi_agent.png** | **V2.3 多专家协作实测：琥珀开关开启态、"多专家协作"徽标、展开的专家过程面板（案例/价格专家 chips＋轮数/耗时/答案，价格专家如实报告历史库数据缺口）** |
 
 ### 7.3 复测方法
 
@@ -537,15 +592,18 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
    `.venv\Scripts\python.exe -m uvicorn api.server:app --port 8001`
    - PROFILE-03 需双密钥链环境：PowerShell 下先 `$env:PROFILE_ENC_KEYS="<K1当前>,<K2历史>"`（key 由 `python -m src.tools.field_crypto gen-key` 生成），后端与验收脚本均需带同一环境变量；
    - 证书 S3/MinIO 模式：设置 `CERT_STORAGE_TYPE=s3` 及 `CERT_S3_ENDPOINT/BUCKET/ACCESS_KEY/SECRET_KEY`（配置项见 .env.example，auto_bucket=true 自动建桶）；
-2. 全量验收：`.venv\Scripts\python.exe tests/acceptance/run_acceptance.py`（约 10-15 分钟，需可用 LLM；产生临时账号/文档）；
+2. 全量验收：`.venv\Scripts\python.exe tests/acceptance\run_acceptance.py`（V2.3 起 **60 例约 18-25 分钟**，末位 MULTI-01 单例约 3 分钟；需可用 LLM；产生临时账号/文档）；
 3. 离线专项（无需 LLM/HTTP）：
-   - `.venv\Scripts\python.exe tests\eval\run_retrieval_eval.py`
-   - `.venv\Scripts\python.exe tests\eval\test_retrieval_access.py`
-   - `.venv\Scripts\python.exe tests\eval\test_page_chunking.py`
-   - `.venv\Scripts\python.exe tests\eval\test_evidence_gate.py`（硬闸门 44 断言）
-4. 标书闭环：浏览器 http://localhost:3000/documents → 文档行钢笔按钮 → 选章节流式生成 → 复制/导出 Word；V1.4 另可访问 http://localhost:3000/profile 维护企业资料库，弹窗内"整本合稿＋响应对照"一键成册；接口侧见 BID-01~06、PROFILE-01 与 4.5b/4.5c。后端单测：`.venv\Scripts\python.exe -m pytest tests/test_new_tools.py -q`（85 项）；审计查询：admin/auditor 登录后 `GET /api/audit/logs?user_id=<uid>&action=profile.update`；异常解释：`POST /api/anomaly/explain {"code":"OVER_CONTROL_PRICE"}`；范本推荐：`POST /api/templates/recommend {"query":"工程施工"}`（V1.9 新增，均无需登录）。
+   - `.venv\Scripts\python.exe tests/eval/run_retrieval_eval.py`
+   - `.venv\Scripts\python.exe tests/eval/test_retrieval_access.py`
+   - `.venv\Scripts\python.exe tests/eval/test_page_chunking.py`
+   - `.venv\Scripts\python.exe tests/eval/test_evidence_gate.py`（硬闸门 44 断言）
+   - V2.3 新增：`.venv\Scripts\python.exe -m pytest tests/test_multi_agent.py tests/test_agent_eval_scoring.py tests/test_tool_text_parsing.py -q`（34 项，秒级）
+4. 标书闭环：浏览器 http://localhost:3000/documents → 文档行钢笔按钮 → 选章节流式生成 → 复制/导出 Word；V1.4 另可访问 http://localhost:3000/profile 维护企业资料库，弹窗内"整本合稿＋响应对照"一键成册；接口侧见 BID-01~06、PROFILE-01 与 4.5b/4.5c。后端单测：`.venv\Scripts\python.exe -m pytest tests/test_new_tools.py -q`（**102 项**）；审计查询：admin/auditor 登录后 `GET /api/audit/logs?user_id=<uid>&action=profile.update`；异常解释：`POST /api/anomaly/explain {"code":"OVER_CONTROL_PRICE"}`；范本推荐：`POST /api/templates/recommend {"query":"工程施工"}`（V1.9 新增，均无需登录）。
 5. 浏览器：frontend 目录 `npm run dev` 后访问 http://localhost:3000/documents，按 4.6 节路径复测。
 6. **V2.2 真实 MinIO 连通复测（手动，约 3 分钟，无需 LLM/后端/PG）**：
    - 获取二进制（开源 server 已从 dl.min.io 归档，用 GitHub Releases 归档版本）：https://github.com/minio/minio/releases/tag/RELEASE.2025-09-07T16-13-09Z 下载 `minio.windows-amd64.*.exe`；
    - 启动：`$env:MINIO_ROOT_USER="minioadmin"; $env:MINIO_ROOT_PASSWORD="minioadmin"; minio.exe server <数据目录> --address ":9000" --console-address ":9001"`（health: http://127.0.0.1:9000/minio/health/live）；
-   - 执行：`.venv\Scripts\python.exe tests\acceptance\manual_minio_live.py`，预期末行 `13/13 PASS`；脚本自行设置 CERT_S3_* 环境变量并在结束时清空删除测试桶，无需改 .env。
+   - 执行：`.venv\Scripts\python.exe tests/acceptance/manual_minio_live.py`，预期末行 `13/13 PASS`；脚本自行设置 CERT_S3_* 环境变量并在结束时清空删除测试桶，无需改 .env。
+7. **V2.3 Agent 端到端评测复跑（需后端＋LLM，约 5-7 分钟）**：确认 /api/health ready 后执行 `.venv\Scripts\python.exe tests/eval/run_agent_eval.py`（12 题逐题打 /api/chat，默认超时 280s/题；可用 `--base-url/--timeout/--fact-threshold/--min-pass`），末行打印通过率并生成 tests/eval/agent_eval_report.json/.md；注意 LLM/检索波动会使个别题（当前观测为 E2E-07）在 gated 拒答与通过间波动，**不得修改题集事实锚点凑分**，扩库后需同步更新锚点。
+8. **V2.3 多专家协作复测**：接口侧 POST /api/multi-agent/run `{"question": "...跨域问题...", "deep_thinking": false}`（非流式，约 1-4 分钟，返回 plan/expert_results/final_answer/sources）；UI 侧首页打开"多专家协作"琥珀开关后发问，验证徽标＋可折叠专家过程面板＋终稿＋来源（参考 4.6 v23_multi_agent.png）。

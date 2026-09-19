@@ -1451,6 +1451,50 @@ def t():
     return {"note": "SUM_MISMATCH error→fail弹红窗契约/CN_MISMATCH大写不符/一致→pass空异常不弹窗"}
 
 
+@case("V23多专家协作", "MULTI-01", "多Agent工作流: 主管拆解→专家并行ReAct→写作综合, 返回计划/专家结果/终稿")
+def t():
+    q = ("XX市智慧园区信息化建设项目（二期）的投标截止时间和预算金额分别是多少？"
+         "投标保证金比例与退还有什么法规要求？")
+    s, d = http("POST", "/api/multi-agent/run",
+                {"question": q, "deep_thinking": False}, timeout=420)
+    assert s == 200, f"multi-agent 状态异常 {s} {str(d)[:200]}"
+
+    # 主管计划
+    plan = d.get("plan") or {}
+    specialists = plan.get("specialists") or []
+    assert isinstance(specialists, list) and specialists, f"主管应给出调度计划, 实际 {plan}"
+    valid = {"LAW", "CASE", "PRICE"}
+    assert set(specialists) <= valid, f"专家名非法: {specialists}"
+
+    # 专家并行结果
+    experts = d.get("expert_results") or []
+    assert len(experts) == d.get("specialists_count"), \
+        f"专家结果数({len(experts)})应等于调度数({d.get('specialists_count')})"
+    assert experts, "至少应执行 1 个专家"
+    for e in experts:
+        assert e.get("role") in ("law_retrieval", "case_retrieval", "price_analysis"), \
+            f"专家 role 非法: {e.get('role')}"
+        assert "answer" in e and isinstance(e.get("elapsed_ms"), int), \
+            f"专家结果结构缺字段: {e}"
+
+    # 写作综合终稿
+    final = d.get("final_answer") or ""
+    assert len(final) > 20, f"写作综合终稿过短: {final[:120]}"
+    # 终稿必须是干净文本: 不得泄漏 DSML/XML 伪工具调用标记
+    assert "DSML" not in final and "｜" not in final, \
+        f"终稿泄漏工具调用标记: {final[:200]}"
+    assert isinstance(d.get("sources"), list), "sources 应为列表"
+    assert isinstance(d.get("total_elapsed_ms"), int) and d["total_elapsed_ms"] >= 0
+
+    # 跨域问题主管至少应调度法规或案例专家之一
+    assert {"LAW", "CASE"} & set(specialists), f"跨域问题调度面过窄: {specialists}"
+    tool_used = [e.get("tool_name") for e in experts if e.get("tool_called")]
+    return {"note": f"调度{specialists} 专家{len(experts)}位 "
+                    f"终稿{len(final)}字 来源{len(d['sources'])}条 "
+                    f"用时{d['total_elapsed_ms']/1000:.1f}s 专家调工具={tool_used}",
+            "answer_head": final[:80]}
+
+
 # ================= main =================
 
 def main():

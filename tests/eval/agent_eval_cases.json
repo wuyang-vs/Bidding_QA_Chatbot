@@ -1,0 +1,121 @@
+[
+  {
+    "id": "E2E-01",
+    "category": "single_hop",
+    "question": "什么是单一来源采购？",
+    "tools_any": ["search_bidding_knowledge"],
+    "facts": [{"any": ["单一来源"]}],
+    "note": "法规/概念单跳, 知识库 FAQ"
+  },
+  {
+    "id": "E2E-02",
+    "category": "single_hop",
+    "question": "XX市智慧园区信息化建设项目（二期）的投标截止时间是什么时候？",
+    "tools_any": ["search_bidding_knowledge"],
+    "facts": [{"any": ["2025年12月15日", "2025-12-15", "12月15日"]}],
+    "note": "招标事实单跳, 主测试文档分片"
+  },
+  {
+    "id": "E2E-03",
+    "category": "single_hop",
+    "question": "XX市智慧园区信息化建设项目（二期）的预算金额是多少？",
+    "tools_any": ["search_bidding_knowledge"],
+    "facts": [{"any": ["860万", "8,600,000", "8600000", "860.0万", "860.00万"]}],
+    "note": "招标事实单跳"
+  },
+  {
+    "id": "E2E-04",
+    "category": "single_hop",
+    "question": "投标人对资格预审文件有异议时，可以通过什么渠道投诉？",
+    "tools_any": ["search_bidding_knowledge"],
+    "facts": [{"any": ["投诉", "异议"]}],
+    "note": "法规渠道单跳"
+  },
+  {
+    "id": "E2E-05",
+    "category": "multi_hop",
+    "question": "北京交通大学雄安校区智慧校园设备采购项目的采购人和代理机构分别是谁？请分别列出。",
+    "tools_any": ["search_knowledge_graph", "search_bidding_knowledge"],
+    "facts": [
+      {"any": ["北京交通大学"]},
+      {"any": ["中央国家机关政府采购中心", "政府采购中心"]}
+    ],
+    "note": "结构化/图谱多跳: 项目→采购人 + 项目→代理机构, 锚定已入库 KG 节点(2 Project/2 Buyer/2 Agency)与 ccgp 公告"
+  },
+  {
+    "id": "E2E-06",
+    "category": "multi_hop",
+    "question": "XX市智慧园区信息化建设项目（二期）的投标截止时间和预算金额分别是什么？请给出两个事实。",
+    "tools_any": ["search_bidding_knowledge"],
+    "facts": [
+      {"any": ["2025年12月15日", "2025-12-15", "12月15日"]},
+      {"any": ["860万", "8,600,000", "8600000", "860.0万"]}
+    ],
+    "note": "同文档双事实点, 验证答得全"
+  },
+  {
+    "id": "E2E-07",
+    "category": "multi_hop",
+    "question": "对比中国大陆和香港的招投标流程，在法规依据和主要环节上有什么区别？",
+    "tools_any": ["search_bidding_knowledge", "search_knowledge_graph"],
+    "facts": [
+      {"any": ["大陆", "内地", "中国大陆"]},
+      {"any": ["香港"]}
+    ],
+    "note": "跨法域对比, 需两侧材料"
+  },
+  {
+    "id": "E2E-08",
+    "category": "multi_hop",
+    "question": "采购数量最多的标的物是什么？它的供应商集中在哪些企业？",
+    "tools_any": ["search_postgresql", "search_knowledge_graph"],
+    "facts": [],
+    "note": "统计聚合+实体下钻, 工具选择是主指标, 事实不做硬锚定"
+  },
+  {
+    "id": "E2E-09",
+    "category": "cross_domain",
+    "question": "结合招标投标法规，投标保证金的比例上限是多少？未中标人的保证金应在什么时候退还？",
+    "tools_any": ["search_bidding_knowledge"],
+    "facts": [
+      {"any": ["保证金"]},
+      {"any": ["2%", "2％", "百分之二", "2 %"]},
+      {"any": ["退还"]}
+    ],
+    "note": "法规线: 比例+退还时限双要点(实施条例)"
+  },
+  {
+    "id": "E2E-10",
+    "category": "cross_domain",
+    "question": "XX市智慧园区信息化建设项目（二期）预算860万元，依法投标保证金最多交多少？请给出计算结果。",
+    "tools_any": ["search_bidding_knowledge"],
+    "facts": [
+      {"any": ["2%", "2％", "百分之二", "2 %"]},
+      {"any": ["17.2万", "172000", "172,000", "17.2 万"]}
+    ],
+    "note": "跨域推理: 2% 规则 × 860万 = 17.2万"
+  },
+  {
+    "id": "E2E-11",
+    "category": "cross_domain",
+    "question": "投标人对XX市智慧园区信息化建设项目（二期）的评标结果有异议，依法应在什么期间、向谁提出？招标人多久内要答复？",
+    "tools_any": ["search_bidding_knowledge"],
+    "facts": [
+      {"any": ["中标候选人", "公示"]},
+      {"any": ["招标人"]},
+      {"any": ["3日", "三日", "3 日", "3天", "三天"]}
+    ],
+    "note": "法规线: 公示期间提出+招标人3日答复"
+  },
+  {
+    "id": "E2E-12",
+    "category": "cross_domain",
+    "question": "请同时回答：XX市智慧园区信息化建设项目（二期）的投标截止时间是哪天？如果投标人在该截止时间后送达投标文件，依法应如何处理？",
+    "tools_any": ["search_bidding_knowledge"],
+    "facts": [
+      {"any": ["2025年12月15日", "2025-12-15", "12月15日"]},
+      {"any": ["拒收", "拒绝", "不予受理", "不得接收"]}
+    ],
+    "note": "项目事实+法规处置跨域组合"
+  }
+]
