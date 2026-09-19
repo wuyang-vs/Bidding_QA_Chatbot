@@ -1101,6 +1101,82 @@ def t():
     return {"note": f"PG密文={enc[:16]}..., 掩码回传保护OK, 脱敏字段=bank/phone/email/legal"}
 
 
+@case("V17密钥轮换", "PROFILE-03", "多密钥链: 历史密钥密文服务端可解+新写入当前密钥+重加密闭环")
+def t():
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+    from cryptography.fernet import Fernet, InvalidToken
+    from src.config import settings
+    from src.tools import field_crypto
+    from src.database.postgresql_client import postgresql_client
+
+    # 验收要求: 后端与本脚本均以 PROFILE_ENC_KEYS=<当前K1>,<历史K2> 启动
+    parts = [p.strip() for p in (settings.profile_enc_keys or "").split(",") if p.strip()]
+    assert len(parts) >= 2, "PROFILE-03 需要 PROFILE_ENC_KEYS=K1,K2 双密钥链环境"
+    cur_f = Fernet(parts[0].encode("utf-8"))
+    old_f = Fernet(parts[1].encode("utf-8"))
+    field_crypto.reload_keys()
+
+    _u, tok, _ = t_auth_common("profile_rot", "accept123", role="bidder")
+    payload = {
+        "company_name": "轮换测试有限公司", "legal_person": "李四光",
+        "contact_phone": "13900001111", "contact_email": "rot@example.com",
+        "bank_account": "6222000011112222",
+    }
+    s, d = http("PUT", "/api/profile", payload, token=tok, timeout=15)
+    assert s == 200, f"PUT 失败 {s} {str(d)[:200]}"
+
+    postgresql_client.initialize()
+
+    def _row():
+        rows = postgresql_client._run(
+            "SELECT bank_account FROM company_profiles WHERE user_id = "
+            "(SELECT id FROM users WHERE username=:u)", {"u": _u})
+        return rows[0]["bank_account"]
+
+    # 1) 新写入必须用当前密钥 K1 加密
+    ct_new = _row()
+    assert ct_new.startswith("gAAAAA"), "新档案银行账号未加密"
+    assert cur_f.decrypt(ct_new.encode("utf-8")).decode("utf-8") == "6222000011112222"
+    try:
+        old_f.decrypt(ct_new.encode("utf-8"))
+        raise AssertionError("当前密钥密文不应被历史密钥解开")
+    except InvalidToken:
+        pass
+
+    # 2) 模拟轮换前的历史密文 (K2 加密) 直写 PG
+    old_plain = "6222999988887777"
+    ct_old = old_f.encrypt(old_plain.encode("utf-8")).decode("utf-8")
+    postgresql_client._run(
+        "UPDATE company_profiles SET bank_account=:ct WHERE user_id = "
+        "(SELECT id FROM users WHERE username=:u)", {"ct": ct_old, "u": _u})
+    assert field_crypto.key_index(ct_old) == 1, "历史密文 key_index 应为 1"
+    assert field_crypto.needs_rotation(ct_old) is True
+
+    # 3) 服务端多密钥链: GET 必须能用历史密钥解密并正确掩码 (HTTP 实证)
+    s, d = http("GET", "/api/profile", token=tok, timeout=15)
+    assert s == 200, f"GET 失败 {s}"
+    bank_mask = d["profile"]["bank_account"]
+    assert bank_mask == "************7777", f"历史密钥密文服务端未解出: {bank_mask}"
+
+    # 4) 批量重加密 dry-run 不改动数据
+    stats = field_crypto.rotate_all_profiles(dry_run=True)
+    assert stats["scanned"] >= 1 and stats["dry_run"] is True
+    assert _row() == ct_old, "dry-run 不应写库"
+
+    # 5) 重加密到当前密钥并回写, GET 仍然正确
+    ct_rot, changed = field_crypto.rotate_value(ct_old)
+    assert changed is True and field_crypto.key_index(ct_rot) == 0
+    postgresql_client._run(
+        "UPDATE company_profiles SET bank_account=:ct WHERE user_id = "
+        "(SELECT id FROM users WHERE username=:u)", {"ct": ct_rot, "u": _u})
+    assert cur_f.decrypt(_row().encode("utf-8")).decode("utf-8") == old_plain
+    s, d = http("GET", "/api/profile", token=tok, timeout=15)
+    assert s == 200 and d["profile"]["bank_account"] == "************7777"
+    return {"note": f"K1新写/K2历史密文HTTP可解/dry-run扫描{stats['scanned']}行/重加密后key_index=0"}
+
+
 @case("V16对照表缓存", "MATRIX-02", "相同招标+投标稿二次请求命中缓存(cached=True)")
 def t():
     body = {"db_id": DB_ID, "markdown": "我方资质齐全，特级资质，工期满足，质保三年。"}

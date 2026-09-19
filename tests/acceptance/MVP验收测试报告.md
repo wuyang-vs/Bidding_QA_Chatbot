@@ -3,15 +3,27 @@
 | 项目 | 内容 |
 |---|---|
 | 系统名称 | 招投标采购智能问答与辅助评标系统（Bidding_QA_Chatbot） |
-| 报告版本 | V1.6（在 V1.5 50 项基线上推进 R9/R10/R11 三项风险收尾：对照表结构化校验+内存 TTL 缓存、企业资料敏感字段 Fernet 加密+掩码展示+操作审计、证书原件存储可插拔抽象+OCR 图像预处理） |
-| 测试日期 | 2026-09-19（V1.6 回归） |
+| 报告版本 | V1.7（在 V1.6 52 项基线上关闭 R11 剩余项与 R10 密钥轮换：证书原件 S3/MinIO 对象存储实际接入 boto3、企业资料敏感字段多版本密钥链与无停机轮换；新增 PROFILE-03 验收用例，全量 53 项） |
+| 测试日期 | 2026-09-19（V1.7 回归） |
 | 测试执行人 | 自动化验收套件（tests/acceptance/run_acceptance.py）＋离线确定性测试＋浏览器 UI 实测 |
-| 基线代码 | V1.5 commit `8ee7ebe`；V1.6 改动见第 5 章（尚未提交） |
-| 报告依据 | 全量执行日志 run_log_v16.txt、evidence.json、离线测试输出、UI 截图（见第 7 章） |
+| 基线代码 | V1.6 commit `58a4399`；V1.7 改动见第 5 章（尚未提交） |
+| 报告依据 | 全量执行日志 run_log_v17.txt、evidence.json、离线测试输出、UI 截图（见第 7 章） |
 
 ---
 
 ## 1. 验收结论
+
+**V1.7 验收套件共 53 项，全量回归 53 PASS / 0 FAIL / 0 ERROR（通过率 100%）。本期关闭 V1.6 报告遗留的两项风险收尾：①R11 证书原件 S3/MinIO 对象存储从"接口占位"变为 boto3 实际接入（put/get/delete/批量 cleanup/预签名 URL/自动建桶），OCR 与预览端点改造为存储后端无关；②R10 敏感字段加密从单一派生密钥升级为多版本密钥链（MultiFernet），支持"新密钥在前、旧密钥在后"的无停机轮换与批量重加密，并提供 gen-key/rotate/status CLI。新增 PROFILE-03 验收用例在 `PROFILE_ENC_KEYS=K1,K2` 双密钥链环境下端到端验证轮换闭环。**
+
+本轮（⑭ R11 S3 接入 + R10 密钥轮换）交付的关键结论：
+
+1. **S3CertStorage 完整实现（boto3 懒加载）**：key=`{prefix}{user_id}/{uuidhex+ext}` 保持用户目录隔离；save=put_object（ContentType 按扩展名、original_name 元数据）、read=get_object（404/NoSuchKey→FileNotFoundError）、delete=delete_object、cleanup=list_objects_v2 分页器列举＋delete_objects 批量 1000/批、presigned_url 生成 s3v4 限时直链。MinIO/自建网关通过 `endpoint_url`＋path-style addressing＋s3v4 签名适配；`auto_bucket=true` 时 head_bucket 404 自动 create_bucket。仅 `CERT_STORAGE_TYPE=s3` 时 import boto3，默认 local 零影响。
+2. **中文原名元数据缺陷修复（D18）**：S3 用户自定义元数据只接受 ASCII，中文文件名直传会被 botocore ParamValidationError 拒绝（真实生产缺陷，本期单测先暴露）。改为 `urllib.parse.quote` URL 编码后存入 `x-amz-meta-original_name`，Stubber 严格断言。
+3. **端点存储后端无关化**：OCR 上传端点保存后直接对**上传字节** `ocr_cert_bytes`（图片内存解码、PDF 写系统临时文件提取后即删），不再依赖本地路径；证书预览端点改为"预签名 URL 307 重定向优先，失败/本地存储时由应用鉴权代理读取字节内联返回（Content-Disposition: inline）"，两种存储后端访问语义一致。
+4. **多版本密钥链（MultiFernet）**：`PROFILE_ENC_KEYS` 逗号分隔多个 Fernet key，**第一个为当前加密密钥**，其余历史密钥仅用于解密旧密文；未配置时回退 AUTH_SECRET 经 PBKDF2HMAC（salt=bid-profile-v1，100k iter）派生的单一密钥，V1.6 存量密文零迁移。新增 `key_index/needs_rotation/rotate_value` 与 `rotate_all_profiles(dry_run)`（全表扫描逐字段重加密，返回 scanned/rotated_users/rotated_fields/skipped 统计）；CLI：`gen-key` 生成新密钥、`rotate [--dry-run]` 批量重加密、`status` 查看密钥链长度。
+5. **PROFILE-03 端到端实证（双密钥链环境）**：新写入档案确认由当前密钥 K1 加密（历史密钥 K2 解不开）；用 K2 加密的"轮换前历史密文"直写 PG 后，服务端 GET 仍能经密钥链解密并正确掩码（HTTP 实证，掩码 `************7777`）；dry-run 扫描 34 行不写库；rotate_value 重加密后 key_index=0、GET 掩码不变。轮换流程：gen-key → PROFILE_ENC_KEYS 新key置首重启（旧密文可读不中断业务）→ rotate 批量收尾（用户下次 PUT 亦惰性重加密）。
+6. **离线测试 12 项新增全过**：TestFieldCryptoRotation 5 项（历史密文可解/needs_rotation+rotate_value/加密用当前密钥/明文 passthrough/非法密钥回退派生）＋TestS3CertStorage 7 项（botocore Stubber：put_object 参数严格断言含编码元数据、get 字节一致与 404、delete、cleanup 列举+批量删、非法 token/越权扩展名不触发 API 调用、预签名 URL 含 X-Amz-Signature、按 settings 工厂构建 s3 存储）。test_new_tools.py 达 67 项；全量 pytest 250 passed（仅 test_intent 3 项失败，经 git stash 在基线 `58a4399` 上复跑确认为**与本期无关的既有失败**）；硬闸门 44 断言全过；前端 tsc 0 报错（本期未改前端）。
+7. V1.6 及以前各版本防线（53 项全量零回退，含 CERT-01 证书链路在双密钥链环境下仍全过、硬闸门 44 断言、RBAC 隔离、整本合稿）在 V1.7 全量回归中持续有效。
 
 **V1.6 验收套件共 52 项，全量回归 52 PASS / 0 FAIL / 0 ERROR（通过率 100%）。本期针对 V1.5 报告中 R9/R10/R11 三项风险做收尾：对照表对 LLM 返回做行结构校验（丢弃空要求、修正非法 status/category、material 启发式校正）并加 1 小时内存 TTL 缓存（相同招标+投标稿复用结果，整本反复生成跳过 LLM）；企业资料库 bank_account/contact_phone/contact_email/legal_person 四个敏感字段应用层 Fernet 加密入库（密钥由 auth_secret 派生），GET 端点掩码展示（银行账号保留后 4 位、电话前 3 后 4、邮箱首字母+***、法人姓+**），PUT 时掩码回传自动保留旧明文，upsert 记录字段级审计日志（不含值）；证书原件存储抽象为 `CertStorage` 基类 + `LocalCertStorage`（默认）+ `S3CertStorage`（接口占位，待接 boto3），OCR 前加灰度化+小图放大预处理提升小字识别率。**
 
@@ -91,19 +103,20 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | **⑪ Cursor 式自动成册** | 企业资料库 1:1（12 文本字段＋证书/业绩 JSONB，匿名 401）、单章生成按资料回填（fill_info/profile_used）、空稿对照表全红 verdict=fail＋无原文 400、整本 SSE（meta/章节/matrix_done/done 序列＋封面目录＋fill_info） | PROFILE-01、BID-04 ~ BID-06 |
 | **⑫ 证书附件 OCR** | 图片/PDF 上传→RapidOCR→LLM 四字段抽取（正则回退）、私有原件存储（uuidhex+目录隔离）、鉴权预览（跨用户/穿越/非法扩展名 404）、随整表保存、孤儿清理 | CERT-01 |
 | **⑬ R9/R10/R11 收尾** | 对照表行结构校验（丢弃空要求/修正非法状态类别/material 启发式）＋内存 TTL 缓存（db_id+bid_hash→matrix，cached=True）；敏感字段 Fernet 加密入库＋GET 掩码展示＋掩码回传保护＋操作审计；证书存储抽象（Local/S3 可插拔）＋OCR 灰度化小图放大预处理 | MATRIX-02、PROFILE-02 |
+| **⑭ V1.7 S3 接入+密钥轮换** | 证书原件 S3/MinIO 实际接入（boto3 put/get/delete/list 批量清理/s3v4 预签名/自动建桶/中文原名 URL 编码）、OCR 字节流与预览端点存储后端无关；敏感字段 MultiFernet 多版本密钥链（第一把=当前密钥）＋历史密钥解密＋dry-run/批量重加密＋gen-key CLI | PROFILE-03（S3 链路由 7 项 Stubber 离线单测覆盖） |
 | Workflow | 预置清单、合规 DAG、评标辅助 DAG | WF-01 ~ WF-03 |
-| **离线专项** | 检索质量评测（17 例 5 指标）、页码切分、RAG 召回行级隔离、**硬闸门纯函数 44 断言**、**占位符回填/跨 chunk 流式/prompt 注入离线自测、pytest 55 项（含证书 OCR 正则/LLM/存储隔离、对照表校验+缓存、字段加密+掩码、存储抽象）** | tests/eval/ 四个脚本＋tests/test_new_tools.py |
+| **离线专项** | 检索质量评测（17 例 5 指标）、页码切分、RAG 召回行级隔离、**硬闸门纯函数 44 断言**、**占位符回填/跨 chunk 流式/prompt 注入离线自测、pytest（test_new_tools.py 67 项：含证书 OCR 正则/LLM/存储隔离、对照表校验+缓存、字段加密+掩码、存储抽象、多密钥轮换、S3 Stubber 全链路；全量 250 passed，test_intent 3 项为基线既有失败）** | tests/eval/ 四个脚本＋tests/test_new_tools.py |
 | **① OCR/Excel** | 扫描件 OCR、xlsx 提取（离线手工实测，见 4.4） | 离线实测 |
 | **浏览器 UI** | 注册角色选择、投标人入口隐藏、上传元数据表、状态机面板、引用文件名/页码、标书生成器弹窗、**企业资料库页（表单/证书增删/完整度）、整本合稿 Tab（章节进度/对照表红行/硬失败红框/整本预览）、单章回填后无占位符** | 15 张截图（7.2） |
 
-### 2.2 范围外说明（截至 V1.6 仍未覆盖）
+### 2.2 范围外说明（截至 V1.7 仍未覆盖）
 
 - 压力/并发性能、安全渗透（token 篡改/过期/水平越权穷举扫描）；
 - 移动端 H5/公众号、CA/USBKey 认证、敏感词过滤、平台对接（属后续二期，已在需求符合性评估中记录）；
 - OCR/Excel 未纳入 HTTP 自动验收（以离线实测＋META-01 上传链路间接覆盖 PDF 侧，证书 OCR 由 CERT-01 覆盖）；
-- 证书原件已抽象为可插拔存储（Local 默认 / S3 接口占位），**S3/MinIO 实际接入待下一期**（多实例部署需共享存储）；OCR 已加灰度+小图放大预处理，复杂版式/手写/印章遮挡场景仍需用户手工核对（系统提供可折叠 OCR 原文对照）；
+- 证书原件已支持 Local/S3 双后端（**V1.7 已接入 boto3 实际 S3/MinIO**，配置见 .env.example：CERT_STORAGE_TYPE/CERT_S3_*），S3 链路由 7 项 botocore Stubber 离线单测覆盖，**未搭建真实 MinIO/S3 环境做连通实测**（部署时按 .env.example 配置即可，auto_bucket 自动建桶）；OCR 已加灰度+小图放大预处理，复杂版式/手写/印章遮挡场景仍需用户手工核对（系统提供可折叠 OCR 原文对照）；
 - 对照表已加行结构校验+缓存，仍为 LLM 抽取判定（带关键词回退），非确定性场景需人工复核；投标报价测算类参数仍需业务人员手工确认（系统显式黄色提示而非杜撰）；
-- 企业资料敏感字段已应用层加密+掩码，**字段级密钥轮换、数据库透明加密（TDE）、操作审计落库表**（当前仅 logger）待下一期。
+- 企业资料敏感字段已应用层加密+掩码，**V1.7 已支持多密钥链无停机轮换与批量重加密（PROFILE-03 全过）**；数据库透明加密（TDE）、操作审计落库表（当前仅 logger）仍待下一期。
 
 ---
 
@@ -120,7 +133,8 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | Qdrant | 本地实例，集合 bid_qa_v2，回归时 **374 点**（含权限回填） |
 | 嵌入/精排 | BGE-M3（dense+sparse）＋ reranker-v2-m3 |
 | OCR/文档 | rapidocr-onnxruntime 1.4.4（懒加载）、pymupdf、openpyxl |
-| 前后端 | Next.js localhost:3000；uvicorn localhost:8001（运行最新代码） |
+| 对象存储 | boto3 1.43（仅 CERT_STORAGE_TYPE=s3 时懒加载，兼容 AWS S3 / MinIO，path-style+s3v4） |
+| 前后端 | Next.js localhost:3000；uvicorn localhost:8001（V1.7 验收以 PROFILE_ENC_KEYS=K1,K2 双密钥链启动） |
 
 ### 3.2 测试数据
 
@@ -132,10 +146,10 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 
 ## 4. 测试用例执行情况
 
-### 4.1 总览（V1.6 全量回归，2026-09-19）
+### 4.1 总览（V1.7 全量回归，2026-09-19，PROFILE_ENC_KEYS 双密钥链环境）
 
-- **共 52 项：PASS 52，FAIL 0，ERROR 0，通过率 100.0%**；
-- 原始输出：`run_log_v16.txt`（仓库未纳管，留存本地）；结构化结果：`tests/acceptance/evidence.json`。
+- **共 53 项：PASS 53，FAIL 0，ERROR 0，通过率 100.0%**；
+- 原始输出：`run_log_v17.txt`（仓库未纳管，留存本地）；结构化结果：`tests/acceptance/evidence.json`。
 
 | 测试组 | 通过/总数 |
 |---|---|
@@ -159,7 +173,8 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | **⑪ V1.4 企业资料库/回填/对照表/整本** | **4/4**（PROFILE-01、BID-04/05/06） |
 | **⑫ V1.5 证书附件 OCR** | **1/1**（CERT-01） |
 | **⑬ V1.6 R9/R10/R11 收尾** | **2/2**（PROFILE-02 加密掩码、MATRIX-02 缓存） |
-| **合计** | **52/52** |
+| **⑭ V1.7 密钥轮换** | **1/1**（PROFILE-03 多密钥链历史密文可解+重加密闭环） |
+| **合计** | **53/53** |
 
 ### 4.2 新增用例明细（本轮，关键观测均取自实际日志）
 
@@ -186,9 +201,10 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | BID-06 | 整本 SSE：封面目录＋fill_info＋对照表 | PASS | 88.8s | 事件计数 meta1/start2/done2/matrix_done1/done1/error0；整本 4374 字含"投 标 文 件""目 录"与回填公司名；对照 18 条、verdict=fail |
 | CERT-01 | 证书图片上传→OCR 结构化→私有预览鉴权→保存→孤儿清理 | PASS | 31.0s | pymupdf 生成中文证书 PNG（simhei 字体）；匿名上传 401；登录上传 OCR 成功（source=llm、warnings=[]），识别：名称=建筑业企业资质证书、等级=一级、编号=BZ-2025-777888、有效期=2029-12-31；本人预览 200 image/png 字节一致、跨用户 404、`../etc/passwd` 穿越 404、.exe 上传 400；PUT 整表保存后 GET 回显含 file_token/ocr_text；去掉证书再 PUT 后原件 404（孤儿清理生效） |
 | PROFILE-02 | 敏感字段 Fernet 加密入库＋GET 掩码＋掩码回传保护 | PASS | ~2s | PUT bank_account=6222021234567890/phone=13812345678/email=zhangsan@example.com/legal=张三丰；GET 掩码：银行 `************7890`、电话 `138****5678`、邮箱 `z***@example.com`、法人 `张**`，公司名明文不变；直连 PG 确认 bank_account 以 `gAAAAA` 开头、不含明文 `6222`；提交掩码值 PUT 后 PG 解密明文仍为 `6222021234567890`（掩码回传保护生效） |
-| MATRIX-02 | 对照表缓存：相同输入二次命中 cached=True | PASS | 36s(首)+<1s(次) | 首次 `cached=False`、18 条要求 verdict=fail；相同 db_id+markdown 第二次 `cached=True`、summary.total 与 verdict 与首次一致、不调 LLM |
+| MATRIX-02 | 对照表缓存：相同输入二次命中 cached=True | PASS | 30s(首)+<1s(次) | 首次 `cached=False`、17 条要求 verdict=fail；相同 db_id+markdown 第二次 `cached=True`、summary.total 与 verdict 与首次一致、不调 LLM |
+| **PROFILE-03** | **多密钥链：历史密钥密文服务端可解＋新写入当前密钥＋重加密闭环** | **PASS** | **10.7s** | 后端以 `PROFILE_ENC_KEYS=K1,K2` 双密钥链启动；新 PUT 档案密文经 K1 解出 `6222000011112222`、K2 解不开（InvalidToken）；用 K2 直写 PG 模拟轮换前历史密文后 key_index=1/needs_rotation=True，GET 掩码仍正确 `************7777`（HTTP 实证历史密钥解密）；dry-run 扫描 34 行不写库；rotate_value 重加密后 key_index=0、K1 解出原文、GET 掩码不变 |
 
-其余存量用例（ENV/M1/M3/M4/P4-P9/AUTH/M5/WF/RBAC/META/STAGE/GATE/BID-01~06/PROFILE-01/CERT-01）V1.6 轮全部 PASS（共 50/50 无回退），观测与 V1.5 报告一致（耗时随 LLM 负载波动）。
+其余存量用例（ENV/M1/M3/M4/P4-P9/AUTH/M5/WF/RBAC/META/STAGE/GATE/BID-01~06/PROFILE-01/02/CERT-01/MATRIX-02）V1.7 轮全部 PASS（共 52/52 无回退，CERT-01 在双密钥链环境仍 33.8s 全过），观测与 V1.6 报告一致（耗时随 LLM 负载波动）。
 
 ### 4.3 离线确定性测试（不依赖 HTTP/LLM，可重复执行）
 
@@ -234,6 +250,16 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 - 后端接口冒烟（临时脚本，测后已删）：注册→登录→匿名上传 401→登录上传证书 PNG（pymupdf 排版＋simhei 字体，200dpi 渲染）→RapidOCR 中文识别＋LLM 四字段全对（建筑业企业资质证书/一级/BZ-2025-777888/2029-12-31，source=llm warnings=[]）→本人预览 200 image/png 字节一致、跨用户 404→PUT 保存→GET 回显含 file_token/ocr_text→清空证书 PUT→孤儿清理 404；
 - 浏览器实测（2026-09-19，admin/admin123）：证书卡片"上传证书自动识别"→按钮 loading→20 秒后四字段自动填充（建筑业企业资质证书/特级/JZ-2026-666999/2030-08-08），左下出现证书缩略图与"原件已上传：资质证书.png"，展开"OCR 原文"显示完整识别文本；保存后绿色提示；刷新页面证书与缩略图正常回显。三张截图见 7.2。
 
+### 4.5e V1.7 S3 接入 + 密钥轮换补充实测（pytest 离线 + CLI，均通过）
+
+- `pytest tests/test_new_tools.py` **67 passed**（V1.6 55 项＋本期 12 项新增）：
+  - **TestFieldCryptoRotation 5 项**（monkeypatch 双密钥链 + reload_keys，测试后恢复派生密钥隔离）：历史 K2 密文经 MultiFernet 仍可解（is_encrypted/decrypt_field）；key_index=1→needs_rotation=True→rotate_value 后 key_index=0 且明文一致、已是当前密钥不重复加密；新 encrypt_field 用第一个（当前）密钥；明文/空串 passthrough 不参与轮换；PROFILE_ENC_KEYS 配成非法值时跳过并回退 AUTH_SECRET 派生密钥（存量零迁移兜底）；
+  - **TestS3CertStorage 7 项**（botocore Stubber，无需真实 MinIO）：put_object 严格断言 Bucket/Key=`certs/{uid}/{uuidhex}.png`/Body/ContentType=image/png/Metadata.original_name 已 URL 编码（**先暴露中文文件名 ASCII 校验缺陷 D18，再修生产代码**）；get_object 字节一致＋NoSuchKey→FileNotFoundError；delete_object；cleanup 列举前缀＋delete_objects 批量删（保留集内不删，返回删除数 1）；`../` 穿越/`.exe` 扩展名/预签名越权 token 均在发 API 前被拒（Stubber 零调用）；预签名 URL 为 s3v4（含 X-Amz-Signature、bucket 与 token）；按 settings（cert_storage_type=s3）工厂构建出 S3CertStorage；
+  - TestCertStorage 既有 2 项补 read() 断言与 reset_cert_storage 单例隔离；
+- 全量 pytest：**250 passed**；仅 tests/test_intent.py 3 项失败（is_out_of_scope 合同违约判定、诚实约束注入），已 `git stash` 在基线 commit `58a4399` 上复跑复现，确认为**与本期改动无关的既有失败**（意图分类模块，非本期触及文件）；
+- CLI 实测：`python -m src.tools.field_crypto status`（默认环境输出"密钥链长度: 1"）、`gen-key`（输出 urlsafe Fernet key 与轮换操作提示）正常；
+- 硬闸门 `tests/eval/test_evidence_gate.py` **44 断言全过**；前端 `npx tsc --noEmit` **0 报错**（本期未改前端）。
+
 ### 4.6 浏览器 UI 实测（V1.3：2026-09-18；V1.4 补测：2026-09-19，admin/admin123）
 
 | 验证点 | 结果 | 证据 |
@@ -274,12 +300,15 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | D15 | 中 | docx 导出中文文件名经 latin-1 编码头崩溃；且导出时重新调用 LLM 生成（与界面所见不一致、慢） | Content-Disposition 改 `filename=bid_draft.docx; filename*=UTF-8''...`；导出端点接受已生成 Markdown 直出 | 手工冒烟：38KB docx 合法下载、中文文件名正常 | 已关闭 |
 | D16 | 中 | access_scope 上下文清理 finally 中两个 reset 误写同一变量（首个还错传 user token），每请求结束必抛 ValueError，/api/chat 500 | 分别 `_current_user.reset(tok_user)` / `_current_scope.reset(tok_scope)` | 全量 45 例 PASS（含全部 chat 用例） | 已关闭 |
 | D17 | 中（V1.4 修） | 前端资格检查 runQualificationCheck 请求体引用不存在的变量 `companyCerts`（重构遗留，tsc TS2304），**UI 上执行资格比对必在前端抛 ReferenceError 并走失败分支**；另 ComplianceResult/QualificationResult 缺 docId 类型声明（4 处 TS2339/2353）、ReviewBox 的 review_type 联合缺 response/scoring（2 处 TS2322），共 9 个存量 tsc 告警 | 变量改回函数入参 `certs`（弹窗文本框录入的资质清单，与后端 company_qualifications 字段对齐）；两个接口补 `docId?: number`；ReviewBox type 联合补齐后端五类 review_type | `npx tsc --noEmit` 0 报错；/documents 页面热更新编译 200 | 已关闭 |
+| D18 | 中（V1.7 修） | **S3 put_object 中文文件名经 Metadata 直传会触发 botocore ParamValidationError**（"Non ascii characters found in S3 metadata"）——S3 用户自定义元数据仅允许 ASCII，而证书原名实际场景几乎都是中文（营业执照.png），S3 模式下上传必失败。由 TestS3CertStorage 的 Stubber 严格参数断言先暴露 | original_name 改为 `urllib.parse.quote(filename, safe="")` URL 编码后存入 Metadata；OCR 端点同步改为对上传字节 `ocr_cert_bytes` 识别（S3 无本地路径，原 `cert_file_path` 路径在 s3 模式会 NotImplementedError）；预览端点改预签名 307/应用代理双通道 | Stubber put_object 断言编码后元数据通过；CERT-01 全过（默认 local 行为不变）；S3 7 项 Stubber 单测全过 | 已关闭 |
 
 V1.1 的 D1-D6 修复在本轮回归中持续有效。
 
 **V1.4（⑪ 自动成册）本期改动未引入新缺陷**：后端 pytest 34 项、接口冒烟、49 项全量、浏览器实测一次通过。顺带修复 1 个 V1.3 遗留的前端运行时缺陷 D17（资格比对必失败）并清零全部存量 tsc 告警。测试脚本侧两处自测断言修正（非产品问题）：①注册端点不返回 token，冒烟脚本改为注册后再登录；②BID-04 回填断言放宽为"占位符已替换"或"prompt 引导 LLM 直接引用真实资料"双路径，均以 profile_used=true 且无 [公司全称] 残留为准。
 
 **V1.5（⑫ 证书附件 OCR）本期改动未引入新缺陷**：后端 pytest 43 项、接口冒烟、50 项全量、浏览器实测一次通过。设计上采取保守策略规避风险：①OCR 不直接写库，识别结果经用户核对后随整表 PUT 一并保存；②原件文件路径用 uuidhex 白名单正则＋resolve 父目录强校验双重防穿越，跨用户目录访问 404；③PUT 后比对新旧 file_token 清理孤儿，避免磁盘堆积；④非证书扩展名上传 400、OCR 失败 422 并回删原件（不残留半文件）。CERT-01 的匿名 401、跨用户 404、穿越 404、非法格式 400、孤儿 404 五项鉴权断言全过。
+
+**V1.7（⑭ S3 接入＋密钥轮换）发现并修复 1 个真实生产缺陷 D18**：S3 元数据不接受非 ASCII，中文名证书在 s3 模式上传必失败，由新增 Stubber 严格参数断言在编码阶段拦截（先红后绿）。另测试方法侧一处适配（非产品问题）：Stubber 包装的注入 client 需显式带 `Config(signature_version="s3v4")` 才能断言预签名 v4 特征，与生产 `_s3()` 构建配置对齐。
 
 ---
 
@@ -296,8 +325,8 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 | R7 | 未做并发/性能与渗透测试 | 生产保障未知 | 上线前补并发基准与 JWT 篡改/过期/水平越权扫描集 |
 | R8 | ~~标书生成当前为**单章流式**（5 章独立生成），企业资料库未接入，[公司全称]/[资质证书号] 等占位符需人工补；尚无整本合稿、逐条招标要求响应对照表与不合格项自动标红~~ **V1.4 已关闭**：企业资料库 1:1＋占位符双路径回填＋整本一键合稿 SSE＋响应对照表（🔴/🟡 标红，硬失败清单）＋docx 同色导出；**V1.5 进一步关闭"证书附件"**：图片/PDF 上传→OCR 四字段→私有原件→鉴权预览→整表保存→孤儿清理（CERT-01 全过） | 已实现"自动成册＋证书 OCR"，PROFILE-01/BID-04/05/06/CERT-01 与浏览器实测通过 | 剩余：业务测算类参数仍显式提示人工确认；证书原件未接入对象存储（见 R11） |
 | R9（新增） | ~~对照表要求抽取与响应判定依赖 LLM（带关键词回退），条款条数/分类可能随模型波动~~ **V1.6 已关闭**：`_validate_row` 行结构校验（空要求丢弃、非法 status→NO_RESPONSE、category 白名单、material 启发式校正防乱标）＋1 小时内存 TTL 缓存（相同 db_id+bid_hash 复用，cached=True 跳过 LLM） | 可能漏标/错标个别偏离项 | 已用校验+缓存+硬失败清单+红黄分级+导出前整改提示；剩余：非确定性 LLM 判定仍需人工最终复核（业务测算类参数显式黄色提示） |
-| R10（新增） | ~~企业资料按账号 1:1 明文存 PG（含银行账号等敏感字段），暂无字段级加密/脱敏~~ **V1.6 已关闭**：bank_account/contact_phone/contact_email/legal_person 应用层 Fernet 加密（PBKDF2 派生密钥）入库，GET 掩码展示（银行后 4/电话前 3 后 4/邮箱首字母+***/法人姓+**），PUT 掩码回传自动保留旧明文，upsert 字段级审计日志（不含值） | 多租户合规差距 | 已实现加密+掩码+审计（PROFILE-02 全过，PG 密文 gAAAAA、不含明文片段）；剩余：密钥轮换、TDE、审计落库表待下一期 |
-| R11（新增 V1.5） | ~~证书原件存本地 `uploads/certs/{uid}/`，未接入对象存储/CDN；OCR 识别准确度依赖图片清晰度~~ **V1.6 部分关闭**：存储抽象为 `CertStorage` 基类＋`LocalCertStorage`（默认）＋`S3CertStorage`（接口占位，待接 boto3）；OCR 前加灰度化+小图放大预处理提升小字识别率 | 多实例部署/生产可靠性、识别准确度 | 已实现可插拔抽象+OCR 预处理（CERT-01 全过、冒烟识别正确）；剩余：S3/MinIO 实际接入、复杂版式/手写/印章遮挡仍需人工核对 |
+| R10（新增） | ~~企业资料按账号 1:1 明文存 PG（含银行账号等敏感字段），暂无字段级加密/脱敏~~ **V1.6 已关闭**：bank_account/contact_phone/contact_email/legal_person 应用层 Fernet 加密（PBKDF2 派生密钥）入库，GET 掩码展示（银行后 4/电话前 3 后 4/邮箱首字母+***/法人姓+**），PUT 掩码回传自动保留旧明文，upsert 字段级审计日志（不含值）。**V1.7 进一步关闭"密钥轮换"**：PROFILE_ENC_KEYS 多密钥链（第一把=当前加密密钥，旧密钥仅解密）支持无停机轮换，rotate_all_profiles 批量重加密（dry-run 预检）＋PUT 惰性重加密双保险，PROFILE-03 全过 | 多租户合规差距 | 已实现加密+掩码+审计+密钥轮换；剩余：TDE（数据库透明加密）、审计落库表（当前仅 logger）待下一期 |
+| R11（新增 V1.5） | ~~证书原件存本地 `uploads/certs/{uid}/`，未接入对象存储/CDN；OCR 识别准确度依赖图片清晰度~~ **V1.6 部分关闭**：存储抽象为 `CertStorage` 基类＋`LocalCertStorage`（默认）＋`S3CertStorage`（接口占位）；OCR 前加灰度化+小图放大预处理。**V1.7 完全关闭对象存储**：boto3 实际接入 S3CertStorage（put/get/delete/list 批量清理、s3v4 预签名 307、MinIO endpoint+path-style 适配、auto_bucket 自动建桶、中文原名 URL 编码 D18），OCR 改字节流、预览双通道，7 项 Stubber 单测全过 | 多实例部署/生产可靠性、识别准确度 | Local/S3 双后端均已可用（CERT_STORAGE_TYPE 切换，.env.example 已补全部配置）；剩余：未做真实 MinIO/S3 环境连通实测（Stubber 模拟覆盖）、复杂版式/手写/印章遮挡仍需人工核对 |
 
 ---
 
@@ -307,9 +336,9 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 
 | 文件 | 说明 |
 |---|---|
-| acceptance/run_acceptance.py | **52 项**验收用例源码（含 RBAC/META/STAGE/GATE/BID/PROFILE/CERT/MATRIX 与 multipart 上传/SSE 流式消费/证书 OCR 夹具/PG 直连密文断言 helper） |
-| tests/acceptance/evidence.json | V1.6 结构化结果（逐条 status/耗时/备注） |
-| tests/test_new_tools.py | 后端 pytest **55 项**（含企业资料占位符回填/跨 chunk 流式、证书 OCR 正则/LLM/存储隔离、对照表校验+缓存、字段加密+掩码、存储抽象） |
+| acceptance/run_acceptance.py | **53 项**验收用例源码（含 RBAC/META/STAGE/GATE/BID/PROFILE/CERT/MATRIX 与 multipart 上传/SSE 流式消费/证书 OCR 夹具/PG 直连密文断言/多密钥链轮换 helper） |
+| tests/acceptance/evidence.json | V1.7 结构化结果（逐条 status/耗时/备注） |
+| tests/test_new_tools.py | 后端 pytest **67 项**（含企业资料占位符回填/跨 chunk 流式、证书 OCR 正则/LLM/存储隔离、对照表校验+缓存、字段加密+掩码、存储抽象、**多密钥轮换 5 项、S3 Stubber 全链路 7 项**） |
 | acceptance/sample_multipage.pdf | META-01 用 2 页中文 PDF 夹具 |
 | eval/retrieval_cases.json | 17 条检索评测用例（招标事实 7/企业 3/法规 7） |
 | eval/run_retrieval_eval.py | 纯检索评测脚本（HitRate/漏检/MRR/引用准确率/证据覆盖，--min-hitrate 门禁） |
@@ -346,7 +375,9 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 
 1. 启动 PostgreSQL、Qdrant，运行后端（首次启动自动回填分片权限，见日志"分片访问权限回填完成"）：
    `.venv\Scripts\python.exe -m uvicorn api.server:app --port 8001`
-2. 全量验收：`.venv\Scripts\python.exe tests\acceptance\run_acceptance.py`（约 10-15 分钟，需可用 LLM；产生临时账号/文档）；
+   - PROFILE-03 需双密钥链环境：PowerShell 下先 `$env:PROFILE_ENC_KEYS="<K1当前>,<K2历史>"`（key 由 `python -m src.tools.field_crypto gen-key` 生成），后端与验收脚本均需带同一环境变量；
+   - 证书 S3/MinIO 模式：设置 `CERT_STORAGE_TYPE=s3` 及 `CERT_S3_ENDPOINT/BUCKET/ACCESS_KEY/SECRET_KEY`（配置项见 .env.example，auto_bucket=true 自动建桶）；
+2. 全量验收：`.venv\Scripts\python.exe tests/acceptance/run_acceptance.py`（约 10-15 分钟，需可用 LLM；产生临时账号/文档）；
 3. 离线专项（无需 LLM/HTTP）：
    - `.venv\Scripts\python.exe tests\eval\run_retrieval_eval.py`
    - `.venv\Scripts\python.exe tests\eval\test_retrieval_access.py`
