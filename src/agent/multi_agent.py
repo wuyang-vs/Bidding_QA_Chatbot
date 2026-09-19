@@ -112,8 +112,10 @@ class SpecialistAgent:
         return [t.to_openai_schema() for t in ALL_TOOLS if t.name in tool_names]
 
     def run(self, task: str, context: str = "", max_rounds: int = 3) -> dict:
-        """执行专家任务, 返回 {role, answer, sources, round_trips, elapsed_ms}."""
-        from src.agent.react_loop import ReActMixin
+        """执行专家任务, 返回 {role, answer, sources, rounds, elapsed_ms}."""
+        from src.agent.tool_defense import (
+            _looks_like_tool_call, _parse_text_tool_calls, to_fake_tool_calls,
+        )
         # 复用 ReAct 循环
         messages = [{"role": "system", "content": self.system_prompt}]
         if context:
@@ -126,8 +128,11 @@ class SpecialistAgent:
         all_sources = []
         last_tool = ""
         answer = ""
+        rounds_used = 0
+        allowed_tools = set(ROLE_TOOLS[self.role])
 
         for round_idx in range(1, max_rounds + 1):
+            rounds_used = round_idx
             try:
                 response = self.llm.chat_raw(messages, tools=self.tool_schemas)
             except Exception as e:
@@ -151,12 +156,46 @@ class SpecialistAgent:
                 continue
 
             raw = getattr(msg, "content", "") or ""
-            if raw:
-                answer = raw
+
+            # 文本形态伪工具调用 (含全角 ｜｜DSML｜｜ 变体): 能解析且在本专家工具
+            # 白名单内则真实执行, 与主 ReAct 循环同构; 否则提示模型直接输出文本。
+            parsed = _parse_text_tool_calls(raw) if _looks_like_tool_call(raw) else None
+            valid_calls = [c for c in (parsed or [])
+                           if c["name"] in TOOL_EXECUTORS and c["name"] in allowed_tools]
+            if valid_calls:
+                fake = to_fake_tool_calls(valid_calls)
+                results = ToolRunner.run_parallel(fake, task, TOOL_EXECUTORS)
+                for r in results:
+                    messages.append({"role": "user",
+                                     "content": f"工具 {r.name} 返回：\n{r.text}\n\n请判断信息是否足够，足够则直接回答。"})
+                    all_sources.extend(r.sources)
+                    last_tool = r.name
+                continue
+            if _looks_like_tool_call(raw):
+                logger.info("[%s] 检测到非法/不可解析的工具调用标记, 提示改为纯文本",
+                            self.role.value)
+                messages.append({"role": "user",
+                                 "content": "不要输出任何工具调用或 DSML/XML 标记, 请基于已有信息直接给出纯文本回答."})
+                continue
+            if raw.strip():
+                answer = raw.strip()
                 break
             messages.append({"role": "user", "content": "请直接给出回答, 不要调用工具."})
-        else:
-            messages.append({"role": "user", "content": "请基于以上工具结果直接回答."})
+
+        # 兜底纠偏: 轮次耗尽仍无干净文本时, 强制一次无工具纯文本生成,
+        # 避免空答案/DSML 标记泄漏到写作专家与前端终稿
+        if not answer or _looks_like_tool_call(answer):
+            try:
+                messages.append({"role": "user",
+                                 "content": "请仅输出纯文本中文回答: 不要工具调用, 不要任何 <、｜、DSML、XML 等标记, 直接给出结论."})
+                fix_resp = self.llm.chat_raw(messages, tools=[])
+                fixed = getattr(fix_resp.choices[0].message, "content", "") or ""
+                if fixed.strip() and not _looks_like_tool_call(fixed):
+                    answer = fixed.strip()
+            except Exception as e:
+                logger.warning("[%s] 纠偏重试失败: %s", self.role.value, e)
+        if _looks_like_tool_call(answer):
+            answer = ""
 
         elapsed = int((time.time() - t0) * 1000)
         return {
@@ -165,7 +204,7 @@ class SpecialistAgent:
             "sources": all_sources[:20],
             "tool_called": bool(last_tool),
             "tool_name": last_tool,
-            "rounds": round_idx if 'round_idx' in dir() else max_rounds,
+            "rounds": rounds_used,
             "elapsed_ms": elapsed,
         }
 
@@ -229,10 +268,15 @@ def run_multi_agent_workflow(question: str, provider: str = "",
 
     # 并行执行专家 (简单线程池)
     import concurrent.futures
+    import contextvars
     specialists_to_run = [specialist_map[s] for s in plan["specialists"] if s in specialist_map]
 
     results: list[dict] = []
     if specialists_to_run:
+        # 捕获主线程上下文 (含 RAG 行级隔离 ContextVar), 为每个专家复制独立副本
+        # 后传播到工作线程; ThreadPoolExecutor 默认不继承 contextvars, 且同一
+        # Context 对象不能并发 run, 必须逐任务 copy()。
+        base_ctx = contextvars.copy_context()
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(specialists_to_run)) as pool:
             futures = {}
             for role in specialists_to_run:
@@ -247,22 +291,34 @@ def run_multi_agent_workflow(question: str, provider: str = "",
                     key = "PRICE"
                 task_desc = plan.get("sub_tasks", {}).get(key, question)
                 agent = SpecialistAgent(role, provider, deep_thinking)
-                futures[pool.submit(agent.run, task_desc)] = role
+                futures[pool.submit(base_ctx.copy().run, agent.run, task_desc)] = role
 
             for future in concurrent.futures.as_completed(futures):
                 results.append(future.result())
 
     # 写作专家综合
     writer = SpecialistAgent(AgentRole.WRITER, provider, deep_thinking)
+    role_labels = {"law_retrieval": "法规专家", "case_retrieval": "案例专家",
+                   "price_analysis": "价格专家"}
     expert_context_parts = []
     for r in results:
-        role_label = {"law_retrieval": "法规专家", "case_retrieval": "案例专家", "price_analysis": "价格专家"}.get(r["role"], r["role"])
-        expert_context_parts.append(f"【{role_label}】\n{r['answer']}")
+        ans = (r.get("answer") or "").strip()
+        if ans:
+            expert_context_parts.append(
+                f"【{role_labels.get(r['role'], r['role'])}】\n{ans}")
     expert_context = "\n\n".join(expert_context_parts)
     if not expert_context:
         expert_context = "没有其他专家的结果, 请直接基于问题回答."
 
     final = writer.run(question, context=expert_context)
+
+    # 终稿兜底: 写作专家纠偏后仍为空时, 直接拼装各专家有效结论, 绝不返回空/标记文本
+    if not final.get("answer", "").strip():
+        stitched = "\n\n".join(
+            f"### {role_labels.get(r['role'], r['role'])}意见\n{r['answer']}"
+            for r in results if (r.get("answer") or "").strip())
+        final["answer"] = (stitched[:2000]
+                           or "抱歉, 多专家协作本次未能生成有效回答, 请稍后重试或改用普通问答.")
 
     # 合并所有来源
     all_sources = []

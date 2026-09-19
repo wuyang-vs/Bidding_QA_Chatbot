@@ -7,6 +7,7 @@ import { Sidebar } from "@/components/Sidebar";
 import {
   chatWithAgentStream, saveConversation, listConversations,
   loadConversation, deleteConversation, saveFeedback, toPersistedMessage,
+  runMultiAgent,
 } from "@/lib/api";
 
 function generateId(): string {
@@ -40,6 +41,8 @@ export default function Page() {
     typeof window !== "undefined" && localStorage.getItem("chat_web_search") === "1");
   const [deepThinking, setDeepThinking] = useState(() =>
     typeof window !== "undefined" && localStorage.getItem("chat_deep_thinking") === "1");
+  const [multiAgent, setMultiAgent] = useState(() =>
+    typeof window !== "undefined" && localStorage.getItem("chat_multi_agent") === "1");
   const [provider, setProvider] = useState(() =>
     (typeof window !== "undefined" && localStorage.getItem("chat_llm_provider")) || "deepseek");
 
@@ -53,6 +56,7 @@ export default function Page() {
   useEffect(() => { localStorage.setItem("chat_dark_mode", darkMode ? "1" : "0"); }, [darkMode]);
   useEffect(() => { localStorage.setItem("chat_web_search", webSearch ? "1" : "0"); }, [webSearch]);
   useEffect(() => { localStorage.setItem("chat_deep_thinking", deepThinking ? "1" : "0"); }, [deepThinking]);
+  useEffect(() => { localStorage.setItem("chat_multi_agent", multiAgent ? "1" : "0"); }, [multiAgent]);
   useEffect(() => { localStorage.setItem("chat_llm_provider", provider); }, [provider]);
 
   useEffect(() => {
@@ -104,6 +108,7 @@ export default function Page() {
       let webSources: any[] = [];
       let toolName = "";
       let elapsedMs: number | undefined;
+      let multiPanel: any = undefined;
 
       try {
         if (isVision) {
@@ -117,6 +122,26 @@ export default function Page() {
           const data = await resp.json();
           answer = data.analysis;
           streamedContent = answer;
+        } else if (multiAgent) {
+          // 多专家协作模式: 非流式(主管拆解→专家并行→写作综合), 过程由专家面板展示
+          setMessages((prev) => prev.map((m) =>
+            m.id === thinkingMsg.id
+              ? { ...m, content: "主管 Agent 正在拆解问题，调度法规/案例/价格专家并行分析（预计 1-4 分钟，多专家将并行检索后综合）…" }
+              : m));
+          const data = await runMultiAgent(
+            { question, provider, deep_thinking: deepThinking },
+            controller.signal,
+          );
+          answer = data.final_answer || "";
+          sources = data.sources || [];
+          toolName = "multi_agent";
+          elapsedMs = data.total_elapsed_ms;
+          multiPanel = {
+            planSpecialists: data.plan?.specialists || [],
+            expertResults: data.expert_results || [],
+            specialistsCount: data.specialists_count ?? 0,
+          };
+          if (!answer) answer = "多专家协作未生成结果，请重试。";
         } else {
           await chatWithAgentStream(
             {
@@ -167,6 +192,7 @@ export default function Page() {
         id: thinkingMsg.id, role: "assistant", content: answer,
         sources: [...sources, ...webSources], toolName,
         thinking: thinking || undefined, pending: false, elapsedMs,
+        multiAgent: multiPanel,
       };
 
       const currentMsgs = messagesRef.current.filter(
@@ -179,7 +205,7 @@ export default function Page() {
 
       if (seq === requestSeqRef.current) setLoading(false);
     },
-    [loading, webSearch, provider, deepThinking, persistConversation],
+    [loading, webSearch, provider, deepThinking, multiAgent, persistConversation],
   );
 
   const handleRegenerate = useCallback(() => {
@@ -277,6 +303,7 @@ export default function Page() {
             <div className="max-w-3xl mx-auto">
               <ChatInput onSend={handleSend} webSearch={webSearch} setWebSearch={setWebSearch}
                          deepThinking={deepThinking} setDeepThinking={setDeepThinking}
+                         multiAgent={multiAgent} setMultiAgent={setMultiAgent}
                          loading={loading} />
             </div>
           </div>

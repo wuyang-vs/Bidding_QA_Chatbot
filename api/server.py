@@ -1907,20 +1907,25 @@ class MultiAgentRequest(BaseModel):
 
 
 @app.post("/api/multi-agent/run")
-def multi_agent_run(req: MultiAgentRequest):
+def multi_agent_run(req: MultiAgentRequest, request: Request,
+                    user: dict | None = Depends(get_current_user_optional)):
     """多 Agent 协作: 主管调度法规/案例/价格专家, 写作专家综合."""
     from src.agent.multi_agent import run_multi_agent_workflow
-    import threading
+    from src.agent.core import bidding_agent
+    if not bidding_agent.ready:
+        raise HTTPException(503, "知识库未就绪")
 
-    # 限频
-    client_ip = getattr(req, "_client_ip", "unknown")
-    ok, info = rate_limiter.acquire(client_ip, limit=10, window=60)
-    if not ok:
-        raise HTTPException(status_code=429, detail=f"限流: {info}")
+    # 按真实客户端 IP 限频 (RateLimiter 全局策略 30 次/60s)
+    client_ip = request.client.host if request.client else "unknown"
+    if not rate_limiter.is_allowed(client_ip):
+        raise HTTPException(status_code=429, detail="限流: 请求过于频繁，请稍后再试")
 
-    result = run_multi_agent_workflow(
-        question=req.question,
-        provider=req.provider,
-        deep_thinking=req.deep_thinking,
-    )
+    # 行级隔离: 专家线程池经 copy_context 继承此范围, 与 /api/chat 语义一致
+    from src.auth.access_scope import use_access_scope
+    with use_access_scope(user):
+        result = run_multi_agent_workflow(
+            question=req.question,
+            provider=req.provider,
+            deep_thinking=req.deep_thinking,
+        )
     return result

@@ -7,6 +7,21 @@ export interface Source {
   url?: string;
 }
 
+export interface ExpertResult {
+  role: string;
+  answer: string;
+  tool_called?: boolean;
+  tool_name?: string;
+  rounds?: number;
+  elapsed_ms?: number;
+}
+
+export interface MultiAgentPanel {
+  planSpecialists: string[];
+  expertResults: ExpertResult[];
+  specialistsCount: number;
+}
+
 export interface PersistedMessage {
   role: "user" | "assistant";
   content: string;
@@ -15,6 +30,7 @@ export interface PersistedMessage {
   toolName?: string;
   image?: string;
   imageName?: string;
+  multiAgent?: MultiAgentPanel;
 }
 
 export function toPersistedMessage(raw: any): PersistedMessage | null {
@@ -31,6 +47,18 @@ export function toPersistedMessage(raw: any): PersistedMessage | null {
   if (typeof raw.toolName === "string") out.toolName = raw.toolName;
   if (typeof raw.image === "string") out.image = raw.image;
   if (typeof raw.imageName === "string") out.imageName = raw.imageName;
+  if (raw.multiAgent && Array.isArray(raw.multiAgent.expertResults)
+      && Array.isArray(raw.multiAgent.planSpecialists)) {
+    out.multiAgent = {
+      planSpecialists: raw.multiAgent.planSpecialists.filter((x: any) => typeof x === "string"),
+      expertResults: raw.multiAgent.expertResults
+        .filter((x: any) => x && typeof x.role === "string" && typeof x.answer === "string")
+        .map((x: any) => ({ role: x.role, answer: x.answer,
+                           tool_called: x.tool_called, tool_name: x.tool_name,
+                           rounds: x.rounds, elapsed_ms: x.elapsed_ms })),
+      specialistsCount: Number(raw.multiAgent.specialistsCount) || 0,
+    };
+  }
   return out;
 }
 
@@ -92,6 +120,24 @@ export async function chatWithAgentStream(
       }
     }
   }
+}
+
+export async function runMultiAgent(body: {
+  question: string;
+  provider?: string;
+  deep_thinking?: boolean;
+}, signal?: AbortSignal): Promise<any> {
+  const resp = await fetch(`${API_BASE}/api/multi-agent/run`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal,
+  });
+  if (!resp.ok) {
+    const detail = await resp.json().catch(() => ({}));
+    throw new Error(detail.detail || `请求失败 (${resp.status})`);
+  }
+  return resp.json();
 }
 
 export async function saveConversation(sessionId: string, title: string, messages: PersistedMessage[]) {

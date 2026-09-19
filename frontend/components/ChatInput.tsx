@@ -1,6 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
-import { Paperclip, Globe, Brain, X, Send, Loader2 } from "lucide-react";
+import { Paperclip, Globe, Brain, X, Send, Loader2, Users } from "lucide-react";
 
 const MAX_IMAGE_FILE_MB = 10;
 
@@ -28,11 +28,14 @@ interface Props {
   setWebSearch: (v: boolean) => void;
   deepThinking: boolean;
   setDeepThinking: (v: boolean) => void;
+  multiAgent: boolean;
+  setMultiAgent: (v: boolean) => void;
   loading?: boolean;
 }
 
 export function ChatInput({
-  onSend, webSearch, setWebSearch, deepThinking, setDeepThinking, loading,
+  onSend, webSearch, setWebSearch, deepThinking, setDeepThinking,
+  multiAgent, setMultiAgent, loading,
 }: Props) {
   const [value, setValue] = useState("");
   const [image, setImage] = useState<{ base64: string; name: string } | null>(null);
@@ -116,6 +119,14 @@ export function ChatInput({
                                : "text-gray-400 hover:text-gray-600"}`}
                 title="深度思考">
           <Brain size={14} /> 深度思考
+        </button>
+
+        <button onClick={() => setMultiAgent(!multiAgent)}
+                className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full transition ${
+                  multiAgent ? "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
+                            : "text-gray-400 hover:text-gray-600"}`}
+                title="主管拆解 → 法规/案例/价格专家并行 → 综合作答（耗时较长）">
+          <Users size={14} /> 多专家协作
         </button>
 
         <button onClick={submit} disabled={loading || (!value.trim() && !image)}

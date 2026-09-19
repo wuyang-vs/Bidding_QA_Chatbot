@@ -11,6 +11,9 @@ def _looks_like_tool_call(text: str) -> bool:
     low = text.lower()
     if "<【" in low and "dsml" in low:
         return True
+    # 全角竖线变体: <｜｜DSML｜｜ invoke ...> / <｜｜DSML｜｜/calls>
+    if "｜｜dsml" in low or "dsml｜｜" in low:
+        return True
     if low.startswith("<") or low.startswith("{"):
         head = low[:200]
         if any(k in head for k in ("tool_call", "invoke", "function_call", '"name"')):
@@ -38,11 +41,22 @@ _NAME_RE = re.compile(r'<name>(.*?)</name>', re.S)
 _JSON_RE = re.compile(r'\{"name":\s*"(search_\w+)",\s*"arguments":\s*(\{.*?\})\}', re.S)
 
 
+# 全角竖线 DSML 控制令牌: <｜｜DSML｜｜ invoke ...> / </｜｜DSML｜｜ invoke>
+_FW_DSML_OPEN_RE = re.compile(r"<｜\s*｜\s*DSML\s*｜\s*｜\s*", re.I)
+_FW_DSML_CLOSE_RE = re.compile(r"</\s*｜\s*｜\s*DSML\s*｜\s*｜\s*", re.I)
+
+
 def _parse_text_tool_calls(text: str):
     if not text:
         return None
     calls = []
     cleaned = text.replace("【DSML】", "").replace("<【", "<").replace("】>", ">")
+    # 归一化全角 DSML 变体为半角 XML 形态后再走既有解析
+    cleaned = _FW_DSML_OPEN_RE.sub("<", cleaned)
+    cleaned = _FW_DSML_CLOSE_RE.sub("</", cleaned)
+    cleaned = (cleaned.replace("< invoke", "<invoke")
+                      .replace("< parameter", "<parameter")
+                      .replace("</ parameter", "</parameter"))
     for m in _INVOKE_RE.finditer(cleaned):
         name, body = m.group(1), m.group(2)
         args = {pm.group(1): pm.group(2).strip() for pm in _PARAM_RE.finditer(body)}
