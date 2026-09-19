@@ -1257,6 +1257,74 @@ def t():
     return {"note": "admin按user_id+action可查≥2条字段名审计/无明文泄露/bidder403/anon401/PG实证/过滤空"}
 
 
+@case("V19异常预警问答", "ANOMALY-01", "异常预警解释层: 按code返回原因/影响/处置/法规依据 + 批量解释")
+def t():
+    # 1) 单条解释: OVER_CONTROL_PRICE 必含废标后果与处置建议
+    s, d = http("POST", "/api/anomaly/explain",
+                {"code": "OVER_CONTROL_PRICE"}, timeout=15)
+    assert s == 200, f"异常解释失败 {s} {str(d)[:200]}"
+    assert d["code"] == "OVER_CONTROL_PRICE"
+    assert d["level"] == "error"
+    blob = json.dumps(d, ensure_ascii=False)
+    assert "废标" in blob or "否决" in blob, "超限价应说明废标后果"
+    assert "处置建议" not in blob  # 结构化返回无该键, actions 列表存在
+    assert isinstance(d["actions"], list) and len(d["actions"]) >= 2
+    assert d.get("legal_basis"), "应有法规依据"
+
+    # 2) 未知 code 返回 404
+    s, d = http("POST", "/api/anomaly/explain", {"code": "NOPE_XYZ"}, timeout=15)
+    assert s == 404, f"未知 code 应 404, 实际 {s}"
+
+    # 3) 批量解释: 已知与未知混合
+    s, d = http("POST", "/api/anomaly/explain_batch",
+                {"codes": ["SUM_MISMATCH", "CN_MISMATCH", "QUALIFICATION_FAIL", "ZZZ"]},
+                timeout=15)
+    assert s == 200
+    items = d["items"]
+    assert len(items) == 4
+    assert all(it["found"] for it in items[:3])
+    assert items[3]["found"] is False and items[3]["entry"] is None
+    # 批量返回的每条已知 entry 含 causes/actions
+    assert items[0]["entry"]["causes"] and items[0]["entry"]["actions"]
+
+    # 4) 围串标线索 code 也可解释
+    s, d = http("POST", "/api/anomaly/explain", {"code": "jaccard_text"}, timeout=15)
+    assert s == 200 and d["level"] == "high"
+    return {"note": "单条/批量解释返回完整原因-影响-处置-法规, 未知code 404, 围串标线索可解释"}
+
+
+@case("V19范本智能推荐", "TEMPLATE-01", "范本推荐: 按项目类型匹配招标/合同/表单范本 + 详情/列表")
+def t():
+    # 1) 工程施工招标 → 招标文件范本优先
+    s, d = http("POST", "/api/templates/recommend",
+                {"query": "工程施工项目招标"}, timeout=15)
+    assert s == 200, f"范本推荐失败 {s} {str(d)[:200]}"
+    items = d["items"]
+    assert items, "应有推荐结果"
+    assert items[0]["id"] == "TPL-BID-001", f"工程施工招标应首推招标文件范本, 实际 {items[0]['id']}"
+    assert items[0]["score"] > 0
+
+    # 2) 限定合同范本类别
+    s, d = http("POST", "/api/templates/recommend",
+                {"query": "工程施工", "category": "合同范本"}, timeout=15)
+    assert s == 200
+    assert all(x["category"] == "合同范本" for x in d["items"])
+
+    # 3) 范本详情含完整章节
+    s, d = http("GET", "/api/templates/TPL-BID-001", timeout=15)
+    assert s == 200
+    assert "招标公告" in d["sections"] and "投标人须知" in d["sections"]
+    # 不存在的范本 404
+    assert http("GET", "/api/templates/NOPE")[0] == 404
+
+    # 4) 列表返回三类
+    s, d = http("GET", "/api/templates", timeout=15)
+    assert s == 200
+    assert set(d["categories"]) == {"招标文件", "合同范本", "业务表单"}
+    assert len(d["items"]) >= 10
+    return {"note": "工程施工招标首推TPL-BID-001/类别过滤生效/详情含章节/列表3类≥10份"}
+
+
 # ================= main =================
 
 def main():

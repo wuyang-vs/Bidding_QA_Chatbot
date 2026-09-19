@@ -3,15 +3,29 @@
 | 项目 | 内容 |
 |---|---|
 | 系统名称 | 招投标采购智能问答与辅助评标系统（Bidding_QA_Chatbot） |
-| 报告版本 | V1.8（在 V1.7 53 项基线上关闭 R12 审计落库：敏感操作审计从仅 logger 升级为 audit_logs 表持久化，admin/auditor 可按字段名/动作/账号分页查询且不含任何敏感值；新增 AUDIT-01 验收用例，全量 54 项） |
-| 测试日期 | 2026-09-19（V1.8 回归） |
+| 报告版本 | V1.9（在 V1.8 54 项基线上关闭智慧问答四类功能中的前两项：R13 异常预警问答解释层——为 P7/P9/M4 检测出的每条异常提供结构化原因/影响/处置/法规依据；R14 范本智能推荐——按项目类型匹配招标文件/合同/业务表单范本；新增 ANOMALY-01、TEMPLATE-01 验收用例，全量 56 项） |
+| 测试日期 | 2026-09-19（V1.9 回归，PROFILE_ENC_KEYS 双密钥链环境） |
 | 测试执行人 | 自动化验收套件（tests/acceptance/run_acceptance.py）＋离线确定性测试＋浏览器 UI 实测 |
-| 基线代码 | V1.7 commit `958ee7a`；V1.8 改动见第 5 章（尚未提交） |
-| 报告依据 | 全量执行日志 run_log_v18.txt、evidence.json、离线测试输出、UI 截图（见第 7 章） |
+| 基线代码 | V1.8 commit `36dd007`；V1.9 改动见第 5 章（尚未提交） |
+| 报告依据 | 全量执行日志 run_log_v19.txt、evidence.json、离线测试输出、UI 截图（见第 7 章） |
 
 ---
 
 ## 1. 验收结论
+
+**V1.9 验收套件共 56 项，全量回归 56 PASS / 0 FAIL / 0 ERROR（通过率 100%，PROFILE_ENC_KEYS 双密钥链环境）。本期关闭"智慧问答四类功能"中的前两项：R13 异常预警问答解释层、R14 范本智能推荐。新增 ANOMALY-01、TEMPLATE-01 两个验收用例。**
+
+本轮（⑯ R13/R14）交付的关键结论：
+
+1. **R13 异常预警问答解释层**：[src/tools/anomaly_catalog.py] 结构化异常知识库覆盖 **12 个异常 code**——P7 报价计算 5 项（ROW_ARITHMETIC/SUM_MISMATCH/CN_UNPARSEABLE/CN_MISMATCH/OVER_CONTROL_PRICE）、P9 围串标 3 项（jaccard_text/identical_line_items/metadata_author）、M4 资格/废标/偏离 4 项（QUALIFICATION_FAIL/REJECTION_CLAUSE/DEVIATION_MAJOR）。每条含 level/item/summary/causes(多条)/impact/actions(可执行步骤)/legal_basis(具体法规条款)。问答侧通过新增 `explain_anomaly` Agent 工具（已加入 BASE_TOOL_NAMES 默认工具集）按 code 查表，避免 LLM 自由发挥误导。
+2. **异常解释 HTTP 端点**：POST `/api/anomaly/explain`（单条，未知 code 404）、POST `/api/anomaly/explain_batch`（批量，已知 found=true/未知 found=false+entry=null 混合返回），供前端检测结果页"为什么不合格/如何修改"按钮直接消费。
+3. **R14 范本智能推荐**：[src/tools/templates_catalog.py] 内置 **11 份范本**（招标文件 4、合同范本 3、业务表单 4），每条含 category/name/project_types/keywords/summary/sections/source_url；自研中文分词（标点拆分 + 词典最大逆向匹配 6→1 字贪心）+ 词命中打分（haystack 命中 1 分，name 命中 0.25 分加权，类别核心词"招标/合同/表单"纳入 keywords 避免名称淹没类别意图）。问答侧通过 `recommend_template` Agent 工具调用。
+4. **范本 HTTP 端点**：POST `/api/templates/recommend`（query+category 过滤+top_k）、GET `/api/templates/{tid}`（详情含完整章节，不存在 404）、GET `/api/templates`（三类全量列表）。
+5. **ANOMALY-01 端到端实证（8.2s）**：OVER_CONTROL_PRICE 返回 level=error、4 条 actions、含法规依据且 impact 含"废标/否决"；未知 code 404；批量混合 [已知×3+未知×1] 正确标记；jaccard_text 围串标线索 level=high 可解释。
+6. **TEMPLATE-01 端到端实证（10.2s）**："工程施工项目招标"首推 TPL-BID-001（score>0）；category="合同范本"过滤后全部为合同类；详情 sections 含"招标公告/投标人须知"；不存在范本 404；列表 3 类 ≥10 份。
+7. **离线测试 10 项新增全过**（test_new_tools.py 85 项）：catalog 完整性（≥10 code 且每条四要素齐全）、大小写不敏感查表、文本渲染含【问题说明】【处置建议】【法规依据】、Agent 工具 executor（正常/空 code/未知 code）、推荐匹配排序（工程→招标文件优先）、类别过滤、无匹配空列表、详情/三类枚举、TestClient 端点全链路。全量 pytest 203 passed（仅 test_intent 3 项为 V1.7 起基线实证的既有失败，非本期回归）；硬闸门 44 断言全过；本期未改前端。
+8. V1.8 及以前各版本防线（56 项全量零回退，PROFILE-03 双密钥链 10.8s、AUDIT-01、CERT-01、硬闸门、RBAC）在 V1.9 全量回归中持续有效。
+9. **四类功能整体进度**：①操作智能引导（未实现）②范本智能推荐（**R14 已关闭**）③异常预警问答（**R13 解释层已关闭**，检测能力 P4-P9 早已具备）④异议投诉咨询（未实现，待 R15）。
 
 **V1.8 验收套件共 54 项，全量回归 54 PASS / 0 FAIL / 0 ERROR（通过率 100%）。本期关闭 V1.7 报告遗留的 R12「操作审计落库表」：敏感操作审计从仅 logger 升级为 audit_logs 表持久化，admin/auditor 可按账号/动作/目标类型分页查询，记录只含字段名与动作，不含任何敏感字段值；新增 AUDIT-01 端到端验收用例（含明文泄露负向断言与 RBAC 断言）。**
 
@@ -117,13 +131,16 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | **⑬ R9/R10/R11 收尾** | 对照表行结构校验（丢弃空要求/修正非法状态类别/material 启发式）＋内存 TTL 缓存（db_id+bid_hash→matrix，cached=True）；敏感字段 Fernet 加密入库＋GET 掩码展示＋掩码回传保护＋操作审计；证书存储抽象（Local/S3 可插拔）＋OCR 灰度化小图放大预处理 | MATRIX-02、PROFILE-02 |
 | **⑭ V1.7 S3 接入+密钥轮换** | 证书原件 S3/MinIO 实际接入（boto3 put/get/delete/list 批量清理/s3v4 预签名/自动建桶/中文原名 URL 编码）、OCR 字节流与预览端点存储后端无关；敏感字段 MultiFernet 多版本密钥链（第一把=当前密钥）＋历史密钥解密＋dry-run/批量重加密＋gen-key CLI | PROFILE-03（S3 链路由 7 项 Stubber 离线单测覆盖） |
 | **⑮ V1.8 审计落库** | audit_logs 表持久化（字段名清单 JSONB、user_id 外键、双索引）、record_audit/list_audit_logs（降级不阻断/参数化/限长/排序白名单）、企业资料/证书 OCR/密钥轮换三类敏感操作接入、GET /api/audit/logs 端点（admin/auditor 403/401） | AUDIT-01 |
+| **⑯ V1.9 异常解释+范本推荐** | 12 code 结构化异常知识库（原因/影响/处置/法规）+ explain_anomaly Agent 工具 + /api/anomaly/explain(_batch)；11 份范本库+中文分词推荐 + recommend_template 工具 + /api/templates 三件套 | ANOMALY-01、TEMPLATE-01 |
 | Workflow | 预置清单、合规 DAG、评标辅助 DAG | WF-01 ~ WF-03 |
 | **离线专项** | 检索质量评测（17 例 5 指标）、页码切分、RAG 召回行级隔离、**硬闸门纯函数 44 断言**、**占位符回填/跨 chunk 流式/prompt 注入离线自测、pytest（test_new_tools.py 67 项：含证书 OCR 正则/LLM/存储隔离、对照表校验+缓存、字段加密+掩码、存储抽象、多密钥轮换、S3 Stubber 全链路；全量 250 passed，test_intent 3 项为基线既有失败）** | tests/eval/ 四个脚本＋tests/test_new_tools.py |
 | **① OCR/Excel** | 扫描件 OCR、xlsx 提取（离线手工实测，见 4.4） | 离线实测 |
 | **浏览器 UI** | 注册角色选择、投标人入口隐藏、上传元数据表、状态机面板、引用文件名/页码、标书生成器弹窗、**企业资料库页（表单/证书增删/完整度）、整本合稿 Tab（章节进度/对照表红行/硬失败红框/整本预览）、单章回填后无占位符** | 15 张截图（7.2） |
 
-### 2.2 范围外说明（截至 V1.7 仍未覆盖）
+### 2.2 范围外说明（截至 V1.9 仍未覆盖）
 
+- **智慧问答四类功能进度**：②范本智能推荐（**V1.9 已实现**，11 份静态范本库+智能匹配）；③异常预警问答（**V1.9 已实现解释层**，12 code 原因/处置/法规，检测能力 P4-P9 早已具备；尚未实现的是"检测后主动弹窗推送预警"的前端联动，当前为用户主动问/调端点）；①操作智能引导（注册/上传/解密的操作阶段识别+步骤指引，未实现，待 R16）；④异议投诉咨询（渠道/时限/材料/法律依据专项知识库，未实现，待 R15）；
+- 范本库当前为**内置静态库 11 份**，含来源标注但未提供范本文件下载（仅章节结构与来源指引），后续可接附件存储与运营后台动态维护；
 - 压力/并发性能、安全渗透（token 篡改/过期/水平越权穷举扫描）；
 - 移动端 H5/公众号、CA/USBKey 认证、敏感词过滤、平台对接（属后续二期，已在需求符合性评估中记录）；
 - OCR/Excel 未纳入 HTTP 自动验收（以离线实测＋META-01 上传链路间接覆盖 PDF 侧，证书 OCR 由 CERT-01 覆盖）；
@@ -159,10 +176,10 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 
 ## 4. 测试用例执行情况
 
-### 4.1 总览（V1.8 全量回归，2026-09-19，PROFILE_ENC_KEYS 双密钥链环境）
+### 4.1 总览（V1.9 全量回归，2026-09-19，PROFILE_ENC_KEYS 双密钥链环境）
 
-- **共 54 项：PASS 54，FAIL 0，ERROR 0，通过率 100.0%**；
-- 原始输出：`run_log_v18.txt`（仓库未纳管，留存本地）；结构化结果：`tests/acceptance/evidence.json`。
+- **共 56 项：PASS 56，FAIL 0，ERROR 0，通过率 100.0%**；
+- 原始输出：`run_log_v19.txt`（仓库未纳管，留存本地）；结构化结果：`tests/acceptance/evidence.json`。
 
 | 测试组 | 通过/总数 |
 |---|---|
@@ -188,7 +205,8 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | **⑬ V1.6 R9/R10/R11 收尾** | **2/2**（PROFILE-02 加密掩码、MATRIX-02 缓存） |
 | **⑭ V1.7 密钥轮换** | **1/1**（PROFILE-03 多密钥链历史密文可解+重加密闭环） |
 | **⑮ V1.8 审计落库** | **1/1**（AUDIT-01 敏感操作落库+按字段名可查无明文+RBAC） |
-| **合计** | **54/54** |
+| **⑯ V1.9 异常解释+范本推荐** | **2/2**（ANOMALY-01 12code解释/批量/404、TEMPLATE-01 匹配/过滤/详情/列表） |
+| **合计** | **56/56** |
 
 ### 4.2 新增用例明细（本轮，关键观测均取自实际日志）
 
@@ -219,7 +237,10 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | **PROFILE-03** | **多密钥链：历史密钥密文服务端可解＋新写入当前密钥＋重加密闭环** | **PASS** | **10.7s** | 后端以 `PROFILE_ENC_KEYS=K1,K2` 双密钥链启动；新 PUT 档案密文经 K1 解出 `6222000011112222`、K2 解不开（InvalidToken）；用 K2 直写 PG 模拟轮换前历史密文后 key_index=1/needs_rotation=True，GET 掩码仍正确 `************7777`（HTTP 实证历史密钥解密）；dry-run 扫描 34 行不写库；rotate_value 重加密后 key_index=0、K1 解出原文、GET 掩码不变 |
 | **AUDIT-01** | **敏感操作审计落库：资料变更→admin 按字段名可查（不含值）→RBAC 401/403** | **PASS** | **19.1s** | 投标人两次 PUT（含 bank_account/contact_phone/legal_person 变更）→ admin 按 user_id+action 查到 ≥2 条审计，changed_fields 含 contact_phone/bank_account/legal_person；**整条 items JSON 不含 "13700008888"/"6222000088889999"/"赵六" 明文**；bidder 403、匿名 401；PG 直连 changed_fields 含 contact_phone；不存在的 action 过滤为空 |
 
-其余存量用例（ENV/M1/M3/M4/P4-P9/AUTH/M5/WF/RBAC/META/STAGE/GATE/BID-01~06/PROFILE-01/02/03/CERT-01/MATRIX-02）V1.8 轮全部 PASS（共 53/53 无回退，CERT-01 在双密钥链环境仍 33.4s 全过），观测与 V1.7 报告一致（耗时随 LLM 负载波动）。
+| **ANOMALY-01** | **异常预警解释层：按 code 返回原因/影响/处置/法规依据＋批量解释** | **PASS** | **8.2s** | OVER_CONTROL_PRICE 返回 level=error、actions 4 条、legal_basis 非空且 impact 含"废标/否决"；未知 code NOPE_XYZ 返回 404；批量 [SUM_MISMATCH/CN_MISMATCH/QUALIFICATION_FAIL/ZZZ] 前 3 found=true 且含 causes/actions、末项 found=false/entry=null；jaccard_text 围串标线索 level=high 可解释 |
+| **TEMPLATE-01** | **范本推荐：按项目类型匹配招标/合同/表单范本＋详情/列表** | **PASS** | **10.2s** | "工程施工项目招标"首推 TPL-BID-001（score>0）；category="合同范本"过滤后全部合同类；详情 sections 含"招标公告/投标人须知"；不存在范本 404；列表 categories 三类、items ≥10 份 |
+
+其余存量用例（ENV/M1/M3/M4/P4-P9/AUTH/M5/WF/RBAC/META/STAGE/GATE/BID-01~06/PROFILE-01/02/03/CERT-01/MATRIX-02/AUDIT-01）V1.9 轮全部 PASS（共 54/54 无回退，PROFILE-03 双密钥链 10.8s、CERT-01 正常通过），观测与 V1.8 报告一致（耗时随 LLM 负载波动）。
 
 ### 4.3 离线确定性测试（不依赖 HTTP/LLM，可重复执行）
 
@@ -287,6 +308,16 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 - HTTP 冒烟：`audit_logs` 表幂等建成（to_regclass=audit_logs）；PUT 资料变更后 admin 查到 changed_fields=`['company_name','contact_phone','bank_account']`，items JSON 无明文；bidder 403、匿名 401；
 - 硬闸门 **44 断言全过**；前端 `npx tsc --noEmit` **0 报错**（本期未改前端）。
 
+### 4.5g V1.9 R13/R14 异常解释层与范本推荐（pytest 离线，均通过）
+
+- `pytest tests/test_new_tools.py` **85 passed**（V1.8 75 项＋本期 10 项：TestAnomalyCatalog 4 项 + TestTemplatesCatalog 6 项）：
+  - 异常 catalog 完整性：≥10 个 code 且每条必须含 summary/causes/impact/actions 四要素；`get_anomaly_guidance` 精确命中 + 大小写不敏感兜底 + 未知/空 code 返回 None；`format_guidance_text` 渲染含【问题说明】【处置建议】【法规依据】；Agent executor 对正常/空 code/未知 code 三种输入的文案断言；
+  - 范本推荐：`recommend_templates("工程施工项目招标")` 首条=TPL-BID-001；category 过滤后类别一致（工程施工+合同范本→TPL-CON-001）；无关 query（量子加密通信卫星）返回空；详情查询与三类枚举（招标文件/合同范本/业务表单）；Agent executor 正常/空 query；TestClient 全链路（explain 200/404、batch 混合、recommend 排序、detail 200/404、list 三类）；
+  - 开发阶段修正的一处算法问题（先红后绿）：初始 name 命中加权 0.5 分导致"建设工程**施工**合同"在纯"工程施工"query 下挤掉招标文件范本，调整为 name 权重 0.25 + 给招标类范本补充类别核心词"招标"，并在测试中明确"工程施工项目招标"含类别意图词的断言；
+- 全量 pytest：**203 passed**（指定测试文件集，test_new_tools 85 + 其余模块；test_intent 3 项为 V1.7 起基线实证的既有失败，非本期回归）；
+- HTTP 冒烟：OVER_CONTROL_PRICE 端点返回 error/4 actions/法规依据；范本推荐 top1=TPL-BID-001、列表 11 份三类；
+- 硬闸门 **44 断言全过**；前端 `npx tsc --noEmit` **0 报错**（本期未改前端）。
+
 ### 4.6 浏览器 UI 实测（V1.3：2026-09-18；V1.4 补测：2026-09-19，admin/admin123）
 
 | 验证点 | 结果 | 证据 |
@@ -339,6 +370,8 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 
 **V1.8（⑮ R12 审计落库）未发现产品缺陷**：8 项离线单测一次通过，HTTP 冒烟与 AUDIT-01 一次通过。开发阶段修复的一处测试桩 bug（`sql.upper()` 后 `startswith("SELECT * FROM company_profiles")` 表名大小不匹配导致 fake PG 返回空档，与生产无关）和一处产品鲁棒性补强（`record_audit` 的 action 入参增加 `str().strip()` 空白清理，避免纯空白 action 落库），后者属防御性加固，非线上缺陷。
 
+**V1.9（⑯ R13 异常解释层＋R14 范本推荐）未发现产品缺陷**：核心单测首轮暴露并修复 1 处推荐排序算法问题——name 命中加权 0.5 过高导致纯"工程施工"query 下"建设工程施工合同范本"（TPL-CON-001）挤掉"工程施工招标文件范本"（TPL-BID-001），改为 name 权重 0.25 并为招标类范本补充类别核心词后测试转绿（先红后绿，属新功能内部调优，非已上线缺陷）。全量 HTTP 验收首轮因**测试环境漏配 `PROFILE_ENC_KEYS` 双密钥链**致 PROFILE-03 失败 1 例（非代码问题），补齐环境变量重跑后 56/56 全绿。
+
 ---
 
 ## 6. 风险评估与遗留事项
@@ -356,6 +389,7 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 | R9（新增） | ~~对照表要求抽取与响应判定依赖 LLM（带关键词回退），条款条数/分类可能随模型波动~~ **V1.6 已关闭**：`_validate_row` 行结构校验（空要求丢弃、非法 status→NO_RESPONSE、category 白名单、material 启发式校正防乱标）＋1 小时内存 TTL 缓存（相同 db_id+bid_hash 复用，cached=True 跳过 LLM） | 可能漏标/错标个别偏离项 | 已用校验+缓存+硬失败清单+红黄分级+导出前整改提示；剩余：非确定性 LLM 判定仍需人工最终复核（业务测算类参数显式黄色提示） |
 | R10（新增） | ~~企业资料按账号 1:1 明文存 PG（含银行账号等敏感字段），暂无字段级加密/脱敏~~ **V1.6 已关闭**：bank_account/contact_phone/contact_email/legal_person 应用层 Fernet 加密（PBKDF2 派生密钥）入库，GET 掩码展示（银行后 4/电话前 3 后 4/邮箱首字母+***/法人姓+**），PUT 掩码回传自动保留旧明文，upsert 字段级审计日志（不含值）。**V1.7 已支持多密钥链无停机轮换与批量重加密**。**V1.8 已支持审计落库表（audit_logs，admin/auditor 按字段名/动作/账号分页查询，AUDIT-01 全过无明文泄露）** | 多租户合规差距 | 已实现加密+掩码+密钥轮换+审计落库；剩余：TDE（数据库透明加密）待下一期 |
 | R11（新增 V1.5） | ~~证书原件存本地 `uploads/certs/{uid}/`，未接入对象存储/CDN；OCR 识别准确度依赖图片清晰度~~ **V1.6 部分关闭**：存储抽象为 `CertStorage` 基类＋`LocalCertStorage`（默认）＋`S3CertStorage`（接口占位）；OCR 前加灰度化+小图放大预处理。**V1.7 完全关闭对象存储**：boto3 实际接入 S3CertStorage（put/get/delete/list 批量清理、s3v4 预签名 307、MinIO endpoint+path-style 适配、auto_bucket 自动建桶、中文原名 URL 编码 D18），OCR 改字节流、预览双通道，7 项 Stubber 单测全过 | 多实例部署/生产可靠性、识别准确度 | Local/S3 双后端均已可用（CERT_STORAGE_TYPE 切换，.env.example 已补全部配置）；剩余：未做真实 MinIO/S3 环境连通实测（Stubber 模拟覆盖）、复杂版式/手写/印章遮挡仍需人工核对 |
+| R12（新增 V1.9） | 智慧问答四类功能覆盖不完整：②范本推荐、③异常预警解释 **V1.9 已实现**（静态库/结构化查表）；①操作智能引导（注册/上传/解密的操作阶段识别+步骤引导）、④异议投诉咨询（渠道/时限/材料/法律依据专项库）仍空白；范本为内置静态 11 份、异常解释仅覆盖 12 个已知 code | 面向交易平台用户的服务完整性、内容运营维护 | R15 建异议投诉专项知识库、R16 做操作阶段引导；范本库后续接运营后台动态维护与附件下载；异常 code 随检测工具扩展持续补录 |
 
 ---
 
@@ -365,9 +399,9 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 
 | 文件 | 说明 |
 |---|---|
-| acceptance/run_acceptance.py | **54 项**验收用例源码（含 RBAC/META/STAGE/GATE/BID/PROFILE/CERT/MATRIX/AUDIT 与 multipart 上传/SSE 流式消费/证书 OCR 夹具/PG 直连密文断言/多密钥链轮换/审计落库明文负向断言 helper） |
-| tests/acceptance/evidence.json | V1.8 结构化结果（逐条 status/耗时/备注） |
-| tests/test_new_tools.py | 后端 pytest **75 项**（含企业资料占位符回填/跨 chunk 流式、证书 OCR 正则/LLM/存储隔离、对照表校验+缓存、字段加密+掩码、存储抽象、多密钥轮换、S3 Stubber 全链路、**R12 审计落库 8 项**） |
+| acceptance/run_acceptance.py | **56 项**验收用例源码（含 RBAC/META/STAGE/GATE/BID/PROFILE/CERT/MATRIX/AUDIT/ANOMALY/TEMPLATE 与 multipart 上传/SSE 流式消费/证书 OCR 夹具/PG 直连密文断言/多密钥链轮换/审计落库明文负向断言/异常批量解释/范本匹配断言 helper） |
+| tests/acceptance/evidence.json | V1.9 结构化结果（逐条 status/耗时/备注） |
+| tests/test_new_tools.py | 后端 pytest **85 项**（含企业资料占位符回填/跨 chunk 流式、证书 OCR 正则/LLM/存储隔离、对照表校验+缓存、字段加密+掩码、存储抽象、多密钥轮换、S3 Stubber 全链路、R12 审计落库 8 项、**R13 异常 catalog 4 项、R14 范本推荐 6 项**） |
 | acceptance/sample_multipage.pdf | META-01 用 2 页中文 PDF 夹具 |
 | eval/retrieval_cases.json | 17 条检索评测用例（招标事实 7/企业 3/法规 7） |
 | eval/run_retrieval_eval.py | 纯检索评测脚本（HitRate/漏检/MRR/引用准确率/证据覆盖，--min-hitrate 门禁） |
@@ -412,5 +446,5 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
    - `.venv\Scripts\python.exe tests\eval\test_retrieval_access.py`
    - `.venv\Scripts\python.exe tests\eval\test_page_chunking.py`
    - `.venv\Scripts\python.exe tests\eval\test_evidence_gate.py`（硬闸门 44 断言）
-4. 标书闭环：浏览器 http://localhost:3000/documents → 文档行钢笔按钮 → 选章节流式生成 → 复制/导出 Word；V1.4 另可访问 http://localhost:3000/profile 维护企业资料库，弹窗内"整本合稿＋响应对照"一键成册；接口侧见 BID-01~06、PROFILE-01 与 4.5b/4.5c。后端单测：`.venv\Scripts\python.exe -m pytest tests/test_new_tools.py -q`（75 项）；审计查询：admin/auditor 登录后 `GET /api/audit/logs?user_id=<uid>&action=profile.update`。
+4. 标书闭环：浏览器 http://localhost:3000/documents → 文档行钢笔按钮 → 选章节流式生成 → 复制/导出 Word；V1.4 另可访问 http://localhost:3000/profile 维护企业资料库，弹窗内"整本合稿＋响应对照"一键成册；接口侧见 BID-01~06、PROFILE-01 与 4.5b/4.5c。后端单测：`.venv\Scripts\python.exe -m pytest tests/test_new_tools.py -q`（85 项）；审计查询：admin/auditor 登录后 `GET /api/audit/logs?user_id=<uid>&action=profile.update`；异常解释：`POST /api/anomaly/explain {"code":"OVER_CONTROL_PRICE"}`；范本推荐：`POST /api/templates/recommend {"query":"工程施工"}`（V1.9 新增，均无需登录）。
 5. 浏览器：frontend 目录 `npm run dev` 后访问 http://localhost:3000/documents，按 4.6 节路径复测。
