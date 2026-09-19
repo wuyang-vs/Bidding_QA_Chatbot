@@ -149,8 +149,25 @@ def extract_cert_fields(ocr_text: str, llm_client=None) -> dict:
 
 # ---- OCR 执行 ----
 
+def _preprocess_image(img):
+    """R11: OCR 前图像预处理: 灰度化 + 小图放大, 提升小字/低清晰度识别率。
+
+    不做强二值化 (避免破坏彩色印章/水印), 仅做灰度与尺度增强。
+    """
+    import cv2
+    h, w = img.shape[:2]
+    # 小图放大 1.5 倍 (证书扫描件字号通常偏小)
+    if w < 1200:
+        img = cv2.resize(img, None, fx=1.5, fy=1.5, interpolation=cv2.INTER_CUBIC)
+    # 灰度化 (RapidOCR 内部也会处理, 显式灰度减少通道干扰)
+    if len(img.shape) == 3:
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        img = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+    return img
+
+
 def _ocr_image_bytes(data: bytes) -> str:
-    """图片字节流 → RapidOCR 文本。"""
+    """图片字节流 → (预处理) → RapidOCR 文本。"""
     import cv2
     import numpy as np
     from src.tools.document_parser import _get_ocr_engine
@@ -158,6 +175,7 @@ def _ocr_image_bytes(data: bytes) -> str:
     img = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
     if img is None:
         raise ValueError("图片解码失败 (文件损坏或格式不受支持)")
+    img = _preprocess_image(img)
     result, _ = _get_ocr_engine()(img)
     if not result:
         return ""
@@ -194,56 +212,135 @@ def _user_dir(user_id: int) -> Path:
 
 
 def save_cert_file(user_id: int, filename: str, data: bytes) -> dict:
-    """落盘证书原件, 返回 {file_token, file_name, ext, size}。
-
-    file_token 即随机文件名 (uuidhex+扩展名), 既是存储名也是访问令牌;
-    原件不暴露真实文件名, 预览端点按 登录用户目录 + token 双重校验。
-    """
-    ext = os.path.splitext(filename or "")[1].lower()
-    if ext not in CERT_EXTS:
-        raise ValueError(f"不支持的证书格式 {ext}")
-    if len(data) > MAX_CERT_BYTES:
-        raise ValueError(f"证书文件超过 {MAX_CERT_BYTES // 1024 // 1024}MB 上限")
-    token = f"{uuid.uuid4().hex}{ext}"
-    _user_dir(user_id).joinpath(token).write_bytes(data)
-    return {"file_token": token, "file_name": filename, "ext": ext,
-            "size": len(data)}
+    """落盘证书原件, 返回 {file_token, file_name, ext, size}。委托给默认 CertStorage。"""
+    return get_cert_storage().save(user_id, filename, data)
 
 
 def cert_file_path(user_id: int, file_token: str) -> Path:
     """解析某用户证书文件的绝对路径; 非法 token / 越权访问一律抛 FileNotFoundError。"""
-    # token 只能是 uuidhex + 白名单扩展名, 杜绝 ../ 穿越
-    if not re.fullmatch(r"[0-9a-f]{32}(?:\.[a-z0-9]+)?", file_token or ""):
-        raise FileNotFoundError(file_token)
-    ext = os.path.splitext(file_token)[1].lower()
-    if ext and ext not in CERT_EXTS:
-        raise FileNotFoundError(file_token)
-    base = _user_dir(user_id).resolve()
-    p = (base / file_token).resolve()
-    if p.parent != base or not p.is_file():
-        raise FileNotFoundError(file_token)
-    return p
+    return get_cert_storage().path(user_id, file_token)
 
 
 def delete_cert_file(user_id: int, file_token: str) -> None:
-    try:
-        cert_file_path(user_id, file_token).unlink()
-    except FileNotFoundError:
-        pass
+    get_cert_storage().delete(user_id, file_token)
 
 
 def cleanup_orphan_certs(user_id: int, keep_tokens: set[str]) -> int:
     """整表 PUT 后清理"旧档案有、新档案无"的孤儿证书文件, 返回删除数。"""
-    removed = 0
-    try:
-        for p in _user_dir(user_id).iterdir():
-            if p.is_file() and p.name not in keep_tokens:
-                try:
-                    p.unlink()
-                    removed += 1
-                except OSError:
-                    pass
-    except FileNotFoundError:
-        pass
-    return removed
+    return get_cert_storage().cleanup(user_id, keep_tokens)
+
+
+# ============ R11: 证书存储抽象层 (可插拔: 本地/S3) ============
+from abc import ABC, abstractmethod
+
+
+class CertStorage(ABC):
+    """证书原件存储抽象基类。实现需保证:
+    - file_token = uuidhex+扩展名, 不暴露真实文件名;
+    - path() 校验 token 合法性与用户目录隔离 (防穿越/越权);
+    - cleanup() 整表保存后清理孤儿文件。
+    """
+
+    @abstractmethod
+    def save(self, user_id: int, filename: str, data: bytes) -> dict:
+        ...
+
+    @abstractmethod
+    def path(self, user_id: int, file_token: str) -> Path:
+        ...
+
+    @abstractmethod
+    def delete(self, user_id: int, file_token: str) -> None:
+        ...
+
+    @abstractmethod
+    def cleanup(self, user_id: int, keep_tokens: set[str]) -> int:
+        ...
+
+
+class LocalCertStorage(CertStorage):
+    """本地磁盘存储: uploads/certs/{user_id}/{uuidhex+ext}。"""
+
+    def save(self, user_id: int, filename: str, data: bytes) -> dict:
+        ext = os.path.splitext(filename or "")[1].lower()
+        if ext not in CERT_EXTS:
+            raise ValueError(f"不支持的证书格式 {ext}")
+        if len(data) > MAX_CERT_BYTES:
+            raise ValueError(f"证书文件超过 {MAX_CERT_BYTES // 1024 // 1024}MB 上限")
+        token = f"{uuid.uuid4().hex}{ext}"
+        _user_dir(user_id).joinpath(token).write_bytes(data)
+        return {"file_token": token, "file_name": filename, "ext": ext, "size": len(data)}
+
+    def path(self, user_id: int, file_token: str) -> Path:
+        if not re.fullmatch(r"[0-9a-f]{32}(?:\.[a-z0-9]+)?", file_token or ""):
+            raise FileNotFoundError(file_token)
+        ext = os.path.splitext(file_token)[1].lower()
+        if ext and ext not in CERT_EXTS:
+            raise FileNotFoundError(file_token)
+        base = _user_dir(user_id).resolve()
+        p = (base / file_token).resolve()
+        if p.parent != base or not p.is_file():
+            raise FileNotFoundError(file_token)
+        return p
+
+    def delete(self, user_id: int, file_token: str) -> None:
+        try:
+            self.path(user_id, file_token).unlink()
+        except FileNotFoundError:
+            pass
+
+    def cleanup(self, user_id: int, keep_tokens: set[str]) -> int:
+        removed = 0
+        try:
+            for p in _user_dir(user_id).iterdir():
+                if p.is_file() and p.name not in keep_tokens:
+                    try:
+                        p.unlink()
+                        removed += 1
+                    except OSError:
+                        pass
+        except FileNotFoundError:
+            pass
+        return removed
+
+
+class S3CertStorage(CertStorage):
+    """对象存储实现占位 (生产多实例部署时接入 S3/MinIO)。
+
+    本期不引入 boto3 依赖, 仅定义接口契约; 接入时实现 save/path/delete/cleanup,
+    并把 get_cert_storage() 工厂的默认实现切换为 S3 (保留本地 fallback)。
+    """
+
+    def __init__(self, bucket: str = "", prefix: str = "certs/"):
+        self.bucket = bucket
+        self.prefix = prefix
+
+    def save(self, user_id, filename, data):
+        raise NotImplementedError("S3CertStorage 待接入 boto3 后实现")
+
+    def path(self, user_id, file_token):
+        raise NotImplementedError("S3CertStorage 待接入 boto3 后实现")
+
+    def delete(self, user_id, file_token):
+        raise NotImplementedError("S3CertStorage 待接入 boto3 后实现")
+
+    def cleanup(self, user_id, keep_tokens):
+        raise NotImplementedError("S3CertStorage 待接入 boto3 后实现")
+
+
+_default_storage: CertStorage | None = None
+
+
+def get_cert_storage() -> CertStorage:
+    """获取默认证书存储实现 (本期为 LocalCertStorage, 可按配置切换)。"""
+    global _default_storage
+    if _default_storage is None:
+        from src.config import settings
+        storage_type = getattr(settings, "cert_storage_type", "local")
+        if storage_type == "s3":
+            bucket = getattr(settings, "cert_s3_bucket", "")
+            _default_storage = S3CertStorage(bucket=bucket)
+        else:
+            _default_storage = LocalCertStorage()
+    return _default_storage
 

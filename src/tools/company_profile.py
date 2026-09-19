@@ -98,7 +98,7 @@ def _norm_items(items: list, keys: tuple) -> list[dict]:
 # ---------- CRUD ----------
 
 def get_profile(user_id: int) -> dict:
-    """取账号档案; 无记录/PG 不可用时返回空骨架。"""
+    """取账号档案; 无记录/PG 不可用时返回空骨架。敏感字段出库后解密为明文(业务用)。"""
     from src.database.postgresql_client import postgresql_client
     if not postgresql_client.ready:
         return dict(EMPTY_PROFILE)
@@ -115,19 +115,33 @@ def get_profile(user_id: int) -> dict:
     for f in JSON_FIELDS:
         v = row.get(f)
         raw[f] = v if isinstance(v, list) else []
+    # R10: 敏感字段解密为明文 (历史明文自动兼容)
+    from src.tools.field_crypto import decrypt_sensitive
+    raw = decrypt_sensitive(raw)
     # 过白名单归一化, 保证 certs/业绩项字段形状一致 (历史数据/新附件键兼容)
     return _norm(raw)
 
 
 def upsert_profile(user_id: int, data: dict) -> dict:
-    """全量更新档案 (未提供字段置空), 返回最新档案。"""
+    """全量更新档案 (未提供字段置空), 返回最新档案。敏感字段入库前加密。"""
     from src.database.postgresql_client import postgresql_client
+    from src.tools.field_crypto import encrypt_sensitive, SENSITIVE_FIELDS
     p = _norm(data)
     if not postgresql_client.ready:
         raise RuntimeError("PostgreSQL 未就绪")
+    # R10 操作审计 + 掩码回传保护: 取旧明文, 敏感字段若为掩码(含 *)则保留旧值
+    old = get_profile(user_id)
+    for f in SENSITIVE_FIELDS:
+        if isinstance(p.get(f), str) and "*" in p[f] and old.get(f):
+            p[f] = old[f]
+    changed = [f for f in PROFILE_FIELDS if (p.get(f) or "") != (old.get(f) or "")]
+    if changed or (p.get("certs") != old.get("certs")) or (p.get("past_projects") != old.get("past_projects")):
+        logger.info("企业资料更新审计 user_id=%s changed_fields=%s", user_id, changed)
+    # R10: 敏感字段加密后入库
+    p_enc = encrypt_sensitive(p)
     params: dict = {"uid": user_id}
     for f in PROFILE_FIELDS:
-        params[f] = p[f]
+        params[f] = p_enc[f]
     params["certs"] = json.dumps(p["certs"], ensure_ascii=False)
     params["past_projects"] = json.dumps(p["past_projects"], ensure_ascii=False)
     cols = ", ".join(PROFILE_FIELDS)

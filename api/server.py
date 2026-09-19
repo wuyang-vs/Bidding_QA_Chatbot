@@ -699,10 +699,13 @@ class CompanyProfileRequest(BaseModel):
 
 @app.get("/api/profile")
 def get_profile(user: dict = Depends(get_current_user_required)):
-    """读取当前登录账号的企业资料档案。"""
+    """读取当前登录账号的企业资料档案 (敏感字段掩码展示)。"""
     from src.tools.company_profile import get_profile, profile_completeness
+    from src.tools.field_crypto import mask_profile
     profile = get_profile(user["id"])
-    return {"profile": profile, "completeness": profile_completeness(profile)}
+    # R10: 敏感字段 (银行账号/电话/邮箱/法人) 掩码后下发, 业务侧(标书生成)仍用明文
+    masked = mask_profile(profile)
+    return {"profile": masked, "completeness": profile_completeness(profile)}
 
 
 @app.put("/api/profile")
@@ -986,6 +989,7 @@ def bid_matrix(req: BidMatrixRequest,
         "hard_failures": matrix["hard_failures"],
         "verdict": matrix["verdict"],
         "markdown": matrix_md,
+        "cached": matrix.get("cached", False),
     }
 
 

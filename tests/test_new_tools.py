@@ -502,7 +502,7 @@ class TestCertOcr:
         assert cert_ocr.cert_file_path(7, saved2["file_token"]).is_file()
 
     def test_ocr_image_uses_rapidocr(self, monkeypatch):
-        """图片字节 → cv2 解码 → RapidOCR 结果按行拼接 (引擎 mock, 不拉模型)。"""
+        """图片字节 → 预处理 → cv2 解码 → RapidOCR 结果按行拼接 (引擎 mock, 不拉模型)。"""
         from src.tools import cert_ocr
 
         fake_engine = MagicMock()
@@ -513,7 +513,138 @@ class TestCertOcr:
         fake_cv2 = MagicMock()
         fake_cv2.imdecode.return_value = "IMG"
         monkeypatch.setattr("cv2.imdecode", fake_cv2.imdecode)
+        # 预处理涉及真实 cv2, 这里 mock 掉只验证引擎调用链
+        monkeypatch.setattr(cert_ocr, "_preprocess_image", lambda x: x)
 
         text = cert_ocr._ocr_image_bytes(b"fake-bytes")
         assert "X-1" in text and "2029-09-09" in text
         fake_engine.assert_called_once_with("IMG")
+
+
+# ==================== R9: 对照表结构校验 + 缓存 ====================
+
+class TestMatrixValidation:
+    def test_validate_row_drops_empty_requirement(self):
+        from src.tools.requirement_matrix import _validate_row
+        assert _validate_row({"requirement": "  "}, 1) is None
+
+    def test_validate_row_fixes_invalid_status_and_category(self):
+        from src.tools.requirement_matrix import _validate_row
+        r = _validate_row({"requirement": "具备资质", "status": "FOO",
+                           "category": "未知类别"}, 1)
+        assert r["status"] == "NO_RESPONSE"
+        assert r["category"] == "其他"
+
+    def test_validate_row_material_heuristic(self):
+        from src.tools.requirement_matrix import _validate_row
+        # 无实质性关键词 → material 强制 false
+        r = _validate_row({"requirement": "提供售后服务", "material": True}, 1)
+        assert r["material"] is False
+        # 含"必须" → material 保留 true
+        r2 = _validate_row({"requirement": "必须具有独立法人资格", "material": True}, 1)
+        assert r2["material"] is True
+
+
+class TestMatrixCache:
+    def test_cache_hit_same_input(self, monkeypatch):
+        from src.tools import requirement_matrix as rm
+        rm.clear_matrix_cache()
+        calls = {"n": 0}
+
+        class FakeLLM:
+            def chat(self, msgs, temperature=0.1):
+                calls["n"] += 1
+                return '{"rows":[{"no":"1","requirement":"必须满足资质","category":"资格","material":true,"response":"已具备","status":"SATISFIED","evidence":"c1","note":""}]}'
+
+        tender = {"db_id": 99, "qualification_requirements": []}
+        m1 = rm.build_requirement_matrix(tender, "招标原文", "投标稿", llm_client=FakeLLM())
+        m2 = rm.build_requirement_matrix(tender, "招标原文", "投标稿", llm_client=FakeLLM())
+        assert m1["cached"] is False
+        assert m2["cached"] is True
+        assert calls["n"] == 1  # 第二次命中缓存, 不调 LLM
+
+    def test_cache_miss_different_bid(self, monkeypatch):
+        from src.tools import requirement_matrix as rm
+        rm.clear_matrix_cache()
+        calls = {"n": 0}
+
+        class FakeLLM:
+            def chat(self, msgs, temperature=0.1):
+                calls["n"] += 1
+                return '{"rows":[{"no":"1","requirement":"必须满足资质","category":"资格","material":true,"response":"x","status":"SATISFIED","evidence":"","note":""}]}'
+
+        tender = {"db_id": 99, "qualification_requirements": []}
+        rm.build_requirement_matrix(tender, "招标原文", "投标稿A", llm_client=FakeLLM())
+        m = rm.build_requirement_matrix(tender, "招标原文", "投标稿B", llm_client=FakeLLM())
+        assert m["cached"] is False
+        assert calls["n"] == 2
+
+
+# ==================== R10: 敏感字段加密 + 掩码 ====================
+
+class TestFieldCrypto:
+    def test_encrypt_decrypt_roundtrip(self):
+        from src.tools.field_crypto import encrypt_field, decrypt_field, is_encrypted
+        ct = encrypt_field("6222021234567890123")
+        assert ct != "6222021234567890123"
+        assert ct.startswith("gAAAAA")
+        assert is_encrypted(ct)
+        assert decrypt_field(ct) == "6222021234567890123"
+
+    def test_no_double_encrypt(self):
+        from src.tools.field_crypto import encrypt_field
+        ct1 = encrypt_field("123456")
+        ct2 = encrypt_field(ct1)
+        assert ct1 == ct2  # 已加密的不再二次加密
+
+    def test_decrypt_plaintext_passthrough(self):
+        from src.tools.field_crypto import decrypt_field
+        # 历史明文数据原样返回 (向后兼容)
+        assert decrypt_field("明文银行账号") == "明文银行账号"
+
+    def test_mask_value(self):
+        from src.tools.field_crypto import mask_value
+        assert mask_value("bank_account", "6222021234567890") == "************7890"
+        assert mask_value("contact_phone", "13812345678") == "138****5678"
+        assert mask_value("contact_email", "zhangsan@example.com") == "z***@example.com"
+        assert mask_value("legal_person", "张三丰") == "张**"
+
+    def test_encrypt_decrypt_sensitive(self):
+        from src.tools.field_crypto import encrypt_sensitive, decrypt_sensitive
+        p = {"company_name": "华信", "bank_account": "6222", "contact_phone": "13800000000"}
+        enc = encrypt_sensitive(p)
+        assert enc["company_name"] == "华信"  # 非敏感字段不变
+        assert enc["bank_account"].startswith("gAAAAA")
+        dec = decrypt_sensitive(enc)
+        assert dec["bank_account"] == "6222"
+        assert dec["contact_phone"] == "13800000000"
+
+
+# ==================== R11: 证书存储抽象 ====================
+
+class TestCertStorage:
+    def test_default_storage_is_local(self):
+        from src.tools.cert_ocr import get_cert_storage, LocalCertStorage
+        assert isinstance(get_cert_storage(), LocalCertStorage)
+
+    def test_local_storage_save_path_cleanup(self, tmp_path):
+        from src.tools.cert_ocr import LocalCertStorage
+        s = LocalCertStorage()
+        # 临时改存储根目录
+        import src.tools.cert_ocr as co
+        old = co.CERT_UPLOAD_DIR
+        co.CERT_UPLOAD_DIR = tmp_path / "certs"
+        try:
+            saved = s.save(1, "a.png", b"hello")
+            token = saved["file_token"]
+            assert token.endswith(".png")
+            assert s.path(1, token).read_bytes() == b"hello"
+            # 穿越校验
+            import pytest
+            with pytest.raises(FileNotFoundError):
+                s.path(1, "../etc/passwd")
+            # cleanup 孤儿
+            assert s.cleanup(1, {token}) == 0
+            assert s.cleanup(1, set()) == 1
+        finally:
+            co.CERT_UPLOAD_DIR = old

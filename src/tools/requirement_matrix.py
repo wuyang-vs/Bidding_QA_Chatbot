@@ -8,9 +8,12 @@ LLM 失败时降级: 用 qualification_requirements + 关键词包含做确定�
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import re
+import threading
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +55,83 @@ def _clean_cell(s: object) -> str:
     return re.sub(r"\s+", " ", s)
 
 
+# ---- R9: 行结构校验 + material 启发式校正 ----
+_CATEGORIES = {"资格", "商务", "技术", "交付", "售后", "其他"}
+# 实质性条款关键词: 带★/实质性/必须/废标/否决/否则/不得/应当
+_MATERIAL_KW = re.compile(r"(★|实质性|必须|废标|否决|否则|不得|应当|资格条件|资质要求)")
+
+
+def _validate_row(r: dict, idx: int) -> dict | None:
+    """校验 LLM 返回的单行; 结构不合规返回 None (丢弃), 字段超限/非法就地修正。"""
+    if not isinstance(r, dict):
+        return None
+    requirement = _clean_cell(r.get("requirement"))[:80]
+    if not requirement:
+        return None  # 无要求文本的行丢弃
+    status = str(r.get("status", "")).upper()
+    if status not in STATUS_MAP:
+        status = "NO_RESPONSE"
+    category = _clean_cell(r.get("category"))[:10]
+    if category not in _CATEGORIES:
+        category = "其他"
+    material = bool(r.get("material"))
+    # 启发式校正: 要求文本含实质性关键词才算 material=true, 防 LLM 乱标
+    if material and not _MATERIAL_KW.search(requirement):
+        material = False
+    return {
+        "no": str(r.get("no") or idx),
+        "requirement": requirement,
+        "category": category,
+        "material": material,
+        "response": _clean_cell(r.get("response"))[:120],
+        "status": status,
+        "evidence": _clean_cell(r.get("evidence"))[:40],
+        "note": _clean_cell(r.get("note"))[:60],
+    }
+
+
+# ---- R9: 内存 TTL 缓存 (db_id + bid_hash → matrix) ----
+_MATRIX_CACHE: dict[str, tuple[float, dict]] = {}
+_MATRIX_CACHE_TTL = 3600  # 1 小时
+_MATRIX_CACHE_MAX = 64
+_cache_lock = threading.Lock()
+
+
+def _cache_key(db_id: int | None, tender_blob: str, bid_blob: str) -> str:
+    h = hashlib.sha256()
+    h.update(str(db_id or 0).encode())
+    h.update(tender_blob[:_MAX_TENDER_CHARS].encode("utf-8"))
+    h.update(bid_blob[:_MAX_BID_CHARS].encode("utf-8"))
+    return h.hexdigest()[:32]
+
+
+def _cache_get(key: str) -> dict | None:
+    with _cache_lock:
+        item = _MATRIX_CACHE.get(key)
+        if item is None:
+            return None
+        ts, val = item
+        if time.time() - ts > _MATRIX_CACHE_TTL:
+            _MATRIX_CACHE.pop(key, None)
+            return None
+        return val
+
+
+def _cache_set(key: str, val: dict) -> None:
+    with _cache_lock:
+        if len(_MATRIX_CACHE) >= _MATRIX_CACHE_MAX:
+            # 淘汰最旧的一项
+            oldest = min(_MATRIX_CACHE.items(), key=lambda kv: kv[1][0])
+            _MATRIX_CACHE.pop(oldest[0], None)
+        _MATRIX_CACHE[key] = (time.time(), val)
+
+
+def clear_matrix_cache() -> None:
+    """测试/运维用: 清空对照表缓存。"""
+    with _cache_lock:
+        _MATRIX_CACHE.clear()
+
+
 def _fallback_rows(tender: dict, bid_md: str) -> list[dict]:
     """LLM 不可用时的确定性降级: 资质要求逐条做关键词包含匹配。"""
     rows = []
@@ -73,12 +153,12 @@ def _fallback_rows(tender: dict, bid_md: str) -> list[dict]:
 
 
 def build_requirement_matrix(tender: dict, raw_text: str, bid_markdown: str,
-                             llm_client=None) -> dict:
+                             llm_client=None, use_cache: bool = True) -> dict:
     """生成逐条响应对照矩阵。
 
     Returns:
         {rows, summary: {total, red, warn, hard_failures, status_counts},
-         hard_failures: [rows...], verdict: pass|warn|fail}
+         hard_failures: [rows...], verdict: pass|warn|fail, cached: bool}
     """
     if llm_client is None:
         from src.clients.llm_factory import get_llm_client
@@ -91,6 +171,14 @@ def build_requirement_matrix(tender: dict, raw_text: str, bid_markdown: str,
         tender_blob = _summarize_tender_info(tender)
     tender_blob = tender_blob[:_MAX_TENDER_CHARS]
     bid_blob = (bid_markdown or "")[:_MAX_BID_CHARS]
+
+    # R9: 内存 TTL 缓存 (相同招标原文 + 相同投标稿直接复用, 跳过 LLM)
+    if use_cache:
+        key = _cache_key(tender.get("db_id"), tender_blob, bid_blob)
+        cached = _cache_get(key)
+        if cached is not None:
+            logger.info("对照表命中缓存 (db_id=%s, bid %d 字)", tender.get("db_id"), len(bid_blob))
+            return {**cached, "cached": True}
 
     user_msg = (
         f"【招标文件】\n{tender_blob}\n\n"
@@ -108,19 +196,9 @@ def build_requirement_matrix(tender: dict, raw_text: str, bid_markdown: str,
         cleaned = re.sub(r"\s*```$", "", cleaned)
         parsed = json.loads(cleaned)
         for i, r in enumerate(parsed.get("rows", []), 1):
-            status = str(r.get("status", "")).upper()
-            if status not in STATUS_MAP:
-                status = "NO_RESPONSE"
-            rows.append({
-                "no": str(r.get("no") or i),
-                "requirement": _clean_cell(r.get("requirement"))[:80],
-                "category": _clean_cell(r.get("category"))[:10] or "其他",
-                "material": bool(r.get("material")),
-                "response": _clean_cell(r.get("response"))[:120],
-                "status": status,
-                "evidence": _clean_cell(r.get("evidence"))[:40],
-                "note": _clean_cell(r.get("note"))[:60],
-            })
+            valid = _validate_row(r, i)
+            if valid:
+                rows.append(valid)
     except Exception as e:
         logger.warning("响应对照矩阵 LLM 失败, 降级关键词匹配: %s", e)
         rows = _fallback_rows(tender, bid_blob)
@@ -144,7 +222,7 @@ def build_requirement_matrix(tender: dict, raw_text: str, bid_markdown: str,
     else:
         verdict = "pass"
 
-    return {
+    matrix = {
         "rows": rows,
         "summary": {
             "total": len(rows), "red": red, "warn": warn,
@@ -154,6 +232,9 @@ def build_requirement_matrix(tender: dict, raw_text: str, bid_markdown: str,
         "hard_failures": hard_failures,
         "verdict": verdict,
     }
+    if use_cache:
+        _cache_set(key, matrix)
+    return {**matrix, "cached": False}
 
 
 def render_matrix_markdown(matrix: dict) -> str:
