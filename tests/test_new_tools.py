@@ -1010,3 +1010,108 @@ class TestAuditLog:
             audit_meta={"username": "u"})
         assert not any("INSERT INTO audit_logs" in s for s, _ in fake.calls), \
             "无字段变化不应写审计"
+
+
+# ========== R13 异常预警问答解释层 ==========
+
+class TestAnomalyCatalog:
+    def test_all_codes_have_required_fields(self):
+        from src.tools.anomaly_catalog import ANOMALY_CATALOG, list_all_codes
+        assert len(list_all_codes()) >= 10
+        for code, entry in ANOMALY_CATALOG.items():
+            assert entry.get("summary"), f"{code} 缺 summary"
+            assert entry.get("causes"), f"{code} 缺 causes"
+            assert entry.get("impact"), f"{code} 缺 impact"
+            assert entry.get("actions"), f"{code} 缺 actions"
+            # 法律依据可选但大多数应有
+
+    def test_get_guidance_exact_and_case_insensitive(self):
+        from src.tools.anomaly_catalog import get_anomaly_guidance
+        e = get_anomaly_guidance("SUM_MISMATCH")
+        assert e and e["code"] == "SUM_MISMATCH"
+        assert "分项合计" in e["summary"]
+        # 大小写不敏感兜底
+        assert get_anomaly_guidance("sum_mismatch") is not None
+        # 未知 code 返回 None
+        assert get_anomaly_guidance("NOT_EXIST") is None
+        assert get_anomaly_guidance("") is None
+
+    def test_format_text_contains_sections(self):
+        from src.tools.anomaly_catalog import get_anomaly_guidance, format_guidance_text
+        e = get_anomaly_guidance("OVER_CONTROL_PRICE")
+        text = format_guidance_text(e)
+        assert "【问题说明】" in text
+        assert "【处置建议】" in text
+        assert "【法规依据】" in text
+        assert "废标" in text or "否决" in text
+
+    def test_explain_anomaly_tool_executor(self):
+        from src.tools.bid_agent_tools import _exec_explain_anomaly
+        text, srcs = _exec_explain_anomaly({"code": "CN_MISMATCH"}, "")
+        assert "大写" in text and "处置建议" in text
+        # 空 code
+        text2, _ = _exec_explain_anomaly({"code": ""}, "")
+        assert "请提供" in text2
+        # 未知 code → 返回已知编码列表
+        text3, _ = _exec_explain_anomaly({"code": "XYZ"}, "")
+        assert "SUM_MISMATCH" in text3
+
+
+# ========== R14 范本智能推荐 ==========
+
+class TestTemplatesCatalog:
+    def test_recommend_matches_engineering(self):
+        from src.tools.templates_catalog import recommend_templates
+        res = recommend_templates("工程施工项目招标")
+        assert res, "工程施工应能命中范本"
+        assert res[0]["id"] == "TPL-BID-001"
+        assert res[0]["score"] > 0
+
+    def test_recommend_category_filter(self):
+        from src.tools.templates_catalog import recommend_templates
+        res = recommend_templates("工程施工", category="合同范本")
+        assert all(r["category"] == "合同范本" for r in res)
+        assert res[0]["id"] == "TPL-CON-001"
+
+    def test_recommend_no_match(self):
+        from src.tools.templates_catalog import recommend_templates
+        res = recommend_templates("量子加密通信卫星")
+        assert res == []
+
+    def test_get_template_and_list_categories(self):
+        from src.tools.templates_catalog import get_template, list_categories
+        t = get_template("TPL-FRM-001")
+        assert t and "投标函" in t["name"]
+        assert get_template("NOPE") is None
+        assert set(list_categories()) == {"招标文件", "合同范本", "业务表单"}
+
+    def test_recommend_template_tool_executor(self):
+        from src.tools.bid_agent_tools import _exec_recommend_template
+        text, _ = _exec_recommend_template({"query": "政府采购货物"}, "")
+        assert "TPL-BID-002" in text and "范本" in text
+        # 空 query
+        text2, _ = _exec_recommend_template({"query": "  "}, "")
+        assert "请提供" in text2
+
+    def test_endpoints_anomaly_and_templates(self):
+        from fastapi.testclient import TestClient
+        from api.server import app
+        c = TestClient(app)
+        # 异常解释
+        r = c.post("/api/anomaly/explain", json={"code": "OVER_CONTROL_PRICE"})
+        assert r.status_code == 200 and "废标" in r.json()["impact"]
+        assert c.post("/api/anomaly/explain", json={"code": "ZZZ"}).status_code == 404
+        # 批量
+        rb = c.post("/api/anomaly/explain_batch",
+                    json={"codes": ["SUM_MISMATCH", "NOPE"]})
+        items = rb.json()["items"]
+        assert items[0]["found"] is True and items[1]["found"] is False
+        # 范本推荐 (含"招标"意图词 → 招标文件范本优先)
+        rt = c.post("/api/templates/recommend", json={"query": "工程施工项目招标"})
+        assert rt.json()["items"][0]["id"] == "TPL-BID-001"
+        # 范本详情
+        assert c.get("/api/templates/TPL-BID-001").status_code == 200
+        assert c.get("/api/templates/NOPE").status_code == 404
+        # 列表
+        rl = c.get("/api/templates")
+        assert rl.json()["categories"] == ["业务表单", "合同范本", "招标文件"]

@@ -225,6 +225,20 @@ class AskRequest(BaseModel):
     top_k: int = 5
 
 
+class AnomalyExplainRequest(BaseModel):
+    code: str
+
+
+class AnomalyExplainBatchRequest(BaseModel):
+    codes: list[str]
+
+
+class TemplateRecommendRequest(BaseModel):
+    query: str
+    category: str | None = None
+    top_k: int = 5
+
+
 class VisionRequest(BaseModel):
     image_base64: str
     prompt: str = "请详细描述这张图片的内容"
@@ -287,6 +301,51 @@ def ask(req: AskRequest,
     from src.auth.access_scope import use_access_scope
     with use_access_scope(user):
         return rag_pipeline.ask(req.question, req.top_k)
+
+
+# ============ R13 异常预警问答解释层 ============
+
+@app.post("/api/anomaly/explain")
+def anomaly_explain(req: AnomalyExplainRequest):
+    from src.tools.anomaly_catalog import get_anomaly_guidance
+    entry = get_anomaly_guidance(req.code)
+    if not entry:
+        raise HTTPException(404, f"未找到 code={req.code} 的解释")
+    return entry
+
+
+@app.post("/api/anomaly/explain_batch")
+def anomaly_explain_batch(req: AnomalyExplainBatchRequest):
+    from src.tools.anomaly_catalog import get_anomaly_guidance
+    results = []
+    for code in req.codes:
+        entry = get_anomaly_guidance(code)
+        results.append({"code": code, "found": entry is not None, "entry": entry})
+    return {"items": results}
+
+
+# ============ R14 范本智能推荐 ============
+
+@app.post("/api/templates/recommend")
+def templates_recommend(req: TemplateRecommendRequest):
+    from src.tools.templates_catalog import recommend_templates
+    items = recommend_templates(req.query, category=req.category, top_k=req.top_k)
+    return {"items": items, "total": len(items)}
+
+
+@app.get("/api/templates/{tid}")
+def templates_detail(tid: str):
+    from src.tools.templates_catalog import get_template
+    t = get_template(tid)
+    if not t:
+        raise HTTPException(404, f"未找到范本 {tid}")
+    return t
+
+
+@app.get("/api/templates")
+def templates_list():
+    from src.tools.templates_catalog import TEMPLATES, list_categories
+    return {"categories": list_categories(), "items": TEMPLATES}
 
 
 MAX_IMAGE_BASE64_CHARS = 4_000_000

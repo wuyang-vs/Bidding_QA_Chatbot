@@ -14,6 +14,8 @@ from src.tools.base import BaseTool
 from src.tools.bid_generator import SECTIONS, generate_section
 from src.tools.bid_service import row_to_tender
 from src.tools.company_profile import get_profile
+from src.tools.anomaly_catalog import get_anomaly_guidance, format_guidance_text
+from src.tools.templates_catalog import recommend_templates, get_template
 
 logger = logging.getLogger(__name__)
 
@@ -129,3 +131,85 @@ BID_AGENT_EXECUTORS = {
     "list_bid_documents": _exec_list_bid_documents,
     "generate_bid_draft": _exec_generate_bid_draft,
 }
+
+
+# ============ R13: 异常预警问答解释 ============
+
+class ExplainAnomaly(BaseTool):
+    name: str = "explain_anomaly"
+    description: str = (
+        "解释某条异常预警的原因、影响、处置建议与法规依据。"
+        "当用户询问报价异常/围串标线索/资格不符/废标等预警的含义或如何修改时，"
+        "传入该异常的 code（如 SUM_MISMATCH / OVER_CONTROL_PRICE / jaccard_text）"
+        "返回权威解释，不要自行编造。")
+    parameters: dict = {
+        "type": "object",
+        "properties": {
+            "code": {"type": "string",
+                     "description": "异常编码，如 SUM_MISMATCH/CN_MISMATCH/OVER_CONTROL_PRICE/ROW_ARITHMETIC/jaccard_text/QUALIFICATION_FAIL/REJECTION_CLAUSE"},
+        },
+        "required": ["code"],
+    }
+
+
+def _exec_explain_anomaly(args, question):
+    code = (args.get("code") or "").strip()
+    if not code:
+        return "请提供异常 code（如 SUM_MISMATCH、OVER_CONTROL_PRICE）", []
+    entry = get_anomaly_guidance(code)
+    if not entry:
+        return (f"暂无 code={code} 的标准解释。已知异常编码: "
+                f"SUM_MISMATCH/CN_MISMATCH/CN_UNPARSEABLE/OVER_CONTROL_PRICE/"
+                f"ROW_ARITHMETIC/jaccard_text/identical_line_items/"
+                f"metadata_author/QUALIFICATION_FAIL/REJECTION_CLAUSE/DEVIATION_MAJOR",
+                [])
+    return format_guidance_text(entry), []
+
+
+BID_AGENT_TOOLS.append(ExplainAnomaly())
+BID_AGENT_EXECUTORS["explain_anomaly"] = _exec_explain_anomaly
+
+
+# ============ R14: 范本智能推荐 ============
+
+class RecommendTemplate(BaseTool):
+    name: str = "recommend_template"
+    description: str = (
+        "根据用户描述的项目类型或需求，智能推荐招标文件范本/合同范本/业务表单。"
+        "当用户问\"XX项目用什么招标文件/合同/表单\"或索要范本时调用。"
+        "query 填项目类型或关键词（如\"工程施工\"、\"货物采购\"、\"设计服务\"）。")
+    parameters: dict = {
+        "type": "object",
+        "properties": {
+            "query": {"type": "string", "description": "项目类型或需求关键词"},
+            "category": {"type": "string",
+                         "enum": ["招标文件", "合同范本", "业务表单"],
+                         "description": "范本类别，可留空"},
+            "top_k": {"type": "integer", "description": "返回数量, 默认5"},
+        },
+        "required": ["query"],
+    }
+
+
+def _exec_recommend_template(args, question):
+    query = (args.get("query") or "").strip()
+    category = (args.get("category") or "").strip() or None
+    top_k = args.get("top_k") or 5
+    if not query:
+        return "请提供项目类型或需求关键词（如\"工程施工\"、\"政府采购货物\"）", []
+    results = recommend_templates(query, category=category, top_k=top_k)
+    if not results:
+        return f"未匹配到「{query}」相关范本，可尝试更通用的关键词或不限定 category", []
+    lines = [f"为你推荐 {len(results)} 份相关范本:"]
+    for r in results:
+        lines.append(
+            f"- [{r['id']}] {r['name']}（类别: {r['category']}，匹配度 {r['score']}）\n"
+            f"  摘要: {r['summary']}\n"
+            f"  章节: {'、'.join(r.get('sections', [])[:3])}{'...' if len(r.get('sections', [])) > 3 else ''}\n"
+            f"  来源: {r.get('source_url', '-')}")
+    lines.append("\n如需某份范本的完整章节清单，告知其 id（如 TPL-BID-001）。")
+    return "\n".join(lines), []
+
+
+BID_AGENT_TOOLS.append(RecommendTemplate())
+BID_AGENT_EXECUTORS["recommend_template"] = _exec_recommend_template
