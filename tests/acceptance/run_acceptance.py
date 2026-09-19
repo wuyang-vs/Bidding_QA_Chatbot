@@ -1325,6 +1325,100 @@ def t():
     return {"note": "工程施工招标首推TPL-BID-001/类别过滤生效/详情含章节/列表3类≥10份"}
 
 
+@case("V20异议投诉咨询", "APPEAL-01", "异议投诉咨询: 渠道/时限/材料/流程/法规检索 + 政采质疑区分")
+def t():
+    # 1) 中标结果异议 → 公示期间+3日答复
+    s, d = http("POST", "/api/appeal/consult",
+                {"query": "对中标候选人评标结果有异议怎么办"}, timeout=15)
+    assert s == 200, f"异议咨询失败 {s} {str(d)[:200]}"
+    items = d["items"]
+    assert items, "应检索到相关主题"
+    assert items[0]["code"] == "APPEAL_RESULT", f"评标结果异议应首推 APPEAL_RESULT, 实际 {items[0]['code']}"
+    assert "公示" in items[0]["deadline"] and "3 日" in items[0]["deadline"]
+    assert items[0]["steps"] and items[0]["legal_basis"]
+
+    # 2) 投诉材料 → COMPLAINT_MATERIALS 命中且材料清单非空
+    s, d = http("POST", "/api/appeal/consult",
+                {"query": "投诉书需要哪些材料怎么写"}, timeout=15)
+    assert s == 200
+    codes = [x["code"] for x in d["items"]]
+    assert "COMPLAINT_MATERIALS" in codes, f"应命中投诉材料主题, 实际 {codes}"
+    mat = next(x for x in d["items"] if x["code"] == "COMPLAINT_MATERIALS")
+    assert len(mat["materials"]) >= 5
+
+    # 3) 投诉流程详情: 异议前置/10日/行政监督部门/第六十条
+    s, d = http("GET", "/api/appeal/topics/COMPLAINT_PROCESS", timeout=15)
+    assert s == 200
+    assert "行政监督部门" in d["channel"]
+    assert "10 日" in d["deadline"]
+    assert "第六十条" in d["legal_basis"]
+    assert any("异议" in st for st in d["steps"])
+    # 不存在的主题 404
+    assert http("GET", "/api/appeal/topics/NOPE")[0] == 404
+
+    # 4) 主题列表分类齐全
+    s, d = http("GET", "/api/appeal/topics", timeout=15)
+    assert s == 200
+    assert len(d["items"]) >= 10
+    assert {"异议", "投诉", "政府采购"} <= set(d["categories"])
+
+    # 5) 政府采购质疑 → 财政渠道+工作日时限, 与工程招投标区分
+    s, d = http("POST", "/api/appeal/consult",
+                {"query": "政府采购供应商怎么质疑投诉"}, timeout=15)
+    assert s == 200
+    top = d["items"][0]
+    assert top["code"] == "GOV_CHALLENGE", f"政采质疑应首推 GOV_CHALLENGE, 实际 {top['code']}"
+    assert "财政" in top["channel"]
+    assert "7 个工作日" in top["deadline"] and "15 个工作日" in top["deadline"]
+    return {"note": "结果异议3日答复/投诉材料≥5项/投诉流程含异议前置与第六十条/政采质疑走财政7+15工作日/列表≥10主题"}
+
+
+@case("V20操作智能引导", "GUIDE-01", "操作引导: 识别当前操作阶段并给出针对性步骤 + 三类角色流程")
+def t():
+    # 1) 上传失败 → 定位到 GW-BID-UPLOAD 的加密上传阶段
+    s, d = http("POST", "/api/guide/recognize",
+                {"query": "投标文件上传失败怎么办"}, timeout=15)
+    assert s == 200, f"阶段识别失败 {s} {str(d)[:200]}"
+    assert d["workflow"]["id"] == "GW-BID-UPLOAD"
+    assert d["stage"]["id"] == "up-3" and d["stage_locked"] is True
+    assert d["prev_stage"] and d["next_stage"]
+    assert d["stage"]["actions"] and d["stage"]["common_errors"]
+
+    # 2) 开标解密 → GW-DECRYPT/dec-2, 前后阶段衔接
+    s, d = http("POST", "/api/guide/recognize",
+                {"query": "开标时怎么在线解密"}, timeout=15)
+    assert s == 200
+    assert d["workflow"]["id"] == "GW-DECRYPT" and d["stage"]["id"] == "dec-2"
+    assert d["prev_stage"] == "准时进入开标大厅"
+    blob = json.dumps(d, ensure_ascii=False)
+    assert "同一把" in blob  # 加密解密同一把 CA 的关键提示
+
+    # 3) 仅说角色 → 命中流程但不锁定阶段(stage_locked=False)
+    s, d = http("POST", "/api/guide/recognize",
+                {"query": "评标专家"}, timeout=15)
+    assert s == 200
+    assert d["workflow"]["id"] == "GW-EXPERT" and d["stage_locked"] is False
+
+    # 4) 招标人发布公告阶段
+    s, d = http("POST", "/api/guide/recognize",
+                {"query": "怎么发布招标公告"}, timeout=15)
+    assert s == 200
+    assert d["workflow"]["role"] == "招标人" and d["stage"]["id"] == "tdr-3"
+
+    # 5) 无法识别 404
+    assert http("POST", "/api/guide/recognize", {"query": "xyz123无关内容"})[0] == 404
+
+    # 6) 流程列表三类角色 ≥7 流程; 专家流程详情 5 阶段
+    s, d = http("GET", "/api/guide/workflows", timeout=15)
+    assert s == 200
+    assert set(d["roles"]) == {"投标人", "招标人", "评标专家"}
+    assert d["total"] >= 7
+    s, d = http("GET", "/api/guide/workflows/GW-EXPERT", timeout=15)
+    assert s == 200 and len(d["stages"]) == 5
+    assert http("GET", "/api/guide/workflows/NOPE")[0] == 404
+    return {"note": "上传失败定位up-3/开标解密dec-2含同一把CA提示/仅角色不锁定阶段/招标人tdr-3/三角色≥7流程/404"}
+
+
 # ================= main =================
 
 def main():
