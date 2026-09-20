@@ -561,8 +561,8 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 | **tests/test_tool_text_parsing.py** | 伪工具调用文本检测/解析 14 项（V2.3 新增全角 `｜｜DSML｜｜` 变体检测与 invoke/parameter 解析 2 项） |
 | acceptance/sample_multipage.pdf | META-01 用 2 页中文 PDF 夹具 |
 | eval/retrieval_cases.json | 17 条检索评测用例（招标事实 7/企业 3/法规 7） |
-| eval/run_retrieval_eval.py | 纯检索评测脚本（HitRate/漏检/MRR/引用准确率/证据覆盖，--min-hitrate 门禁） |
-| eval/retrieval_eval_report.json/.md | 基线报告（HitRate@5=100%） |
+| eval/run_retrieval_eval.py | 纯检索评测脚本（HitRate/漏检/MRR/nDCG/引用准确率/证据覆盖，--topk 可调、--min-hitrate 门禁） |
+| eval/retrieval_eval_report.json/.md | 检索评测报告（最新 top-K=20 复跑：HitRate=100%/MRR=1.0/nDCG=0.9846） |
 | **eval/agent_eval_cases.json** | **V2.3 Agent 端到端基准 12 题（single_hop/multi_hop/cross_domain 各 4，含 tools_any/tools_required/facts 锚点/note）** |
 | **eval/run_agent_eval.py** | **V2.3 Agent 端到端 HTTP 评测器（逐题 POST /api/chat，exec_log.tool_calls 提取工具→双指标打分→json/md 报告；--base-url/--timeout/--fact-threshold/--min-pass）** |
 | **eval/agent_eval_report.json/.md** | **V2.3 评测报告：11/12 通过、工具选择 1.00、事实覆盖 0.909（单跳4/4、跨域4/4、多跳3/4，E2E-07 gated 波动）** |

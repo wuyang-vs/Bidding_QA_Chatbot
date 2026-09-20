@@ -1,27 +1,31 @@
 {
   "summary": {
     "cases": 17,
-    "top_k": 5,
+    "top_k": 20,
     "hit_rate": 1.0,
     "miss_rate": 0.0,
     "mrr": 1.0,
-    "citation_precision": 0.3294,
+    "ndcg": 0.9846,
+    "citation_precision": 0.0882,
     "evidence_coverage": 1.0,
     "by_domain": {
       "tender_fact": {
         "cases": 7,
         "hit_rate": 1.0,
-        "mrr": 1.0
+        "mrr": 1.0,
+        "ndcg": 0.982
       },
       "enterprise": {
         "cases": 3,
         "hit_rate": 1.0,
-        "mrr": 1.0
+        "mrr": 1.0,
+        "ndcg": 0.9545
       },
       "regulation": {
         "cases": 7,
         "hit_rate": 1.0,
-        "mrr": 1.0
+        "mrr": 1.0,
+        "ndcg": 1.0
       }
     }
   },
@@ -34,7 +38,8 @@
       "rank": 1,
       "rr": 1.0,
       "relevant_in_topk": 2,
-      "precision_at_k": 0.4,
+      "precision_at_k": 0.1,
+      "ndcg": 1.0,
       "evidence_coverage": 1.0,
       "top_sources": [
         {
@@ -76,6 +81,126 @@
           "page_no": null,
           "relevant": false,
           "snippet": "国家广播电视总局282台基础设施配套改造项目的开标地点？ 国正聚源工程咨询集团有限公司（地址：长沙市雨花区华晨国际公馆1栋2301室）"
+        },
+        {
+          "rank": 6,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "国家广播电视总局282台基础设施配套改造项目的采购单位是谁？ 国家广播电视总局282台基础设施配套改造项目的采购单位是国家广播电视总局282台。"
+        },
+        {
+          "rank": 7,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "国家广播电视总局282台基础设施配套改造项目的采购单位是谁？ 国家广播电视总局282台"
+        },
+        {
+          "rank": 8,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "国家广播电视总局282台基础设施配套改造项目的开标地点在哪里？ 国家广播电视总局282台基础设施配套改造项目的开标地点为国正聚源工程咨询集团有限公司（地址：长沙市雨花区华晨国际公馆"
+        },
+        {
+          "rank": 9,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "国家广播电视总局282台基础设施配套改造项目的行政区域是哪里？ 国家广播电视总局282台基础设施配套改造项目的行政区域为长沙县。"
+        },
+        {
+          "rank": 10,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "国家广播电视总局282台基础设施配套改造项目的开标时间是什么时候？ 国家广播电视总局282台基础设施配套改造项目的开标时间为2026年10月08日  14:00。"
+        },
+        {
+          "rank": 11,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "国家广播电视总局282台基础设施配套改造项目的开标时间？ 2026年10月08日  14:00"
+        },
+        {
+          "rank": 12,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "百炼大模型管理平台升级及运维服务项目的预算金额是多少？ ￥110.000000万元（人民币）"
+        },
+        {
+          "rank": 13,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "百炼大模型管理平台升级及运维服务项目的预算金额是多少？ 百炼大模型管理平台升级及运维服务项目的预算金额为￥110.000000万元（人民币）。"
+        },
+        {
+          "rank": 14,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "多功能分液器和非接触式微孔板样品处理系统采购项目的预算金额是多少？ ￥160.000000万元（人民币）"
+        },
+        {
+          "rank": 15,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "高内涵成像分析仪采购项目的预算金额是多少？ ￥280.000000万元（人民币）"
+        },
+        {
+          "rank": 16,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "2026年东北区域国家重点档案修复项目的预算金额是多少？ ￥65.000000万元（人民币）"
+        },
+        {
+          "rank": 17,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的预算金额是多少？ 148万元"
+        },
+        {
+          "rank": 18,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的预算金额是多少？ ￥9971.645796万元（人民币）"
+        },
+        {
+          "rank": 19,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "南开大学实验室设备处智慧安全实验室建设采购项目的预算金额是多少？ ￥150.165000万元（人民币）"
+        },
+        {
+          "rank": 20,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的预算金额是多少？ ￥99.000000万元（人民币）"
         }
       ]
     },
@@ -86,8 +211,9 @@
       "hit": true,
       "rank": 1,
       "rr": 1.0,
-      "relevant_in_topk": 2,
-      "precision_at_k": 0.4,
+      "relevant_in_topk": 3,
+      "precision_at_k": 0.15,
+      "ndcg": 0.8739,
       "evidence_coverage": 1.0,
       "top_sources": [
         {
@@ -129,6 +255,126 @@
           "page_no": null,
           "relevant": false,
           "snippet": "国家广播电视总局282台基础设施配套改造项目的预算金额是多少？ ￥240.430000万元（人民币）"
+        },
+        {
+          "rank": 6,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "国家广播电视总局282台基础设施配套改造项目的采购单位是谁？ 国家广播电视总局282台"
+        },
+        {
+          "rank": 7,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "国家广播电视总局282台基础设施配套改造项目的预算金额是多少？ 国家广播电视总局282台基础设施配套改造项目的预算金额为￥240.430000万元（人民币）。"
+        },
+        {
+          "rank": 8,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "国家广播电视总局282台基础设施配套改造项目的代理机构？ 国正聚源工程咨询集团有限公司"
+        },
+        {
+          "rank": 9,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "国家广播电视总局282台基础设施配套改造项目的代理机构是什么？ 国家广播电视总局282台基础设施配套改造项目的代理机构是国正聚源工程咨询集团有限公司。"
+        },
+        {
+          "rank": 10,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "2026年东北区域国家重点档案修复项目的开标时间？ 2026年10月12日  09:30"
+        },
+        {
+          "rank": 11,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "国家广播电视总局282台基础设施配套改造项目的采购单位是谁？ 国家广播电视总局282台基础设施配套改造项目的采购单位是国家广播电视总局282台。"
+        },
+        {
+          "rank": 12,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "国家广播电视总局282台基础设施配套改造项目的行政区域是哪里？ 国家广播电视总局282台基础设施配套改造项目的行政区域为长沙县。"
+        },
+        {
+          "rank": 13,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "高内涵成像分析仪采购项目的开标时间？ 2026年10月09日  13:30"
+        },
+        {
+          "rank": 14,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "2026年东北区域国家重点档案修复项目的开标时间是什么时候？ 2026年东北区域国家重点档案修复项目的开标时间为2026年10月12日  09:30。"
+        },
+        {
+          "rank": 15,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "百炼大模型管理平台升级及运维服务项目的开标时间？ 2026年10月08日  10:30"
+        },
+        {
+          "rank": 16,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "多功能分液器和非接触式微孔板样品处理系统采购项目的开标时间？ 2026年10月09日  13:30"
+        },
+        {
+          "rank": 17,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标时间？ 2026年10月08日  10:00"
+        },
+        {
+          "rank": 18,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "高内涵成像分析仪采购项目的开标时间是什么时候？ 高内涵成像分析仪采购项目的开标时间为2026年10月09日  13:30。"
+        },
+        {
+          "rank": 19,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": true,
+          "snippet": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的开标时间？ 2026年10月08日  14:00"
+        },
+        {
+          "rank": 20,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院2026-2027年度保安服务项目的开标时间？ 2026年10月08日  09:30"
         }
       ]
     },
@@ -140,7 +386,8 @@
       "rank": 1,
       "rr": 1.0,
       "relevant_in_topk": 2,
-      "precision_at_k": 0.4,
+      "precision_at_k": 0.1,
+      "ndcg": 1.0,
       "evidence_coverage": 1.0,
       "top_sources": [
         {
@@ -182,6 +429,126 @@
           "page_no": null,
           "relevant": false,
           "snippet": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标时间是什么时候？ 北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开"
+        },
+        {
+          "rank": 6,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标地点？ 项目通过网上开标大厅进行开标，请在开标当日登录国e采系统点击“网上开标”进入网上开标大厅，"
+        },
+        {
+          "rank": 7,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的代理机构是什么？ 北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的代理机"
+        },
+        {
+          "rank": 8,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标地点在哪里？ 北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标地"
+        },
+        {
+          "rank": 9,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的代理机构？ 中央国家机关政府采购中心"
+        },
+        {
+          "rank": 10,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标时间？ 2026年10月14日  09:00"
+        },
+        {
+          "rank": 11,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的行政区域是哪里？ 北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的行政区"
+        },
+        {
+          "rank": 12,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "南开大学实验室设备处智慧安全实验室建设采购项目的预算金额是多少？ ￥150.165000万元（人民币）"
+        },
+        {
+          "rank": 13,
+          "source_file": "bid_internal_tender.txt",
+          "db_id": 136,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】bid_internal_tender.txt - XX市标书闭环内部项目招标文件 XX市标书闭环内部项目招标文件 项目名称：XX市标书闭环内部项目 预算金额：人民币 "
+        },
+        {
+          "rank": 14,
+          "source_file": "bid_internal_tender.txt",
+          "db_id": 128,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市标书闭环内部项目 - XX市标书闭环内部项目招标文件 XX市标书闭环内部项目招标文件 项目名称：XX市标书闭环内部项目 预算金额：人民币 660 万元 投标截止时"
+        },
+        {
+          "rank": 15,
+          "source_file": "bid_internal_tender.txt",
+          "db_id": 200,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市标书闭环内部项目 - XX市标书闭环内部项目招标文件 XX市标书闭环内部项目招标文件 项目名称：XX市标书闭环内部项目 预算金额：人民币 660 万元 投标截止时"
+        },
+        {
+          "rank": 16,
+          "source_file": "bid_internal_tender.txt",
+          "db_id": 176,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市标书闭环内部项目 - XX市标书闭环内部项目招标文件 XX市标书闭环内部项目招标文件 项目名称：XX市标书闭环内部项目 预算金额：人民币 660 万元 投标截止时"
+        },
+        {
+          "rank": 17,
+          "source_file": "bid_internal_tender.txt",
+          "db_id": 88,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市标书闭环内部项目 - XX市标书闭环内部项目招标文件 XX市标书闭环内部项目招标文件 项目名称：XX市标书闭环内部项目 预算金额：人民币 660 万元 投标截止时"
+        },
+        {
+          "rank": 18,
+          "source_file": "bid_internal_tender.txt",
+          "db_id": 71,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市标书闭环内部项目 - XX市标书闭环内部项目招标文件 XX市标书闭环内部项目招标文件 项目名称：XX市标书闭环内部项目 预算金额：人民币 660 万元 投标截止时"
+        },
+        {
+          "rank": 19,
+          "source_file": "bid_internal_tender.txt",
+          "db_id": 192,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市标书闭环内部项目 - XX市标书闭环内部项目招标文件 XX市标书闭环内部项目招标文件 项目名称：XX市标书闭环内部项目 预算金额：人民币 660 万元 投标截止时"
+        },
+        {
+          "rank": 20,
+          "source_file": "bid_internal_tender.txt",
+          "db_id": 152,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市标书闭环内部项目 - XX市标书闭环内部项目招标文件 XX市标书闭环内部项目招标文件 项目名称：XX市标书闭环内部项目 预算金额：人民币 660 万元 投标截止时"
         }
       ]
     },
@@ -193,7 +560,8 @@
       "rank": 1,
       "rr": 1.0,
       "relevant_in_topk": 2,
-      "precision_at_k": 0.4,
+      "precision_at_k": 0.1,
+      "ndcg": 1.0,
       "evidence_coverage": 1.0,
       "top_sources": [
         {
@@ -226,15 +594,135 @@
           "db_id": null,
           "page_no": null,
           "relevant": false,
-          "snippet": "吉林大学中日联谊医院双层电蒸锅采购的采购单位是谁？ 吉林大学中日联谊医院双层电蒸锅采购的采购单位是吉林大学中日联谊医院。"
+          "snippet": "吉林大学中日联谊医院2026-2027年度保安服务项目的预算金额是多少？ 吉林大学中日联谊医院2026-2027年度保安服务项目的预算金额为￥900.000000万元（人民币）。"
         },
         {
           "rank": 5,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院双层电蒸锅采购的采购单位是谁？ 吉林大学中日联谊医院双层电蒸锅采购的采购单位是吉林大学中日联谊医院。"
+        },
+        {
+          "rank": 6,
           "source_file": "ccgp.gov.cn",
           "db_id": null,
           "page_no": null,
           "relevant": false,
           "snippet": "吉林大学中日联谊医院双层电蒸锅采购的代理机构？ 中资国际工程咨询集团有限责任公司"
+        },
+        {
+          "rank": 7,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院双层电蒸锅采购的代理机构是什么？ 吉林大学中日联谊医院双层电蒸锅采购的代理机构是中资国际工程咨询集团有限责任公司。"
+        },
+        {
+          "rank": 8,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院2026-2027年度保安服务项目的预算金额是多少？ ￥900.000000万元（人民币）"
+        },
+        {
+          "rank": 9,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院双层电蒸锅采购的开标时间是什么时候？ 吉林大学中日联谊医院双层电蒸锅采购的开标时间为2026年10月10日  09:00。"
+        },
+        {
+          "rank": 10,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院护士鞋采购的预算金额是多少？ ￥53.000000万元（人民币）"
+        },
+        {
+          "rank": 11,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院双层电蒸锅采购的开标地点在哪里？ 吉林大学中日联谊医院双层电蒸锅采购的开标地点为长春市二道区东南湖大路3030号，中资国际工程咨询集团有限责任公司一楼开标室。"
+        },
+        {
+          "rank": 12,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院护士鞋采购的预算金额是多少？ 吉林大学中日联谊医院护士鞋采购的预算金额为￥53.000000万元（人民币）。"
+        },
+        {
+          "rank": 13,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的预算金额是多少？ 2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的预算金额为￥99.0000"
+        },
+        {
+          "rank": 14,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院双层电蒸锅采购的行政区域是哪里？ 吉林大学中日联谊医院双层电蒸锅采购的行政区域为吉林省。"
+        },
+        {
+          "rank": 15,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的预算金额是多少？ ￥99.000000万元（人民币）"
+        },
+        {
+          "rank": 16,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院双层电蒸锅采购的开标时间？ 2026年10月10日  09:00"
+        },
+        {
+          "rank": 17,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院双层电蒸锅采购的开标地点？ 长春市二道区东南湖大路3030号，中资国际工程咨询集团有限责任公司一楼开标室"
+        },
+        {
+          "rank": 18,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院2026-2027年度保安服务项目的采购单位是谁？ 吉林大学中日联谊医院"
+        },
+        {
+          "rank": 19,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的采购单位是谁？ 吉林大学中日联谊医院"
+        },
+        {
+          "rank": 20,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院2026-2027年度保安服务项目的代理机构？ 江苏仁禾中衡工程咨询房地产估价有限公司"
         }
       ]
     },
@@ -246,7 +734,8 @@
       "rank": 1,
       "rr": 1.0,
       "relevant_in_topk": 2,
-      "precision_at_k": 0.4,
+      "precision_at_k": 0.1,
+      "ndcg": 1.0,
       "evidence_coverage": 1.0,
       "top_sources": [
         {
@@ -288,6 +777,126 @@
           "page_no": null,
           "relevant": false,
           "snippet": "大连理工大学数字化机器人手术实验平台采购项目的采购单位是谁？ 大连理工大学数字化机器人手术实验平台采购项目的采购单位是大连理工大学。"
+        },
+        {
+          "rank": 6,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "大连理工大学数字化机器人手术实验平台采购项目的代理机构是什么？ 大连理工大学数字化机器人手术实验平台采购项目的代理机构是大连市机电设备招标有限责任公司。"
+        },
+        {
+          "rank": 7,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "大连理工大学数字化机器人手术实验平台采购项目的开标地点？ 大连市机电设备招标有限责任公司2楼202会议室（大连市沙河口区长兴街2-5号）。"
+        },
+        {
+          "rank": 8,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "大连理工大学数字化机器人手术实验平台采购项目的开标时间是什么时候？ 大连理工大学数字化机器人手术实验平台采购项目的开标时间为2026年10月12日  10:00。"
+        },
+        {
+          "rank": 9,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "大连理工大学数字化机器人手术实验平台采购项目的开标地点在哪里？ 大连理工大学数字化机器人手术实验平台采购项目的开标地点为大连市机电设备招标有限责任公司2楼202会议室（大连市沙河口"
+        },
+        {
+          "rank": 10,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "大连理工大学数字化机器人手术实验平台采购项目的开标时间？ 2026年10月12日  10:00"
+        },
+        {
+          "rank": 11,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "大连理工大学数字化机器人手术实验平台采购项目的行政区域是哪里？ 大连理工大学数字化机器人手术实验平台采购项目的行政区域为辽宁省。"
+        },
+        {
+          "rank": 12,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "高内涵成像分析仪采购项目的预算金额是多少？ ￥280.000000万元（人民币）"
+        },
+        {
+          "rank": 13,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "多功能分液器和非接触式微孔板样品处理系统采购项目的预算金额是多少？ ￥160.000000万元（人民币）"
+        },
+        {
+          "rank": 14,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "多功能分液器和非接触式微孔板样品处理系统采购项目的预算金额是多少？ 多功能分液器和非接触式微孔板样品处理系统采购项目的预算金额为￥160.000000万元（人民币）。"
+        },
+        {
+          "rank": 15,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "南开大学实验室设备处智慧安全实验室建设采购项目的预算金额是多少？ ￥150.165000万元（人民币）"
+        },
+        {
+          "rank": 16,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "高内涵成像分析仪采购项目的预算金额是多少？ 高内涵成像分析仪采购项目的预算金额为￥280.000000万元（人民币）。"
+        },
+        {
+          "rank": 17,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "百炼大模型管理平台升级及运维服务项目的预算金额是多少？ ￥110.000000万元（人民币）"
+        },
+        {
+          "rank": 18,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的预算金额是多少？ ￥9971.645796万元（人民币）"
+        },
+        {
+          "rank": 19,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的预算金额是多少？ 北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的预算金"
+        },
+        {
+          "rank": 20,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "南开大学实验室设备处智慧安全实验室建设采购项目的预算金额是多少？ 南开大学实验室设备处智慧安全实验室建设采购项目的预算金额为￥150.165000万元（人民币）。"
         }
       ]
     },
@@ -299,7 +908,8 @@
       "rank": 1,
       "rr": 1.0,
       "relevant_in_topk": 2,
-      "precision_at_k": 0.4,
+      "precision_at_k": 0.1,
+      "ndcg": 1.0,
       "evidence_coverage": 1.0,
       "top_sources": [
         {
@@ -341,6 +951,126 @@
           "page_no": null,
           "relevant": false,
           "snippet": "百炼大模型管理平台升级及运维服务项目的代理机构是什么？ 百炼大模型管理平台升级及运维服务项目的代理机构是上海申诣建设咨询有限公司。"
+        },
+        {
+          "rank": 6,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "百炼大模型管理平台升级及运维服务项目的采购单位是谁？ 中华人民共和国上海海关"
+        },
+        {
+          "rank": 7,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "百炼大模型管理平台升级及运维服务项目的行政区域是哪里？ 百炼大模型管理平台升级及运维服务项目的行政区域为上海市。"
+        },
+        {
+          "rank": 8,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "百炼大模型管理平台升级及运维服务项目的开标地点在哪里？ 百炼大模型管理平台升级及运维服务项目的开标地点为上海市静安区长安路1001号长安大厦1号楼（办公楼）20层。"
+        },
+        {
+          "rank": 9,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "百炼大模型管理平台升级及运维服务项目的开标时间是什么时候？ 百炼大模型管理平台升级及运维服务项目的开标时间为2026年10月08日  10:30。"
+        },
+        {
+          "rank": 10,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "百炼大模型管理平台升级及运维服务项目的开标时间？ 2026年10月08日  10:30"
+        },
+        {
+          "rank": 11,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "百炼大模型管理平台升级及运维服务项目的开标地点？ 上海市静安区长安路1001号长安大厦1号楼（办公楼）20层"
+        },
+        {
+          "rank": 12,
+          "source_file": "bid_internal_tender.txt",
+          "db_id": 136,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】bid_internal_tender.txt - XX市标书闭环内部项目招标文件 XX市标书闭环内部项目招标文件 项目名称：XX市标书闭环内部项目 预算金额：人民币 "
+        },
+        {
+          "rank": 13,
+          "source_file": "bid_internal_tender.txt",
+          "db_id": 192,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市标书闭环内部项目 - XX市标书闭环内部项目招标文件 XX市标书闭环内部项目招标文件 项目名称：XX市标书闭环内部项目 预算金额：人民币 660 万元 投标截止时"
+        },
+        {
+          "rank": 14,
+          "source_file": "bid_internal_tender.txt",
+          "db_id": 96,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市标书闭环内部项目 - XX市标书闭环内部项目招标文件 XX市标书闭环内部项目招标文件 项目名称：XX市标书闭环内部项目 预算金额：人民币 660 万元 投标截止时"
+        },
+        {
+          "rank": 15,
+          "source_file": "bid_internal_tender.txt",
+          "db_id": 160,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市标书闭环内部项目 - XX市标书闭环内部项目招标文件 XX市标书闭环内部项目招标文件 项目名称：XX市标书闭环内部项目 预算金额：人民币 660 万元 投标截止时"
+        },
+        {
+          "rank": 16,
+          "source_file": "bid_internal_tender.txt",
+          "db_id": 39,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市标书闭环内部项目 - XX市标书闭环内部项目招标文件 XX市标书闭环内部项目招标文件 项目名称：XX市标书闭环内部项目 预算金额：人民币 660 万元 投标截止时"
+        },
+        {
+          "rank": 17,
+          "source_file": "bid_internal_tender.txt",
+          "db_id": 200,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市标书闭环内部项目 - XX市标书闭环内部项目招标文件 XX市标书闭环内部项目招标文件 项目名称：XX市标书闭环内部项目 预算金额：人民币 660 万元 投标截止时"
+        },
+        {
+          "rank": 18,
+          "source_file": "bid_internal_tender.txt",
+          "db_id": 88,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市标书闭环内部项目 - XX市标书闭环内部项目招标文件 XX市标书闭环内部项目招标文件 项目名称：XX市标书闭环内部项目 预算金额：人民币 660 万元 投标截止时"
+        },
+        {
+          "rank": 19,
+          "source_file": "bid_internal_tender.txt",
+          "db_id": 71,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市标书闭环内部项目 - XX市标书闭环内部项目招标文件 XX市标书闭环内部项目招标文件 项目名称：XX市标书闭环内部项目 预算金额：人民币 660 万元 投标截止时"
+        },
+        {
+          "rank": 20,
+          "source_file": "bid_internal_tender.txt",
+          "db_id": 80,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市标书闭环内部项目 - XX市标书闭环内部项目招标文件 XX市标书闭环内部项目招标文件 项目名称：XX市标书闭环内部项目 预算金额：人民币 660 万元 投标截止时"
         }
       ]
     },
@@ -352,7 +1082,8 @@
       "rank": 1,
       "rr": 1.0,
       "relevant_in_topk": 2,
-      "precision_at_k": 0.4,
+      "precision_at_k": 0.1,
+      "ndcg": 1.0,
       "evidence_coverage": 1.0,
       "top_sources": [
         {
@@ -394,6 +1125,126 @@
           "page_no": null,
           "relevant": false,
           "snippet": "高内涵成像分析仪采购项目的代理机构是什么？ 高内涵成像分析仪采购项目的代理机构是北京明德致信咨询有限公司。"
+        },
+        {
+          "rank": 6,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "高内涵成像分析仪采购项目的代理机构？ 北京明德致信咨询有限公司"
+        },
+        {
+          "rank": 7,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "高内涵成像分析仪采购项目的开标时间是什么时候？ 高内涵成像分析仪采购项目的开标时间为2026年10月09日  13:30。"
+        },
+        {
+          "rank": 8,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "高内涵成像分析仪采购项目的开标地点在哪里？ 高内涵成像分析仪采购项目的开标地点为北京市海淀区学院路30号科大天工大厦A座6层616会议室。。"
+        },
+        {
+          "rank": 9,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "高内涵成像分析仪采购项目的开标时间？ 2026年10月09日  13:30"
+        },
+        {
+          "rank": 10,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "高内涵成像分析仪采购项目的开标地点？ 北京市海淀区学院路30号科大天工大厦A座6层616会议室。"
+        },
+        {
+          "rank": 11,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "高内涵成像分析仪采购项目的行政区域是哪里？ 高内涵成像分析仪采购项目的行政区域为北京市。"
+        },
+        {
+          "rank": 12,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "多功能分液器和非接触式微孔板样品处理系统采购项目的预算金额是多少？ ￥160.000000万元（人民币）"
+        },
+        {
+          "rank": 13,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的预算金额是多少？ ￥7.000000万元（人民币）"
+        },
+        {
+          "rank": 14,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的预算金额是多少？ ￥9971.645796万元（人民币）"
+        },
+        {
+          "rank": 15,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "南开大学实验室设备处智慧安全实验室建设采购项目的预算金额是多少？ ￥150.165000万元（人民币）"
+        },
+        {
+          "rank": 16,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "多功能分液器和非接触式微孔板样品处理系统采购项目的预算金额是多少？ 多功能分液器和非接触式微孔板样品处理系统采购项目的预算金额为￥160.000000万元（人民币）。"
+        },
+        {
+          "rank": 17,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "大连理工大学数字化机器人手术实验平台采购项目的预算金额是多少？ ￥150.000000万元（人民币）"
+        },
+        {
+          "rank": 18,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "南开大学实验室设备处智慧安全实验室建设采购项目的预算金额是多少？ 南开大学实验室设备处智慧安全实验室建设采购项目的预算金额为￥150.165000万元（人民币）。"
+        },
+        {
+          "rank": 19,
+          "source_file": "rbac_internal.txt",
+          "db_id": 194,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市权限隔离内部项目 - XX市权限隔离内部项目(评标内部文件) XX市权限隔离内部项目(评标内部文件) 项目名称：XX市权限隔离内部项目 预算金额：人民币 880 "
+        },
+        {
+          "rank": 20,
+          "source_file": "rbac_internal.txt",
+          "db_id": 65,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市权限隔离内部项目 - XX市权限隔离内部项目(评标内部文件) XX市权限隔离内部项目(评标内部文件) 项目名称：XX市权限隔离内部项目 预算金额：人民币 880 "
         }
       ]
     },
@@ -404,8 +1255,9 @@
       "hit": true,
       "rank": 1,
       "rr": 1.0,
-      "relevant_in_topk": 3,
-      "precision_at_k": 0.6,
+      "relevant_in_topk": 4,
+      "precision_at_k": 0.2,
+      "ndcg": 0.9439,
       "evidence_coverage": 1.0,
       "top_sources": [
         {
@@ -447,6 +1299,126 @@
           "page_no": null,
           "relevant": false,
           "snippet": "吉林大学中日联谊医院双层电蒸锅采购的采购单位是谁？ 吉林大学中日联谊医院双层电蒸锅采购的采购单位是吉林大学中日联谊医院。"
+        },
+        {
+          "rank": 6,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": true,
+          "snippet": "吉林大学中日联谊医院双层电蒸锅采购的开标地点在哪里？ 吉林大学中日联谊医院双层电蒸锅采购的开标地点为长春市二道区东南湖大路3030号，中资国际工程咨询集团有限责任公司一楼开标室。"
+        },
+        {
+          "rank": 7,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院2026-2027年度保安服务项目的代理机构是什么？ 吉林大学中日联谊医院2026-2027年度保安服务项目的代理机构是江苏仁禾中衡工程咨询房地产估价有限公司。"
+        },
+        {
+          "rank": 8,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院护士鞋采购的代理机构？ 中资国际工程咨询集团有限责任公司"
+        },
+        {
+          "rank": 9,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院双层电蒸锅采购的预算金额是多少？ ￥123.900000万元（人民币）"
+        },
+        {
+          "rank": 10,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院2026-2027年度保安服务项目的代理机构？ 江苏仁禾中衡工程咨询房地产估价有限公司"
+        },
+        {
+          "rank": 11,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的代理机构是什么？ 2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的代理机构是吉林恒峰工程咨询"
+        },
+        {
+          "rank": 12,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的代理机构？ 吉林恒峰工程咨询有限公司"
+        },
+        {
+          "rank": 13,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院双层电蒸锅采购的预算金额是多少？ 吉林大学中日联谊医院双层电蒸锅采购的预算金额为￥123.900000万元（人民币）。"
+        },
+        {
+          "rank": 14,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院护士鞋采购的代理机构是什么？ 吉林大学中日联谊医院护士鞋采购的代理机构是中资国际工程咨询集团有限责任公司。"
+        },
+        {
+          "rank": 15,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院双层电蒸锅采购的开标时间是什么时候？ 吉林大学中日联谊医院双层电蒸锅采购的开标时间为2026年10月10日  09:00。"
+        },
+        {
+          "rank": 16,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院双层电蒸锅采购的开标时间？ 2026年10月10日  09:00"
+        },
+        {
+          "rank": 17,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院双层电蒸锅采购的行政区域是哪里？ 吉林大学中日联谊医院双层电蒸锅采购的行政区域为吉林省。"
+        },
+        {
+          "rank": 18,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院护士鞋采购的开标地点？ 长春市二道区东南湖大路3030号，中资国际工程咨询集团有限责任公司一楼开标室"
+        },
+        {
+          "rank": 19,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院2026-2027年度保安服务项目的采购单位是谁？ 吉林大学中日联谊医院"
+        },
+        {
+          "rank": 20,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院2026-2027年度保安服务项目的采购单位是谁？ 吉林大学中日联谊医院2026-2027年度保安服务项目的采购单位是吉林大学中日联谊医院。"
         }
       ]
     },
@@ -458,7 +1430,8 @@
       "rank": 1,
       "rr": 1.0,
       "relevant_in_topk": 2,
-      "precision_at_k": 0.4,
+      "precision_at_k": 0.1,
+      "ndcg": 0.9197,
       "evidence_coverage": 1.0,
       "top_sources": [
         {
@@ -500,6 +1473,126 @@
           "page_no": null,
           "relevant": false,
           "snippet": "吉林大学中日联谊医院2026-2027年度保安服务项目的开标地点在哪里？ 吉林大学中日联谊医院2026-2027年度保安服务项目的开标地点为吉林省长春市生态大街五洲国际二期6栋30"
+        },
+        {
+          "rank": 6,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的开标地点在哪里？ 2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的开标地点为吉林省长春市二道"
+        },
+        {
+          "rank": 7,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院2026-2027年度保安服务项目的开标地点？ 吉林省长春市生态大街五洲国际二期6栋305室开标室"
+        },
+        {
+          "rank": 8,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院2026-2027年度保安服务项目的采购单位是谁？ 吉林大学中日联谊医院"
+        },
+        {
+          "rank": 9,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的开标地点？ 吉林省长春市二道区临河街3268号南北智慧酒店5楼会议室"
+        },
+        {
+          "rank": 10,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院2026-2027年度保安服务项目的采购单位是谁？ 吉林大学中日联谊医院2026-2027年度保安服务项目的采购单位是吉林大学中日联谊医院。"
+        },
+        {
+          "rank": 11,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院2026-2027年度保安服务项目的预算金额是多少？ 吉林大学中日联谊医院2026-2027年度保安服务项目的预算金额为￥900.000000万元（人民币）。"
+        },
+        {
+          "rank": 12,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的采购单位是谁？ 吉林大学中日联谊医院"
+        },
+        {
+          "rank": 13,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的采购单位是谁？ 2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的采购单位是吉林大学中日联谊医"
+        },
+        {
+          "rank": 14,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院2026-2027年度保安服务项目的预算金额是多少？ ￥900.000000万元（人民币）"
+        },
+        {
+          "rank": 15,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的预算金额是多少？ 2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的预算金额为￥99.0000"
+        },
+        {
+          "rank": 16,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的预算金额是多少？ ￥99.000000万元（人民币）"
+        },
+        {
+          "rank": 17,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的代理机构是什么？ 2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的代理机构是吉林恒峰工程咨询"
+        },
+        {
+          "rank": 18,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院2026-2027年度保安服务项目的代理机构是什么？ 吉林大学中日联谊医院2026-2027年度保安服务项目的代理机构是江苏仁禾中衡工程咨询房地产估价有限公司。"
+        },
+        {
+          "rank": 19,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的行政区域是哪里？ 2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的行政区域为长春市。"
+        },
+        {
+          "rank": 20,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "吉林大学中日联谊医院双层电蒸锅采购的开标时间是什么时候？ 吉林大学中日联谊医院双层电蒸锅采购的开标时间为2026年10月10日  09:00。"
         }
       ]
     },
@@ -511,7 +1604,8 @@
       "rank": 1,
       "rr": 1.0,
       "relevant_in_topk": 1,
-      "precision_at_k": 0.2,
+      "precision_at_k": 0.05,
+      "ndcg": 1.0,
       "evidence_coverage": 1.0,
       "top_sources": [
         {
@@ -553,6 +1647,126 @@
           "page_no": null,
           "relevant": false,
           "snippet": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标地点？ 复旦大学采购与招标管理系统（网址：https://cz.fudan.edu.cn）"
+        },
+        {
+          "rank": 6,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的采购单位是谁？ 复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的采购单位是复旦大学。"
+        },
+        {
+          "rank": 7,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的采购单位是谁？ 复旦大学"
+        },
+        {
+          "rank": 8,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标时间是什么时候？ 复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标时间为2026年10月08日 "
+        },
+        {
+          "rank": 9,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的预算金额是多少？ 148万元"
+        },
+        {
+          "rank": 10,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的预算金额是多少？ 复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的预算金额为148万元。"
+        },
+        {
+          "rank": 11,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标时间？ 2026年10月08日  10:00"
+        },
+        {
+          "rank": 12,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "2026年东北区域国家重点档案修复项目的代理机构？ 中招国际招标有限公司"
+        },
+        {
+          "rank": 13,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "2026年东北区域国家重点档案修复项目的开标地点？ 北京市海淀区学院南路62号中关村资本大厦6层第十一会议室"
+        },
+        {
+          "rank": 14,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "南开大学实验室设备处智慧安全实验室建设采购项目的代理机构？ 天津信诚盛德工程咨询有限公司"
+        },
+        {
+          "rank": 15,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的代理机构？ 中央国家机关政府采购中心"
+        },
+        {
+          "rank": 16,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "大连理工大学数字化机器人手术实验平台采购项目的代理机构？ 大连市机电设备招标有限责任公司"
+        },
+        {
+          "rank": 17,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "百炼大模型管理平台升级及运维服务项目的行政区域是哪里？ 百炼大模型管理平台升级及运维服务项目的行政区域为上海市。"
+        },
+        {
+          "rank": 18,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "高内涵成像分析仪采购项目的行政区域是哪里？ 高内涵成像分析仪采购项目的行政区域为北京市。"
+        },
+        {
+          "rank": 19,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "百炼大模型管理平台升级及运维服务项目的代理机构？ 上海申诣建设咨询有限公司"
+        },
+        {
+          "rank": 20,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "南开大学实验室设备处智慧安全实验室建设采购项目的行政区域是哪里？ 南开大学实验室设备处智慧安全实验室建设采购项目的行政区域为天津市。"
         }
       ]
     },
@@ -564,7 +1778,8 @@
       "rank": 1,
       "rr": 1.0,
       "relevant_in_topk": 1,
-      "precision_at_k": 0.2,
+      "precision_at_k": 0.05,
+      "ndcg": 1.0,
       "evidence_coverage": 1.0,
       "top_sources": [
         {
@@ -593,6 +1808,46 @@
         },
         {
           "rank": 4,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "2026年东北区域国家重点档案修复项目的开标时间？ 2026年10月12日  09:30"
+        },
+        {
+          "rank": 5,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标地点在哪里？ 北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标地"
+        },
+        {
+          "rank": 6,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "2026年东北区域国家重点档案修复项目的开标时间是什么时候？ 2026年东北区域国家重点档案修复项目的开标时间为2026年10月12日  09:30。"
+        },
+        {
+          "rank": 7,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的开标时间？ 2026年10月08日  14:00"
+        },
+        {
+          "rank": 8,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标时间？ 2026年10月08日  10:00"
+        },
+        {
+          "rank": 9,
           "source_file": "ccgp_structured",
           "db_id": null,
           "page_no": null,
@@ -600,12 +1855,92 @@
           "snippet": "国家广播电视总局282台基础设施配套改造项目的开标时间是什么时候？ 国家广播电视总局282台基础设施配套改造项目的开标时间为2026年10月08日  14:00。"
         },
         {
-          "rank": 5,
+          "rank": 10,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标时间？ 2026年10月14日  09:00"
+        },
+        {
+          "rank": 11,
           "source_file": "ccgp.gov.cn",
           "db_id": null,
           "page_no": null,
           "relevant": false,
           "snippet": "多功能分液器和非接触式微孔板样品处理系统采购项目的开标时间？ 2026年10月09日  13:30"
+        },
+        {
+          "rank": 12,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "高内涵成像分析仪采购项目的开标时间？ 2026年10月09日  13:30"
+        },
+        {
+          "rank": 13,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "南开大学实验室设备处智慧安全实验室建设采购项目的开标时间？ 2026年10月08日  14:00"
+        },
+        {
+          "rank": 14,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "高内涵成像分析仪采购项目的开标时间是什么时候？ 高内涵成像分析仪采购项目的开标时间为2026年10月09日  13:30。"
+        },
+        {
+          "rank": 15,
+          "source_file": "ccgp.gov.cn",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的开标时间？ 2026年10月12日  09:30"
+        },
+        {
+          "rank": 16,
+          "source_file": "招标投标法实施条例",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么情况下可以采用邀请招标？ 根据《招标投标法实施条例》第八条，国有资金占控股或者主导地位的依法必须进行招标的项目，应当公开招标；但有下列情形之一的，可以邀请招标：（一）技术复杂、"
+        },
+        {
+          "rank": 17,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标时间是什么时候？ 北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开"
+        },
+        {
+          "rank": 18,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标时间是什么时候？ 复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标时间为2026年10月08日 "
+        },
+        {
+          "rank": 19,
+          "source_file": "ccgp_structured",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "多功能分液器和非接触式微孔板样品处理系统采购项目的开标时间是什么时候？ 多功能分液器和非接触式微孔板样品处理系统采购项目的开标时间为2026年10月09日  13:30。"
+        },
+        {
+          "rank": 20,
+          "source_file": "招标投标法实施条例",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "招标投标异议应当如何处理？ 根据《招标投标法实施条例》第二十二条，潜在投标人或者其他利害关系人对招标文件有异议的，应当在投标截止时间十日前提出。招标人应当自收到异议之日起三日内作出"
         }
       ]
     },
@@ -617,7 +1952,8 @@
       "rank": 1,
       "rr": 1.0,
       "relevant_in_topk": 1,
-      "precision_at_k": 0.2,
+      "precision_at_k": 0.05,
+      "ndcg": 1.0,
       "evidence_coverage": 1.0,
       "top_sources": [
         {
@@ -659,6 +1995,126 @@
           "page_no": null,
           "relevant": false,
           "snippet": "政府采购的方式有哪几种？ 根据《政府采购法》第二十六条，政府采购采用以下方式：（一）公开招标；（二）邀请招标；（三）竞争性谈判；（四）单一来源采购；（五）询价；（六）国务院政府采购"
+        },
+        {
+          "rank": 6,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "政府采购中什么情况下需要重新组织采购活动？ 根据《政府采购法》及相关法规，在政府采购活动中，出现下列情形之一的，应当重新组织采购活动：（一）招标后符合条件的供应商或者合格标不足三家"
+        },
+        {
+          "rank": 7,
+          "source_file": "招标投标法实施条例",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么是邀请招标的适用范围？ 根据《招标投标法实施条例》第八条，可以采用邀请招标的情形包括：（一）技术复杂、有特殊要求或者受自然环境限制，只有少量潜在投标人可供选择；（二）采用公开招"
+        },
+        {
+          "rank": 8,
+          "source_file": "政府采购非招标采购方式管理办法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么情况下政府采购项目可以终止？ 根据《政府采购非招标采购方式管理办法》，在政府采购活动中，出现以下情形之一的，采购人应当终止采购活动：（一）因重大变故，采购任务取消的；（二）出现"
+        },
+        {
+          "rank": 9,
+          "source_file": "政府采购竞争性磋商采购方式管理暂行办法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么是竞争性磋商采购方式？ 竞争性磋商是政府采购的一种采购方式，适用于政府购买服务项目、技术复杂或者性质特殊的项目。竞争性磋商与竞争性谈判的区别在于：磋商小组与供应商经过磋商后，由"
+        },
+        {
+          "rank": 10,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "政府采购中什么情况下可以采取应急采购？ 政府采购应急采购是指因严重自然灾害、突发公共卫生事件、社会安全事件等不可预见的紧急情况，为满足紧急需要而进行的采购。应急采购可以不执行政府采"
+        },
+        {
+          "rank": 11,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么是政府采购的采购方式变更？ 政府采购方式变更是指在采购活动开始后，因法定事由将原定的采购方式变更为其他采购方式。采购方式变更应当符合以下条件：（一）因法定事由导致原采购方式无法"
+        },
+        {
+          "rank": 12,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么是政府采购？ 根据《政府采购法》第二条，政府采购是指各级国家机关、事业单位和团体组织，使用财政性资金采购依法制定的集中采购目录以内的或者采购限额标准以上的货物、工程和服务的行为"
+        },
+        {
+          "rank": 13,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "采购人、采购代理机构有哪些违法行为会受处罚？ 根据《政府采购法》第七十一条，采购人、采购代理机构有下列情形之一的，责令限期改正，给予警告，可以并处罚款：（一）应当采用公开招标方式而"
+        },
+        {
+          "rank": 14,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么是政府采购的回避原则？ 根据《政府采购法》和相关法规，在政府采购活动中，采购人员及相关人员与供应商有利害关系的，必须回避。回避的情形包括：（一）是供应商的负责人或参加采购活动前"
+        },
+        {
+          "rank": 15,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "政府采购合同类型有哪些？ 政府采购合同类型主要包括：（一）固定价格合同，合同价格在合同中约定，不随实际成本变化；（二）成本补偿合同，根据供应商实际成本给予补偿，并约定利润；（三）成"
+        },
+        {
+          "rank": 16,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "政府采购中的进口产品采购有什么要求？ 根据《政府采购法》和《政府采购进口产品管理办法》，政府采购应当采购本国货物、工程和服务。确需采购进口产品的，应当符合以下条件：（一）在中国境内"
+        },
+        {
+          "rank": 17,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "政府采购中如何处理回避问题？ 根据《政府采购法》和相关法规，在政府采购活动中，采购人员及相关人员与供应商有利害关系的，必须回避。供应商认为采购人员及相关人员与其他供应商有利害关系的"
+        },
+        {
+          "rank": 18,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么是政府采购活动的中止？ 政府采购活动中止是指在采购活动进行过程中，因法定事由暂停采购活动的情形。中止的情形包括：（一）供应商提出质疑或投诉，且质疑或投诉可能影响采购结果的；（二"
+        },
+        {
+          "rank": 19,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "政府采购预算应当如何编制？ 根据《政府采购法》第三十三条，负有编制部门预算职责的部门在编制下一财政年度部门预算时，应当将该财政年度政府采购的项目及资金预算列出，报本级财政部门汇总。"
+        },
+        {
+          "rank": 20,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么是政府采购优先采购制度？ 政府采购优先采购制度是指政府采购应当在满足基本采购需求的前提下，优先采购节能环保产品、自主创新产品、中小企业产品等。具体包括：（一）节能产品政府采购清"
         }
       ]
     },
@@ -670,7 +2126,8 @@
       "rank": 1,
       "rr": 1.0,
       "relevant_in_topk": 1,
-      "precision_at_k": 0.2,
+      "precision_at_k": 0.05,
+      "ndcg": 1.0,
       "evidence_coverage": 1.0,
       "top_sources": [
         {
@@ -712,6 +2169,126 @@
           "page_no": null,
           "relevant": false,
           "snippet": "政府采购合同履行中可以追加吗？ 根据《政府采购法》第四十九条，政府采购合同履行中，采购人需追加与合同标的相同的货物、工程或者服务的，在不改变合同其他条款的前提下，可以与供应商协商签"
+        },
+        {
+          "rank": 6,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "政府采购合同变更有什么要求？ 根据《政府采购法》第四十九条，政府采购合同履行中，采购人需追加与合同标的相同的货物、工程或者服务的，在不改变合同其他条款的前提下，可以与供应商协商签订"
+        },
+        {
+          "rank": 7,
+          "source_file": "招标投标法实施条例",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么情况下应当重新招标？ 根据《招标投标法实施条例》第五十四条和第四十四条，招标人应当重新招标的情形包括：（一）通过资格预审的申请人少于3个的；（二）所有投标被否决的；（三）投标人"
+        },
+        {
+          "rank": 8,
+          "source_file": "test_bid.txt",
+          "db_id": 6,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市智慧园区信息化建设项目（二期） - 投标人须具备 软件企业认定证书 或 CMMI3 级及以上认证。 投标人须具备 软件企业认定证书 或 CMMI3 级及以上认证。"
+        },
+        {
+          "rank": 9,
+          "source_file": "test_bid.txt",
+          "db_id": 7,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市智慧园区信息化建设项目（二期） - 投标人须具备 软件企业认定证书 或 CMMI3 级及以上认证。 投标人须具备 软件企业认定证书 或 CMMI3 级及以上认证。"
+        },
+        {
+          "rank": 10,
+          "source_file": "tmpjkwlvs0z.txt",
+          "db_id": 5,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市智慧园区信息化建设项目（二期） - 投标人须具备 软件企业认定证书 或 CMMI3 级及以上认证。 投标人须具备 软件企业认定证书 或 CMMI3 级及以上认证。"
+        },
+        {
+          "rank": 11,
+          "source_file": "招标投标法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么是招标投标活动中的禁止行为清单？ 招标投标活动中禁止行为包括：招标人不得以不合理条件限制排斥潜在投标人、不得对投标人实行歧视待遇、不得与投标人就实质内容谈判、不得泄露评标信息。"
+        },
+        {
+          "rank": 12,
+          "source_file": "招标投标法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "中标通知书具有什么法律效力？ 根据《招标投标法》第四十五条，中标人确定后，招标人应当向中标人发出中标通知书，并同时将中标结果通知所有未中标的投标人。中标通知书对招标人和中标人具有法"
+        },
+        {
+          "rank": 13,
+          "source_file": "招标投标法实施条例",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "招标人不得有哪些限制竞争的行为？ 根据《招标投标法实施条例》第三十二条，招标人不得以不合理条件限制、排斥潜在投标人或投标人。不得有下列情形：（一）就同一招标项目向潜在投标人或者投标"
+        },
+        {
+          "rank": 14,
+          "source_file": "tmpjkwlvs0z.txt",
+          "db_id": 5,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市智慧园区信息化建设项目（二期） - 文件规定加盖投标人公章并有法定代表人或其授权代表签字的； 文件规定加盖投标人公章并有法定代表人或其授权代表签字的； （三）投标"
+        },
+        {
+          "rank": 15,
+          "source_file": "test_bid.txt",
+          "db_id": 6,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市智慧园区信息化建设项目（二期） - 文件规定加盖投标人公章并有法定代表人或其授权代表签字的； 文件规定加盖投标人公章并有法定代表人或其授权代表签字的； （三）投标"
+        },
+        {
+          "rank": 16,
+          "source_file": "test_bid.txt",
+          "db_id": 7,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市智慧园区信息化建设项目（二期） - 文件规定加盖投标人公章并有法定代表人或其授权代表签字的； 文件规定加盖投标人公章并有法定代表人或其授权代表签字的； （三）投标"
+        },
+        {
+          "rank": 17,
+          "source_file": "招标投标法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "投标文件截止时间后可以补充修改投标文件吗？ 根据《招标投标法》第二十九条，投标人在招标文件要求提交投标文件的截止时间前，可以补充、修改或者撤回已提交的投标文件，并书面通知招标人。补"
+        },
+        {
+          "rank": 18,
+          "source_file": "招标投标法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "投标人不得有哪些行为？ 根据《招标投标法》第三十二条，投标人不得相互串通投标报价，不得排挤其他投标人的公平竞争，损害招标人或者其他投标人的合法权益。投标人不得与招标人串通投标，损害"
+        },
+        {
+          "rank": 19,
+          "source_file": "招标投标法实施条例",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "招标人不得设置哪些不合理条件限制潜在投标人？ 根据《招标投标法实施条例》第三十二条，招标人不得以不合理条件限制、排斥潜在投标人或投标人，不得有以下情形：（一）就同一招标项目向不同投"
+        },
+        {
+          "rank": 20,
+          "source_file": "招标投标法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "投标人以他人名义投标或弄虚作假骗取中标的后果是什么？ 根据《招标投标法》第五十四条，投标人以他人名义投标或者以其他方式弄虚作假，骗取中标的，中标无效，给招标人造成损失的，依法承担赔"
         }
       ]
     },
@@ -723,7 +2300,8 @@
       "rank": 1,
       "rr": 1.0,
       "relevant_in_topk": 1,
-      "precision_at_k": 0.2,
+      "precision_at_k": 0.05,
+      "ndcg": 1.0,
       "evidence_coverage": 1.0,
       "top_sources": [
         {
@@ -765,6 +2343,126 @@
           "page_no": null,
           "relevant": false,
           "snippet": "投标人不得有哪些行为？ 根据《招标投标法》第三十二条，投标人不得相互串通投标报价，不得排挤其他投标人的公平竞争，损害招标人或者其他投标人的合法权益。投标人不得与招标人串通投标，损害"
+        },
+        {
+          "rank": 6,
+          "source_file": "招标投标法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么是招标投标活动中的禁止行为清单？ 招标投标活动中禁止行为包括：招标人不得以不合理条件限制排斥潜在投标人、不得对投标人实行歧视待遇、不得与投标人就实质内容谈判、不得泄露评标信息。"
+        },
+        {
+          "rank": 7,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么是政府采购的回避原则？ 根据《政府采购法》和相关法规，在政府采购活动中，采购人员及相关人员与供应商有利害关系的，必须回避。回避的情形包括：（一）是供应商的负责人或参加采购活动前"
+        },
+        {
+          "rank": 8,
+          "source_file": "招标投标法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "评标委员会不得有哪些行为？ 根据《招标投标法》第四十条，评标委员会应当按照招标文件确定的评标标准和方法对投标文件进行评审和比较。评标委员会成员应当客观、公正地履行职务，遵守职业道德"
+        },
+        {
+          "rank": 9,
+          "source_file": "招标投标法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么是招标投标公开原则？ 公开原则是招标投标活动的基本原则之一，要求招标投标活动应当公开进行。具体包括：（一）招标信息公开，招标公告应当在指定媒介发布；（二）评标标准和方法公开，应"
+        },
+        {
+          "rank": 10,
+          "source_file": "招标投标法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "招标投标活动应当遵循哪些原则？ 根据《招标投标法》第五条，招标投标活动应当遵循公开、公平、公正和诚实信用的原则。公开原则要求招标投标活动应当公开进行，包括招标信息公开、评标标准和方"
+        },
+        {
+          "rank": 11,
+          "source_file": "招标投标法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "招标人泄露评标信息会怎样？ 根据《招标投标法》第五十条，招标人以不合理的条件限制或者排斥潜在投标人的，对潜在投标人实行歧视待遇的，强制要求投标人组成联合体共同投标的，或者限制投标人"
+        },
+        {
+          "rank": 12,
+          "source_file": "招标投标法实施条例",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "招标人不得有哪些限制竞争的行为？ 根据《招标投标法实施条例》第三十二条，招标人不得以不合理条件限制、排斥潜在投标人或投标人。不得有下列情形：（一）就同一招标项目向潜在投标人或者投标"
+        },
+        {
+          "rank": 13,
+          "source_file": "招标投标法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么是公平原则和公正原则？ 公平原则要求招标人不得以不合理条件限制或排斥潜在投标人，不得对潜在投标人实行歧视待遇，所有潜在投标人享有平等的竞争机会。公正原则要求评标委员会对所有投标"
+        },
+        {
+          "rank": 14,
+          "source_file": "tmpjkwlvs0z.txt",
+          "db_id": 5,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市智慧园区信息化建设项目（二期） - 投标人须具备 软件企业认定证书 或 CMMI3 级及以上认证。 投标人须具备 软件企业认定证书 或 CMMI3 级及以上认证。"
+        },
+        {
+          "rank": 15,
+          "source_file": "test_bid.txt",
+          "db_id": 7,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市智慧园区信息化建设项目（二期） - 投标人须具备 软件企业认定证书 或 CMMI3 级及以上认证。 投标人须具备 软件企业认定证书 或 CMMI3 级及以上认证。"
+        },
+        {
+          "rank": 16,
+          "source_file": "test_bid.txt",
+          "db_id": 6,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市智慧园区信息化建设项目（二期） - 投标人须具备 软件企业认定证书 或 CMMI3 级及以上认证。 投标人须具备 软件企业认定证书 或 CMMI3 级及以上认证。"
+        },
+        {
+          "rank": 17,
+          "source_file": "招标投标法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "招标公告应当载明哪些内容？ 根据《招标投标法》第十六条，招标公告应当载明招标人的名称和地址、招标项目的性质、数量、实施地点和时间以及获取招标文件的办法等事项。招标公告应当通过国家指"
+        },
+        {
+          "rank": 18,
+          "source_file": "招标投标法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "投标文件未按规定密封会被拒收吗？ 根据《招标投标法》和相关法规，投标人应当按照招标文件的要求对投标文件进行密封和标记。未按招标文件要求密封的投标文件，招标人应当拒收。招标人收到投标"
+        },
+        {
+          "rank": 19,
+          "source_file": "sample_multipage.pdf",
+          "db_id": 140,
+          "page_no": 1,
+          "relevant": false,
+          "snippet": "【招标文件】XX市页码溯源测试项目 - XX市页码溯源测试项目招标文件 (第一页) XX市页码溯源测试项目招标文件 (第一页) 项目名称: XX市页码溯源测试项目 项目编号: PA"
+        },
+        {
+          "rank": 20,
+          "source_file": "sample_multipage.pdf",
+          "db_id": 21,
+          "page_no": 1,
+          "relevant": false,
+          "snippet": "【招标文件】XX市页码溯源测试项目 - XX市页码溯源测试项目招标文件 (第一页) XX市页码溯源测试项目招标文件 (第一页) 项目名称: XX市页码溯源测试项目 项目编号: PA"
         }
       ]
     },
@@ -776,7 +2474,8 @@
       "rank": 1,
       "rr": 1.0,
       "relevant_in_topk": 2,
-      "precision_at_k": 0.4,
+      "precision_at_k": 0.1,
+      "ndcg": 1.0,
       "evidence_coverage": 1.0,
       "top_sources": [
         {
@@ -818,6 +2517,126 @@
           "page_no": null,
           "relevant": false,
           "snippet": "政府采购公告发布媒体有哪些？ 根据《政府采购法》和《政府采购信息公告管理办法》，政府采购信息应当在以下指定媒体上发布：（一）中国政府采购网（国家级指定媒体）；（二）省级以上人民政府"
+        },
+        {
+          "rank": 6,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "政府采购的信息应当如何公开？ 根据《政府采购法》第十一条和《政府采购信息公告管理办法》，政府采购的信息应当在政府采购监督管理部门指定的媒体上及时向社会公开发布，但涉及商业秘密的除外"
+        },
+        {
+          "rank": 7,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么是采购需求公示？ 采购需求公示是采购人在采购活动开始前，将采购需求向社会公开，征求公众意见的过程。采购需求公示适用于技术复杂、性质特殊或者预算金额较大的采购项目。公示内容包括采"
+        },
+        {
+          "rank": 8,
+          "source_file": "政府采购质疑投诉办法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "政府采购投诉应当在什么时限内提出？ 根据《政府采购质疑和投诉办法》第十七条，质疑供应商对采购人、采购代理机构的答复不满意，或者采购人、采购代理机构未在规定时间内作出答复的，可以在答"
+        },
+        {
+          "rank": 9,
+          "source_file": "招标投标法实施条例",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么是招标投标书面报告制度？ 根据《招标投标法实施条例》第六十条，招标人应当自确定中标人之日起十五日内，向有关行政监督部门提交招标投标情况的书面报告。书面报告应当至少包括：（一）招"
+        },
+        {
+          "rank": 10,
+          "source_file": "招标投标法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "招标人和中标人应当何时签订书面合同？ 根据《招标投标法》第四十六条，招标人和中标人应当自中标通知书发出之日起三十日内，按照招标文件和中标人的投标文件订立书面合同。招标人和中标人不得"
+        },
+        {
+          "rank": 11,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "供应商对政府采购活动有异议怎么办？ 根据《政府采购法》第五十一条至第五十六条，供应商认为采购文件、采购过程和中标、成交结果使自己的权益受到损害的，可以在知道或者应当知道其权益受到损"
+        },
+        {
+          "rank": 12,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么是政府采购信息公开目录？ 政府采购信息公开目录是政府采购监督管理部门制定的，规定政府采购信息应当公开的具体内容、范围和方式的清单。公开目录包括：（一）采购公告，包括招标公告、竞"
+        },
+        {
+          "rank": 13,
+          "source_file": "政府采购质疑投诉办法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "政府采购供应商投诉处理决定的期限是多久？ 根据《政府采购质疑和投诉办法》第二十六条，财政部门收到投诉书后应当在五个工作日内进行审查，对符合投诉条件的，自收到投诉书之日起即为受理。财"
+        },
+        {
+          "rank": 14,
+          "source_file": "招标投标法实施条例",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么是招标文件发售？ 招标文件发售是招标人向潜在投标人提供招标文件的过程。根据《招标投标法实施条例》第十六条，招标人应当按照资格预审公告、招标公告或者投标邀请书规定的时间、地点发售"
+        },
+        {
+          "rank": 15,
+          "source_file": "招标投标法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "招标人对已发出的招标文件进行必要的澄清或修改的时限要求是什么？ 根据《招标投标法》第二十三条，招标人对已发出的招标文件进行必要的澄清或者修改的，应当在招标文件要求提交投标文件截止时"
+        },
+        {
+          "rank": 16,
+          "source_file": "招标投标法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "招标公告应当载明哪些内容？ 根据《招标投标法》第十六条，招标公告应当载明招标人的名称和地址、招标项目的性质、数量、实施地点和时间以及获取招标文件的办法等事项。招标公告应当通过国家指"
+        },
+        {
+          "rank": 17,
+          "source_file": "政府采购质疑投诉办法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "政府采购供应商可以提出临时救济措施吗？ 根据《政府采购质疑和投诉办法》，供应商在投诉处理期间，可以申请财政部门采取临时救济措施，包括：（一）暂停采购活动；（二）暂停签订政府采购合同"
+        },
+        {
+          "rank": 18,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "政府采购档案管理有什么要求？ 根据《政府采购法》第四十二条，采购人、采购代理机构对政府采购项目每项采购活动的采购文件应当妥善保存，不得伪造、变造、隐匿或者销毁。采购文件的保存期限为"
+        },
+        {
+          "rank": 19,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "政府采购预算应当如何编制？ 根据《政府采购法》第三十三条，负有编制部门预算职责的部门在编制下一财政年度部门预算时，应当将该财政年度政府采购的项目及资金预算列出，报本级财政部门汇总。"
+        },
+        {
+          "rank": 20,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "政府采购验收应当如何进行？ 根据《政府采购法》第四十七条，采购人在政府采购合同履行完毕后，应当组织对采购项目的验收。验收应当根据采购合同和采购文件的规定进行。大型或者复杂的政府采购"
         }
       ]
     },
@@ -829,7 +2648,8 @@
       "rank": 1,
       "rr": 1.0,
       "relevant_in_topk": 1,
-      "precision_at_k": 0.2,
+      "precision_at_k": 0.05,
+      "ndcg": 1.0,
       "evidence_coverage": 1.0,
       "top_sources": [
         {
@@ -871,6 +2691,126 @@
           "page_no": null,
           "relevant": false,
           "snippet": "什么是公平原则和公正原则？ 公平原则要求招标人不得以不合理条件限制或排斥潜在投标人，不得对潜在投标人实行歧视待遇，所有潜在投标人享有平等的竞争机会。公正原则要求评标委员会对所有投标"
+        },
+        {
+          "rank": 6,
+          "source_file": "tmpjkwlvs0z.txt",
+          "db_id": 5,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市智慧园区信息化建设项目（二期） - 投标人须具备 软件企业认定证书 或 CMMI3 级及以上认证。 投标人须具备 软件企业认定证书 或 CMMI3 级及以上认证。"
+        },
+        {
+          "rank": 7,
+          "source_file": "test_bid.txt",
+          "db_id": 7,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市智慧园区信息化建设项目（二期） - 投标人须具备 软件企业认定证书 或 CMMI3 级及以上认证。 投标人须具备 软件企业认定证书 或 CMMI3 级及以上认证。"
+        },
+        {
+          "rank": 8,
+          "source_file": "test_bid.txt",
+          "db_id": 6,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "【招标文件】XX市智慧园区信息化建设项目（二期） - 投标人须具备 软件企业认定证书 或 CMMI3 级及以上认证。 投标人须具备 软件企业认定证书 或 CMMI3 级及以上认证。"
+        },
+        {
+          "rank": 9,
+          "source_file": "sample_multipage.pdf",
+          "db_id": 196,
+          "page_no": 1,
+          "relevant": false,
+          "snippet": "【招标文件】XX市页码溯源测试项目 - XX市页码溯源测试项目招标文件 (第一页) XX市页码溯源测试项目招标文件 (第一页) 项目名称: XX市页码溯源测试项目 项目编号: PA"
+        },
+        {
+          "rank": 10,
+          "source_file": "sample_multipage.pdf",
+          "db_id": 132,
+          "page_no": 1,
+          "relevant": false,
+          "snippet": "【招标文件】XX市页码溯源测试项目 - XX市页码溯源测试项目招标文件 (第一页) XX市页码溯源测试项目招标文件 (第一页) 项目名称: XX市页码溯源测试项目 项目编号: PA"
+        },
+        {
+          "rank": 11,
+          "source_file": "sample_multipage.pdf",
+          "db_id": 59,
+          "page_no": 1,
+          "relevant": false,
+          "snippet": "【招标文件】XX市页码溯源测试项目 - XX市页码溯源测试项目招标文件 (第一页) XX市页码溯源测试项目招标文件 (第一页) 项目名称: XX市页码溯源测试项目 项目编号: PA"
+        },
+        {
+          "rank": 12,
+          "source_file": "sample_multipage.pdf",
+          "db_id": 148,
+          "page_no": 1,
+          "relevant": false,
+          "snippet": "【招标文件】XX市页码溯源测试项目 - XX市页码溯源测试项目招标文件 (第一页) XX市页码溯源测试项目招标文件 (第一页) 项目名称: XX市页码溯源测试项目 项目编号: PA"
+        },
+        {
+          "rank": 13,
+          "source_file": "sample_multipage.pdf",
+          "db_id": 100,
+          "page_no": 1,
+          "relevant": false,
+          "snippet": "【招标文件】XX市页码溯源测试项目 - XX市页码溯源测试项目招标文件 (第一页) XX市页码溯源测试项目招标文件 (第一页) 项目名称: XX市页码溯源测试项目 项目编号: PA"
+        },
+        {
+          "rank": 14,
+          "source_file": "sample_multipage.pdf",
+          "db_id": 28,
+          "page_no": 1,
+          "relevant": false,
+          "snippet": "【招标文件】XX市页码溯源测试项目 - XX市页码溯源测试项目招标文件 (第一页) XX市页码溯源测试项目招标文件 (第一页) 项目名称: XX市页码溯源测试项目 项目编号: PA"
+        },
+        {
+          "rank": 15,
+          "source_file": "sample_multipage.pdf",
+          "db_id": 76,
+          "page_no": 1,
+          "relevant": false,
+          "snippet": "【招标文件】XX市页码溯源测试项目 - XX市页码溯源测试项目招标文件 (第一页) XX市页码溯源测试项目招标文件 (第一页) 项目名称: XX市页码溯源测试项目 项目编号: PA"
+        },
+        {
+          "rank": 16,
+          "source_file": "sample_multipage.pdf",
+          "db_id": 43,
+          "page_no": 1,
+          "relevant": false,
+          "snippet": "【招标文件】XX市页码溯源测试项目 - XX市页码溯源测试项目招标文件 (第一页) XX市页码溯源测试项目招标文件 (第一页) 项目名称: XX市页码溯源测试项目 项目编号: PA"
+        },
+        {
+          "rank": 17,
+          "source_file": "sample_multipage.pdf",
+          "db_id": 140,
+          "page_no": 1,
+          "relevant": false,
+          "snippet": "【招标文件】XX市页码溯源测试项目 - XX市页码溯源测试项目招标文件 (第一页) XX市页码溯源测试项目招标文件 (第一页) 项目名称: XX市页码溯源测试项目 项目编号: PA"
+        },
+        {
+          "rank": 18,
+          "source_file": "sample_multipage.pdf",
+          "db_id": 67,
+          "page_no": 1,
+          "relevant": false,
+          "snippet": "【招标文件】XX市页码溯源测试项目 - XX市页码溯源测试项目招标文件 (第一页) XX市页码溯源测试项目招标文件 (第一页) 项目名称: XX市页码溯源测试项目 项目编号: PA"
+        },
+        {
+          "rank": 19,
+          "source_file": "sample_multipage.pdf",
+          "db_id": 204,
+          "page_no": 1,
+          "relevant": false,
+          "snippet": "【招标文件】XX市页码溯源测试项目 - XX市页码溯源测试项目招标文件 (第一页) XX市页码溯源测试项目招标文件 (第一页) 项目名称: XX市页码溯源测试项目 项目编号: PA"
+        },
+        {
+          "rank": 20,
+          "source_file": "sample_multipage.pdf",
+          "db_id": 35,
+          "page_no": 1,
+          "relevant": false,
+          "snippet": "【招标文件】XX市页码溯源测试项目 - XX市页码溯源测试项目招标文件 (第一页) XX市页码溯源测试项目招标文件 (第一页) 项目名称: XX市页码溯源测试项目 项目编号: PA"
         }
       ]
     },
@@ -882,7 +2822,8 @@
       "rank": 1,
       "rr": 1.0,
       "relevant_in_topk": 1,
-      "precision_at_k": 0.2,
+      "precision_at_k": 0.05,
+      "ndcg": 1.0,
       "evidence_coverage": 1.0,
       "top_sources": [
         {
@@ -924,6 +2865,126 @@
           "page_no": null,
           "relevant": false,
           "snippet": "什么情况下可以采用单一来源方式采购？ 根据《政府采购法》第三十一条，符合下列情形之一的货物或者服务，可以依法采用单一来源方式采购：（一）只能从唯一供应商处采购；（二）发生了不可预见"
+        },
+        {
+          "rank": 6,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "政府采购中的进口产品采购有什么要求？ 根据《政府采购法》和《政府采购进口产品管理办法》，政府采购应当采购本国货物、工程和服务。确需采购进口产品的，应当符合以下条件：（一）在中国境内"
+        },
+        {
+          "rank": 7,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "政府采购的方式有哪几种？ 根据《政府采购法》第二十六条，政府采购采用以下方式：（一）公开招标；（二）邀请招标；（三）竞争性谈判；（四）单一来源采购；（五）询价；（六）国务院政府采购"
+        },
+        {
+          "rank": 8,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "政府采购中什么情况下可以采取应急采购？ 政府采购应急采购是指因严重自然灾害、突发公共卫生事件、社会安全事件等不可预见的紧急情况，为满足紧急需要而进行的采购。应急采购可以不执行政府采"
+        },
+        {
+          "rank": 9,
+          "source_file": "政府采购非招标采购方式管理办法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么情况下政府采购项目可以终止？ 根据《政府采购非招标采购方式管理办法》，在政府采购活动中，出现以下情形之一的，采购人应当终止采购活动：（一）因重大变故，采购任务取消的；（二）出现"
+        },
+        {
+          "rank": 10,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么情况下可以采用竞争性谈判方式采购？ 根据《政府采购法》第三十条，符合下列情形之一的货物或者服务，可以采用竞争性谈判方式采购：（一）招标后没有供应商投标或者没有合格标的或者重新招"
+        },
+        {
+          "rank": 11,
+          "source_file": "政府采购信息公告管理办法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "政府采购信息变更公告应当在什么时限内发布？ 根据《政府采购信息公告管理办法》，采购人或者采购代理机构应当在中标、成交信息公告发布后，如需变更的，应当在原信息公告发布媒体上发布更正公"
+        },
+        {
+          "rank": 12,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么是政府采购？ 根据《政府采购法》第二条，政府采购是指各级国家机关、事业单位和团体组织，使用财政性资金采购依法制定的集中采购目录以内的或者采购限额标准以上的货物、工程和服务的行为"
+        },
+        {
+          "rank": 13,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么情况下可以采用询价方式采购？ 根据《政府采购法》第三十二条，采购的货物规格、标准统一，现货货源充足且价格变化幅度小，采购项目预算在公开招标限额标准以下的，可以依照本法采用询价方"
+        },
+        {
+          "rank": 14,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "政府采购合同履行中可以追加吗？ 根据《政府采购法》第四十九条，政府采购合同履行中，采购人需追加与合同标的相同的货物、工程或者服务的，在不改变合同其他条款的前提下，可以与供应商协商签"
+        },
+        {
+          "rank": 15,
+          "source_file": "政府采购非招标采购方式管理办法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么情形下采购人可以终止采购活动？ 根据《政府采购非招标采购方式管理办法》，在政府采购活动中，出现下列情形之一的，采购人应当终止采购活动：（一）因重大变故，采购任务取消的；（二）出"
+        },
+        {
+          "rank": 16,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么是政府采购优先采购制度？ 政府采购优先采购制度是指政府采购应当在满足基本采购需求的前提下，优先采购节能环保产品、自主创新产品、中小企业产品等。具体包括：（一）节能产品政府采购清"
+        },
+        {
+          "rank": 17,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么是政府采购需求管理？ 政府采购需求管理是采购人为实现采购目标，对采购需求进行调查、确定、审查和管理的过程。包括：（一）开展采购需求市场调查；（二）编制采购需求；（三）对采购需求"
+        },
+        {
+          "rank": 18,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "政府采购的信息应当如何公开？ 根据《政府采购法》第十一条和《政府采购信息公告管理办法》，政府采购的信息应当在政府采购监督管理部门指定的媒体上及时向社会公开发布，但涉及商业秘密的除外"
+        },
+        {
+          "rank": 19,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "政府采购预算应当如何编制？ 根据《政府采购法》第三十三条，负有编制部门预算职责的部门在编制下一财政年度部门预算时，应当将该财政年度政府采购的项目及资金预算列出，报本级财政部门汇总。"
+        },
+        {
+          "rank": 20,
+          "source_file": "政府采购法",
+          "db_id": null,
+          "page_no": null,
+          "relevant": false,
+          "snippet": "什么是政府采购的回避原则？ 根据《政府采购法》和相关法规，在政府采购活动中，采购人员及相关人员与供应商有利害关系的，必须回避。回避的情形包括：（一）是供应商的负责人或参加采购活动前"
         }
       ]
     }
