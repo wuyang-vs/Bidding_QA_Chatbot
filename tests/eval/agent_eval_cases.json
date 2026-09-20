@@ -3,42 +3,93 @@
     "id": "E2E-01",
     "category": "single_hop",
     "question": "什么是单一来源采购？",
-    "tools_any": ["search_bidding_knowledge"],
-    "facts": [{"any": ["单一来源"]}],
+    "tools_any": [
+      "search_bidding_knowledge"
+    ],
+    "facts": [
+      {
+        "any": [
+          "单一来源"
+        ]
+      }
+    ],
     "note": "法规/概念单跳, 知识库 FAQ"
   },
   {
     "id": "E2E-02",
     "category": "single_hop",
     "question": "XX市智慧园区信息化建设项目（二期）的投标截止时间是什么时候？",
-    "tools_any": ["search_bidding_knowledge"],
-    "facts": [{"any": ["2025年12月15日", "2025-12-15", "12月15日"]}],
+    "tools_any": [
+      "search_bidding_knowledge"
+    ],
+    "facts": [
+      {
+        "any": [
+          "2025年12月15日",
+          "2025-12-15",
+          "12月15日"
+        ]
+      }
+    ],
     "note": "招标事实单跳, 主测试文档分片"
   },
   {
     "id": "E2E-03",
     "category": "single_hop",
     "question": "XX市智慧园区信息化建设项目（二期）的预算金额是多少？",
-    "tools_any": ["search_bidding_knowledge"],
-    "facts": [{"any": ["860万", "8,600,000", "8600000", "860.0万", "860.00万"]}],
+    "tools_any": [
+      "search_bidding_knowledge"
+    ],
+    "facts": [
+      {
+        "any": [
+          "860万",
+          "8,600,000",
+          "8600000",
+          "860.0万",
+          "860.00万"
+        ]
+      }
+    ],
     "note": "招标事实单跳"
   },
   {
     "id": "E2E-04",
     "category": "single_hop",
     "question": "投标人对资格预审文件有异议时，可以通过什么渠道投诉？",
-    "tools_any": ["search_bidding_knowledge"],
-    "facts": [{"any": ["投诉", "异议"]}],
+    "tools_any": [
+      "search_bidding_knowledge"
+    ],
+    "facts": [
+      {
+        "any": [
+          "投诉",
+          "异议"
+        ]
+      }
+    ],
     "note": "法规渠道单跳"
   },
   {
     "id": "E2E-05",
     "category": "multi_hop",
     "question": "北京交通大学雄安校区智慧校园设备采购项目的采购人和代理机构分别是谁？请分别列出。",
-    "tools_any": ["search_knowledge_graph", "search_bidding_knowledge"],
+    "tools_any": [
+      "search_knowledge_graph",
+      "search_bidding_knowledge"
+    ],
     "facts": [
-      {"any": ["北京交通大学"]},
-      {"any": ["中央国家机关政府采购中心", "政府采购中心"]}
+      {
+        "any": [
+          "北京交通大学"
+        ]
+      },
+      {
+        "any": [
+          "中央国家机关政府采购中心",
+          "政府采购中心"
+        ]
+      }
     ],
     "note": "结构化/图谱多跳: 项目→采购人 + 项目→代理机构, 锚定已入库 KG 节点(2 Project/2 Buyer/2 Agency)与 ccgp 公告"
   },
@@ -46,10 +97,25 @@
     "id": "E2E-06",
     "category": "multi_hop",
     "question": "XX市智慧园区信息化建设项目（二期）的投标截止时间和预算金额分别是什么？请给出两个事实。",
-    "tools_any": ["search_bidding_knowledge"],
+    "tools_any": [
+      "search_bidding_knowledge"
+    ],
     "facts": [
-      {"any": ["2025年12月15日", "2025-12-15", "12月15日"]},
-      {"any": ["860万", "8,600,000", "8600000", "860.0万"]}
+      {
+        "any": [
+          "2025年12月15日",
+          "2025-12-15",
+          "12月15日"
+        ]
+      },
+      {
+        "any": [
+          "860万",
+          "8,600,000",
+          "8600000",
+          "860.0万"
+        ]
+      }
     ],
     "note": "同文档双事实点, 验证答得全"
   },
@@ -57,10 +123,23 @@
     "id": "E2E-07",
     "category": "multi_hop",
     "question": "对比中国大陆和香港的招投标流程，在法规依据和主要环节上有什么区别？",
-    "tools_any": ["search_bidding_knowledge", "search_knowledge_graph"],
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph"
+    ],
     "facts": [
-      {"any": ["大陆", "内地", "中国大陆"]},
-      {"any": ["香港"]}
+      {
+        "any": [
+          "大陆",
+          "内地",
+          "中国大陆"
+        ]
+      },
+      {
+        "any": [
+          "香港"
+        ]
+      }
     ],
     "note": "跨法域对比, 需两侧材料"
   },
@@ -68,7 +147,10 @@
     "id": "E2E-08",
     "category": "multi_hop",
     "question": "采购数量最多的标的物是什么？它的供应商集中在哪些企业？",
-    "tools_any": ["search_postgresql", "search_knowledge_graph"],
+    "tools_any": [
+      "search_postgresql",
+      "search_knowledge_graph"
+    ],
     "facts": [],
     "note": "统计聚合+实体下钻, 工具选择是主指标, 事实不做硬锚定"
   },
@@ -76,11 +158,28 @@
     "id": "E2E-09",
     "category": "cross_domain",
     "question": "结合招标投标法规，投标保证金的比例上限是多少？未中标人的保证金应在什么时候退还？",
-    "tools_any": ["search_bidding_knowledge"],
+    "tools_any": [
+      "search_bidding_knowledge"
+    ],
     "facts": [
-      {"any": ["保证金"]},
-      {"any": ["2%", "2％", "百分之二", "2 %"]},
-      {"any": ["退还"]}
+      {
+        "any": [
+          "保证金"
+        ]
+      },
+      {
+        "any": [
+          "2%",
+          "2％",
+          "百分之二",
+          "2 %"
+        ]
+      },
+      {
+        "any": [
+          "退还"
+        ]
+      }
     ],
     "note": "法规线: 比例+退还时限双要点(实施条例)"
   },
@@ -88,10 +187,26 @@
     "id": "E2E-10",
     "category": "cross_domain",
     "question": "XX市智慧园区信息化建设项目（二期）预算860万元，依法投标保证金最多交多少？请给出计算结果。",
-    "tools_any": ["search_bidding_knowledge"],
+    "tools_any": [
+      "search_bidding_knowledge"
+    ],
     "facts": [
-      {"any": ["2%", "2％", "百分之二", "2 %"]},
-      {"any": ["17.2万", "172000", "172,000", "17.2 万"]}
+      {
+        "any": [
+          "2%",
+          "2％",
+          "百分之二",
+          "2 %"
+        ]
+      },
+      {
+        "any": [
+          "17.2万",
+          "172000",
+          "172,000",
+          "17.2 万"
+        ]
+      }
     ],
     "note": "跨域推理: 2% 规则 × 860万 = 17.2万"
   },
@@ -99,11 +214,30 @@
     "id": "E2E-11",
     "category": "cross_domain",
     "question": "投标人对XX市智慧园区信息化建设项目（二期）的评标结果有异议，依法应在什么期间、向谁提出？招标人多久内要答复？",
-    "tools_any": ["search_bidding_knowledge"],
+    "tools_any": [
+      "search_bidding_knowledge"
+    ],
     "facts": [
-      {"any": ["中标候选人", "公示"]},
-      {"any": ["招标人"]},
-      {"any": ["3日", "三日", "3 日", "3天", "三天"]}
+      {
+        "any": [
+          "中标候选人",
+          "公示"
+        ]
+      },
+      {
+        "any": [
+          "招标人"
+        ]
+      },
+      {
+        "any": [
+          "3日",
+          "三日",
+          "3 日",
+          "3天",
+          "三天"
+        ]
+      }
     ],
     "note": "法规线: 公示期间提出+招标人3日答复"
   },
@@ -111,11 +245,823 @@
     "id": "E2E-12",
     "category": "cross_domain",
     "question": "请同时回答：XX市智慧园区信息化建设项目（二期）的投标截止时间是哪天？如果投标人在该截止时间后送达投标文件，依法应如何处理？",
-    "tools_any": ["search_bidding_knowledge"],
+    "tools_any": [
+      "search_bidding_knowledge"
+    ],
     "facts": [
-      {"any": ["2025年12月15日", "2025-12-15", "12月15日"]},
-      {"any": ["拒收", "拒绝", "不予受理", "不得接收"]}
+      {
+        "any": [
+          "2025年12月15日",
+          "2025-12-15",
+          "12月15日"
+        ]
+      },
+      {
+        "any": [
+          "拒收",
+          "拒绝",
+          "不予受理",
+          "不得接收"
+        ]
+      }
     ],
     "note": "项目事实+法规处置跨域组合"
+  },
+  {
+    "id": "E2E-SH100",
+    "category": "single_hop",
+    "question": "国家广播电视总局282台基础设施配套改造项目预算大概多少？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "国家广播电视总局"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH102",
+    "category": "single_hop",
+    "question": "那个国家广播电视总局282台基础设施配套改造项目的开标时间？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "10月08日",
+          "14:00"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH105",
+    "category": "single_hop",
+    "question": "请问北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目预算多少钱？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "北京交通大学雄安"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH107",
+    "category": "single_hop",
+    "question": "我想问下北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标时间？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "10月14日",
+          "09:00"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH110",
+    "category": "single_hop",
+    "question": "那个遂宁市消防救援支队年度食材配送服务项目预算是多少？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "遂宁市消防救援支"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH112",
+    "category": "single_hop",
+    "question": "遂宁市消防救援支队年度食材配送服务项目的开标时间？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "10月08日",
+          "14:30"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH115",
+    "category": "single_hop",
+    "question": "我想问下2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目预算大概多少？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "联谊医院"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH117",
+    "category": "single_hop",
+    "question": "请问2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的开标时间？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "10月08日",
+          "14:00"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH120",
+    "category": "single_hop",
+    "question": "吉林大学中日联谊医院双层电蒸锅采购预算多少钱？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "吉林大学中日联谊"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH122",
+    "category": "single_hop",
+    "question": "那个吉林大学中日联谊医院双层电蒸锅采购的开标时间？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "10月10日",
+          "09:00"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH125",
+    "category": "single_hop",
+    "question": "请问天津海关化矿金属材料检测中心2026年仪器设备购置项目预算是多少？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "天津海关化矿金属"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH127",
+    "category": "single_hop",
+    "question": "我想问下天津海关化矿金属材料检测中心2026年仪器设备购置项目的开标时间？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "10月12日",
+          "09:30"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH130",
+    "category": "single_hop",
+    "question": "那个吉林大学中日联谊医院护士鞋采购预算大概多少？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "吉林大学中日联谊"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH132",
+    "category": "single_hop",
+    "question": "吉林大学中日联谊医院护士鞋采购的开标时间？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "10月10日",
+          "09:00"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH135",
+    "category": "single_hop",
+    "question": "我想问下吉林大学中日联谊医院2026-2027年度保安服务项目预算多少钱？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "吉林大学中日联谊"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH137",
+    "category": "single_hop",
+    "question": "请问吉林大学中日联谊医院2026-2027年度保安服务项目的开标时间？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "10月08日",
+          "09:30"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH140",
+    "category": "single_hop",
+    "question": "大连理工大学数字化机器人手术实验平台采购项目预算是多少？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "大连理工大学数字"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH142",
+    "category": "single_hop",
+    "question": "那个大连理工大学数字化机器人手术实验平台采购项目的开标时间？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "10月12日",
+          "10:00"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH145",
+    "category": "single_hop",
+    "question": "请问南开大学实验室设备处智慧安全实验室建设采购项目预算大概多少？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "南开大学实验室设"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH147",
+    "category": "single_hop",
+    "question": "我想问下南开大学实验室设备处智慧安全实验室建设采购项目的开标时间？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "10月08日",
+          "14:00"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH150",
+    "category": "single_hop",
+    "question": "那个复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务预算多少钱？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "复旦大学国家基础"
+        ]
+      }
+    ],
+    "note": "enterprise 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH151",
+    "category": "single_hop",
+    "question": "我想问下复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务采购单位是谁？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "复旦大学国家基础"
+        ]
+      }
+    ],
+    "note": "enterprise 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH152",
+    "category": "single_hop",
+    "question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标时间？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "10月08日",
+          "10:00"
+        ]
+      }
+    ],
+    "note": "enterprise 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH153",
+    "category": "single_hop",
+    "question": "请问复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标地点？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "复旦大学国家基础"
+        ]
+      }
+    ],
+    "note": "enterprise 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH154",
+    "category": "single_hop",
+    "question": "那个复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务代理机构？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "复旦大学国家基础",
+          "上海银鑫建设咨询有限公司"
+        ]
+      }
+    ],
+    "note": "enterprise 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH155",
+    "category": "single_hop",
+    "question": "我想问下2026年东北区域国家重点档案修复项目预算是多少？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "年东北区域国家重"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH157",
+    "category": "single_hop",
+    "question": "请问2026年东北区域国家重点档案修复项目的开标时间？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "10月12日",
+          "09:30"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH160",
+    "category": "single_hop",
+    "question": "百炼大模型管理平台升级及运维服务项目预算大概多少？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "any": [
+          "110.000000"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH162",
+    "category": "single_hop",
+    "question": "那个百炼大模型管理平台升级及运维服务项目的开标时间？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "10月08日",
+          "10:30"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH165",
+    "category": "single_hop",
+    "question": "请问多功能分液器和非接触式微孔板样品处理系统采购项目预算多少钱？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "多功能分液器和非"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH167",
+    "category": "single_hop",
+    "question": "我想问下多功能分液器和非接触式微孔板样品处理系统采购项目的开标时间？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "10月09日",
+          "13:30"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH170",
+    "category": "single_hop",
+    "question": "那个高内涵成像分析仪采购项目预算是多少？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "高内涵成像分析仪"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH172",
+    "category": "single_hop",
+    "question": "高内涵成像分析仪采购项目的开标时间？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "10月09日",
+          "13:30"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp.gov.cn"
+  },
+  {
+    "id": "E2E-SH176",
+    "category": "single_hop",
+    "question": "国家广播电视总局282台基础设施配套改造项目代理机构是什么？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "代理机构",
+          "国家广播电视总局"
+        ]
+      }
+    ],
+    "note": "enterprise 单跳, 源 ccgp_structured"
+  },
+  {
+    "id": "E2E-SH177",
+    "category": "single_hop",
+    "question": "请问国家广播电视总局282台基础设施配套改造项目预算多少钱？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "预算金额"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp_structured"
+  },
+  {
+    "id": "E2E-SH178",
+    "category": "single_hop",
+    "question": "那个国家广播电视总局282台基础设施配套改造项目的开标时间是什么时候？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "10月08日",
+          "14:00"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp_structured"
+  },
+  {
+    "id": "E2E-SH180",
+    "category": "single_hop",
+    "question": "国家广播电视总局282台基础设施配套改造项目的行政区域是哪里？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "行政区域",
+          "国家广播电视总局"
+        ]
+      }
+    ],
+    "note": "enterprise 单跳, 源 ccgp_structured"
+  },
+  {
+    "id": "E2E-SH182",
+    "category": "single_hop",
+    "question": "那个北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目代理机构是什么？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "代理机构",
+          "北京交通大学雄安校区"
+        ]
+      }
+    ],
+    "note": "enterprise 单跳, 源 ccgp_structured"
+  },
+  {
+    "id": "E2E-SH183",
+    "category": "single_hop",
+    "question": "我想问下北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目预算多少钱？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "预算金额"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp_structured"
+  },
+  {
+    "id": "E2E-SH184",
+    "category": "single_hop",
+    "question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标时间是什么时候？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "10月14日",
+          "09:00"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp_structured"
+  },
+  {
+    "id": "E2E-SH186",
+    "category": "single_hop",
+    "question": "那个北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的行政区域是哪里？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "行政区域",
+          "北京交通大学雄安校区"
+        ]
+      }
+    ],
+    "note": "enterprise 单跳, 源 ccgp_structured"
+  },
+  {
+    "id": "E2E-SH188",
+    "category": "single_hop",
+    "question": "遂宁市消防救援支队年度食材配送服务项目代理机构是什么？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "代理机构",
+          "遂宁市"
+        ]
+      }
+    ],
+    "note": "enterprise 单跳, 源 ccgp_structured"
+  },
+  {
+    "id": "E2E-SH189",
+    "category": "single_hop",
+    "question": "请问遂宁市消防救援支队年度食材配送服务项目预算多少钱？",
+    "tools_any": [
+      "search_bidding_knowledge",
+      "search_knowledge_graph",
+      "search_postgresql"
+    ],
+    "facts": [
+      {
+        "all": [
+          "预算金额"
+        ]
+      }
+    ],
+    "note": "tender_fact 单跳, 源 ccgp_structured"
   }
 ]

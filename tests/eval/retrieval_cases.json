@@ -2,22 +2,701 @@
   "description": "检索质量离线评测集. 问题为对库内真实 Q&A 的口语化改写; must_any=命中任一即相关, must_all=必须全部出现. 期望词全部取自库内答案原文, 不做编造.",
   "top_k": 5,
   "cases": [
-    {"id": "EV-01", "domain": "tender_fact", "question": "广电总局282台那个基础设施配套改造项目，预算大概多少钱？", "must_any": ["240.43"]},
-    {"id": "EV-02", "domain": "tender_fact", "question": "国家广播电视总局282台改造项目哪天几点开标啊", "must_all": ["10月08日", "14:00"]},
-    {"id": "EV-03", "domain": "tender_fact", "question": "北京交通大学雄安校区一期智慧校园设备采购及系统集成项目的最高限价是多少", "must_any": ["9971.64"]},
-    {"id": "EV-04", "domain": "tender_fact", "question": "吉林大学中日联谊医院买双层电蒸锅的预算是多少", "must_any": ["123.9"]},
-    {"id": "EV-05", "domain": "tender_fact", "question": "大连理工大学数字化机器人手术实验平台采购项目花多少钱预算", "must_all": ["机器人手术", "150.0"]},
-    {"id": "EV-06", "domain": "tender_fact", "question": "百炼大模型管理平台升级及运维服务项目预算多少", "must_all": ["百炼", "110.0"]},
-    {"id": "EV-07", "domain": "tender_fact", "question": "高内涵成像分析仪采购项目的预算金额", "must_any": ["280.0"]},
-    {"id": "EV-08", "domain": "enterprise", "question": "吉大中日联谊医院双层电蒸锅采购这个项目，招标代理机构找的是哪家公司", "must_all": ["电蒸锅", "中资国际工程咨询"]},
-    {"id": "EV-09", "domain": "enterprise", "question": "吉林大学中日联谊医院2026到2027年度保安服务项目是什么时候开标的", "must_all": ["保安", "10月08日", "09:30"]},
-    {"id": "EV-10", "domain": "enterprise", "question": "复旦大学化学学科国家基础研究创新提升工程的招标代理服务在哪个行政区域", "must_all": ["复旦", "上海市"]},
-    {"id": "EV-11", "domain": "regulation", "question": "开标应该安排在什么时间、什么地点，法律怎么规定的", "must_all": ["第三十四条", "同一时间"]},
-    {"id": "EV-12", "domain": "regulation", "question": "什么情况下政府采购允许用询价方式", "must_all": ["第三十二条", "三家"]},
-    {"id": "EV-13", "domain": "regulation", "question": "合同签完之后，招标人和中标人还能另外再签一份背离原合同实质内容的协议吗", "must_all": ["第五十七条", "背离"]},
-    {"id": "EV-14", "domain": "regulation", "question": "招标投标活动里各方都有哪些保密义务", "must_all": ["第二十二条", "标底"]},
-    {"id": "EV-15", "domain": "regulation", "question": "政府采购合同签完要在几天内、到哪里公告", "must_all": ["两个工作日", "指定的媒体"]},
-    {"id": "EV-16", "domain": "regulation", "question": "招投标里说的诚实信用原则到底指什么", "must_all": ["诚实信用", "弄虚作假"]},
-    {"id": "EV-17", "domain": "regulation", "question": "政府采购要变更采购方式需要满足什么条件、走什么手续", "must_all": ["财政部门批准", "竞争性谈判"]}
+    {
+      "id": "EV-01",
+      "domain": "tender_fact",
+      "question": "广电总局282台那个基础设施配套改造项目，预算大概多少钱？",
+      "must_any": [
+        "240.43"
+      ]
+    },
+    {
+      "id": "EV-02",
+      "domain": "tender_fact",
+      "question": "国家广播电视总局282台改造项目哪天几点开标啊",
+      "must_all": [
+        "10月08日",
+        "14:00"
+      ]
+    },
+    {
+      "id": "EV-03",
+      "domain": "tender_fact",
+      "question": "北京交通大学雄安校区一期智慧校园设备采购及系统集成项目的最高限价是多少",
+      "must_any": [
+        "9971.64"
+      ]
+    },
+    {
+      "id": "EV-04",
+      "domain": "tender_fact",
+      "question": "吉林大学中日联谊医院买双层电蒸锅的预算是多少",
+      "must_any": [
+        "123.9"
+      ]
+    },
+    {
+      "id": "EV-05",
+      "domain": "tender_fact",
+      "question": "大连理工大学数字化机器人手术实验平台采购项目花多少钱预算",
+      "must_all": [
+        "机器人手术",
+        "150.0"
+      ]
+    },
+    {
+      "id": "EV-06",
+      "domain": "tender_fact",
+      "question": "百炼大模型管理平台升级及运维服务项目预算多少",
+      "must_all": [
+        "百炼",
+        "110.0"
+      ]
+    },
+    {
+      "id": "EV-07",
+      "domain": "tender_fact",
+      "question": "高内涵成像分析仪采购项目的预算金额",
+      "must_any": [
+        "280.0"
+      ]
+    },
+    {
+      "id": "EV-08",
+      "domain": "enterprise",
+      "question": "吉大中日联谊医院双层电蒸锅采购这个项目，招标代理机构找的是哪家公司",
+      "must_all": [
+        "电蒸锅",
+        "中资国际工程咨询"
+      ]
+    },
+    {
+      "id": "EV-09",
+      "domain": "enterprise",
+      "question": "吉林大学中日联谊医院2026到2027年度保安服务项目是什么时候开标的",
+      "must_all": [
+        "保安",
+        "10月08日",
+        "09:30"
+      ]
+    },
+    {
+      "id": "EV-10",
+      "domain": "enterprise",
+      "question": "复旦大学化学学科国家基础研究创新提升工程的招标代理服务在哪个行政区域",
+      "must_all": [
+        "复旦",
+        "上海市"
+      ]
+    },
+    {
+      "id": "EV-11",
+      "domain": "regulation",
+      "question": "开标应该安排在什么时间、什么地点，法律怎么规定的",
+      "must_all": [
+        "第三十四条",
+        "同一时间"
+      ]
+    },
+    {
+      "id": "EV-12",
+      "domain": "regulation",
+      "question": "什么情况下政府采购允许用询价方式",
+      "must_all": [
+        "第三十二条",
+        "三家"
+      ]
+    },
+    {
+      "id": "EV-13",
+      "domain": "regulation",
+      "question": "合同签完之后，招标人和中标人还能另外再签一份背离原合同实质内容的协议吗",
+      "must_all": [
+        "第五十七条",
+        "背离"
+      ]
+    },
+    {
+      "id": "EV-14",
+      "domain": "regulation",
+      "question": "招标投标活动里各方都有哪些保密义务",
+      "must_all": [
+        "第二十二条",
+        "标底"
+      ]
+    },
+    {
+      "id": "EV-15",
+      "domain": "regulation",
+      "question": "政府采购合同签完要在几天内、到哪里公告",
+      "must_all": [
+        "两个工作日",
+        "指定的媒体"
+      ]
+    },
+    {
+      "id": "EV-16",
+      "domain": "regulation",
+      "question": "招投标里说的诚实信用原则到底指什么",
+      "must_all": [
+        "诚实信用",
+        "弄虚作假"
+      ]
+    },
+    {
+      "id": "EV-17",
+      "domain": "regulation",
+      "question": "政府采购要变更采购方式需要满足什么条件、走什么手续",
+      "must_all": [
+        "财政部门批准",
+        "竞争性谈判"
+      ]
+    },
+    {
+      "id": "EV-G100",
+      "domain": "tender_fact",
+      "question": "国家广播电视总局282台基础设施配套改造项目预算大概多少？",
+      "must_all": [
+        "国家广播电视总局"
+      ],
+      "must_any": [
+        "240.430000"
+      ]
+    },
+    {
+      "id": "EV-G102",
+      "domain": "tender_fact",
+      "question": "那个国家广播电视总局282台基础设施配套改造项目的开标时间？",
+      "must_all": [
+        "10月08日",
+        "14:00"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G105",
+      "domain": "tender_fact",
+      "question": "请问北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目预算多少钱？",
+      "must_all": [
+        "北京交通大学雄安"
+      ],
+      "must_any": [
+        "9971.645796"
+      ]
+    },
+    {
+      "id": "EV-G107",
+      "domain": "tender_fact",
+      "question": "我想问下北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标时间？",
+      "must_all": [
+        "10月14日",
+        "09:00"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G110",
+      "domain": "tender_fact",
+      "question": "那个遂宁市消防救援支队年度食材配送服务项目预算是多少？",
+      "must_all": [
+        "遂宁市消防救援支"
+      ],
+      "must_any": [
+        "307.520000"
+      ]
+    },
+    {
+      "id": "EV-G112",
+      "domain": "tender_fact",
+      "question": "遂宁市消防救援支队年度食材配送服务项目的开标时间？",
+      "must_all": [
+        "10月08日",
+        "14:30"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G115",
+      "domain": "tender_fact",
+      "question": "我想问下2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目预算大概多少？",
+      "must_all": [
+        "联谊医院"
+      ],
+      "must_any": [
+        "99.000000"
+      ]
+    },
+    {
+      "id": "EV-G117",
+      "domain": "tender_fact",
+      "question": "请问2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的开标时间？",
+      "must_all": [
+        "10月08日",
+        "14:00"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G120",
+      "domain": "tender_fact",
+      "question": "吉林大学中日联谊医院双层电蒸锅采购预算多少钱？",
+      "must_all": [
+        "吉林大学中日联谊"
+      ],
+      "must_any": [
+        "123.900000"
+      ]
+    },
+    {
+      "id": "EV-G122",
+      "domain": "tender_fact",
+      "question": "那个吉林大学中日联谊医院双层电蒸锅采购的开标时间？",
+      "must_all": [
+        "10月10日",
+        "09:00"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G125",
+      "domain": "tender_fact",
+      "question": "请问天津海关化矿金属材料检测中心2026年仪器设备购置项目预算是多少？",
+      "must_all": [
+        "天津海关化矿金属"
+      ],
+      "must_any": [
+        "7.000000"
+      ]
+    },
+    {
+      "id": "EV-G127",
+      "domain": "tender_fact",
+      "question": "我想问下天津海关化矿金属材料检测中心2026年仪器设备购置项目的开标时间？",
+      "must_all": [
+        "10月12日",
+        "09:30"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G130",
+      "domain": "tender_fact",
+      "question": "那个吉林大学中日联谊医院护士鞋采购预算大概多少？",
+      "must_all": [
+        "吉林大学中日联谊"
+      ],
+      "must_any": [
+        "53.000000"
+      ]
+    },
+    {
+      "id": "EV-G132",
+      "domain": "tender_fact",
+      "question": "吉林大学中日联谊医院护士鞋采购的开标时间？",
+      "must_all": [
+        "10月10日",
+        "09:00"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G135",
+      "domain": "tender_fact",
+      "question": "我想问下吉林大学中日联谊医院2026-2027年度保安服务项目预算多少钱？",
+      "must_all": [
+        "吉林大学中日联谊"
+      ],
+      "must_any": [
+        "900.000000"
+      ]
+    },
+    {
+      "id": "EV-G137",
+      "domain": "tender_fact",
+      "question": "请问吉林大学中日联谊医院2026-2027年度保安服务项目的开标时间？",
+      "must_all": [
+        "10月08日",
+        "09:30"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G140",
+      "domain": "tender_fact",
+      "question": "大连理工大学数字化机器人手术实验平台采购项目预算是多少？",
+      "must_all": [
+        "大连理工大学数字"
+      ],
+      "must_any": [
+        "150.000000"
+      ]
+    },
+    {
+      "id": "EV-G142",
+      "domain": "tender_fact",
+      "question": "那个大连理工大学数字化机器人手术实验平台采购项目的开标时间？",
+      "must_all": [
+        "10月12日",
+        "10:00"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G145",
+      "domain": "tender_fact",
+      "question": "请问南开大学实验室设备处智慧安全实验室建设采购项目预算大概多少？",
+      "must_all": [
+        "南开大学实验室设"
+      ],
+      "must_any": [
+        "150.165000"
+      ]
+    },
+    {
+      "id": "EV-G147",
+      "domain": "tender_fact",
+      "question": "我想问下南开大学实验室设备处智慧安全实验室建设采购项目的开标时间？",
+      "must_all": [
+        "10月08日",
+        "14:00"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G150",
+      "domain": "enterprise",
+      "question": "那个复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务预算多少钱？",
+      "must_all": [
+        "复旦大学国家基础"
+      ],
+      "must_any": [
+        "148"
+      ]
+    },
+    {
+      "id": "EV-G151",
+      "domain": "enterprise",
+      "question": "我想问下复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务采购单位是谁？",
+      "must_all": [
+        "复旦大学国家基础"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G152",
+      "domain": "enterprise",
+      "question": "复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标时间？",
+      "must_all": [
+        "10月08日",
+        "10:00"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G153",
+      "domain": "enterprise",
+      "question": "请问复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标地点？",
+      "must_all": [
+        "复旦大学国家基础"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G154",
+      "domain": "enterprise",
+      "question": "那个复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务代理机构？",
+      "must_all": [
+        "复旦大学国家基础",
+        "上海银鑫建设咨询有限公司"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G155",
+      "domain": "tender_fact",
+      "question": "我想问下2026年东北区域国家重点档案修复项目预算是多少？",
+      "must_all": [
+        "年东北区域国家重"
+      ],
+      "must_any": [
+        "65.000000"
+      ]
+    },
+    {
+      "id": "EV-G157",
+      "domain": "tender_fact",
+      "question": "请问2026年东北区域国家重点档案修复项目的开标时间？",
+      "must_all": [
+        "10月12日",
+        "09:30"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G160",
+      "domain": "tender_fact",
+      "question": "百炼大模型管理平台升级及运维服务项目预算大概多少？",
+      "must_all": [],
+      "must_any": [
+        "110.000000"
+      ]
+    },
+    {
+      "id": "EV-G162",
+      "domain": "tender_fact",
+      "question": "那个百炼大模型管理平台升级及运维服务项目的开标时间？",
+      "must_all": [
+        "10月08日",
+        "10:30"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G165",
+      "domain": "tender_fact",
+      "question": "请问多功能分液器和非接触式微孔板样品处理系统采购项目预算多少钱？",
+      "must_all": [
+        "多功能分液器和非"
+      ],
+      "must_any": [
+        "160.000000"
+      ]
+    },
+    {
+      "id": "EV-G167",
+      "domain": "tender_fact",
+      "question": "我想问下多功能分液器和非接触式微孔板样品处理系统采购项目的开标时间？",
+      "must_all": [
+        "10月09日",
+        "13:30"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G170",
+      "domain": "tender_fact",
+      "question": "那个高内涵成像分析仪采购项目预算是多少？",
+      "must_all": [
+        "高内涵成像分析仪"
+      ],
+      "must_any": [
+        "280.000000"
+      ]
+    },
+    {
+      "id": "EV-G172",
+      "domain": "tender_fact",
+      "question": "高内涵成像分析仪采购项目的开标时间？",
+      "must_all": [
+        "10月09日",
+        "13:30"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G176",
+      "domain": "enterprise",
+      "question": "国家广播电视总局282台基础设施配套改造项目代理机构是什么？",
+      "must_all": [
+        "代理机构",
+        "国家广播电视总局"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G177",
+      "domain": "tender_fact",
+      "question": "请问国家广播电视总局282台基础设施配套改造项目预算多少钱？",
+      "must_all": [
+        "预算金额"
+      ],
+      "must_any": [
+        "240.430000"
+      ]
+    },
+    {
+      "id": "EV-G178",
+      "domain": "tender_fact",
+      "question": "那个国家广播电视总局282台基础设施配套改造项目的开标时间是什么时候？",
+      "must_all": [
+        "10月08日",
+        "14:00"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G180",
+      "domain": "enterprise",
+      "question": "国家广播电视总局282台基础设施配套改造项目的行政区域是哪里？",
+      "must_all": [
+        "行政区域",
+        "国家广播电视总局"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G182",
+      "domain": "enterprise",
+      "question": "那个北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目代理机构是什么？",
+      "must_all": [
+        "代理机构",
+        "北京交通大学雄安校区"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G183",
+      "domain": "tender_fact",
+      "question": "我想问下北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目预算多少钱？",
+      "must_all": [
+        "预算金额"
+      ],
+      "must_any": [
+        "9971.645796"
+      ]
+    },
+    {
+      "id": "EV-G184",
+      "domain": "tender_fact",
+      "question": "北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的开标时间是什么时候？",
+      "must_all": [
+        "10月14日",
+        "09:00"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G186",
+      "domain": "enterprise",
+      "question": "那个北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目的行政区域是哪里？",
+      "must_all": [
+        "行政区域",
+        "北京交通大学雄安校区"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G188",
+      "domain": "enterprise",
+      "question": "遂宁市消防救援支队年度食材配送服务项目代理机构是什么？",
+      "must_all": [
+        "代理机构",
+        "遂宁市"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G189",
+      "domain": "tender_fact",
+      "question": "请问遂宁市消防救援支队年度食材配送服务项目预算多少钱？",
+      "must_all": [
+        "预算金额"
+      ],
+      "must_any": [
+        "307.520000"
+      ]
+    },
+    {
+      "id": "EV-G190",
+      "domain": "tender_fact",
+      "question": "那个遂宁市消防救援支队年度食材配送服务项目的开标时间是什么时候？",
+      "must_all": [
+        "10月08日",
+        "14:30"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G192",
+      "domain": "enterprise",
+      "question": "遂宁市消防救援支队年度食材配送服务项目的行政区域是哪里？",
+      "must_all": [
+        "行政区域",
+        "遂宁市"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G194",
+      "domain": "enterprise",
+      "question": "那个2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目代理机构是什么？",
+      "must_all": [
+        "代理机构",
+        "2026-2027年度吉林大学中日联谊医院"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G195",
+      "domain": "tender_fact",
+      "question": "我想问下2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目预算多少钱？",
+      "must_all": [
+        "预算金额"
+      ],
+      "must_any": [
+        "99.000000"
+      ]
+    },
+    {
+      "id": "EV-G196",
+      "domain": "tender_fact",
+      "question": "2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的开标时间是什么时候？",
+      "must_all": [
+        "10月08日",
+        "14:00"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G198",
+      "domain": "enterprise",
+      "question": "那个2026-2027年度吉林大学中日联谊医院《安防监控系统维保》项目的行政区域是哪里？",
+      "must_all": [
+        "行政区域",
+        "2026-2027年度吉林大学中日联谊医院"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G200",
+      "domain": "enterprise",
+      "question": "吉林大学中日联谊医院双层电蒸锅采购代理机构是什么？",
+      "must_all": [
+        "代理机构",
+        "吉林大学中日联谊医院"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G201",
+      "domain": "tender_fact",
+      "question": "请问吉林大学中日联谊医院双层电蒸锅采购预算多少钱？",
+      "must_all": [
+        "预算金额"
+      ],
+      "must_any": [
+        "123.900000"
+      ]
+    },
+    {
+      "id": "EV-G202",
+      "domain": "tender_fact",
+      "question": "那个吉林大学中日联谊医院双层电蒸锅采购的开标时间是什么时候？",
+      "must_all": [
+        "10月10日",
+        "09:00"
+      ],
+      "must_any": []
+    },
+    {
+      "id": "EV-G204",
+      "domain": "enterprise",
+      "question": "吉林大学中日联谊医院双层电蒸锅采购的行政区域是哪里？",
+      "must_all": [
+        "行政区域",
+        "吉林大学中日联谊医院"
+      ],
+      "must_any": []
+    }
   ]
 }

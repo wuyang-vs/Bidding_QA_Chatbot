@@ -2,11 +2,11 @@
   "fact_threshold": 0.6,
   "summary": {
     "overall": {
-      "cases": 12,
-      "passed": 11,
-      "pass_rate": 0.9167,
-      "tool_selection_rate": 1.0,
-      "fact_group_hit_rate": 0.9091,
+      "cases": 55,
+      "passed": 47,
+      "pass_rate": 0.8545,
+      "tool_selection_rate": 0.8727,
+      "fact_group_hit_rate": 0.9259,
       "required_tool_recall": null
     },
     "by_category": {
@@ -27,11 +27,11 @@
         "required_tool_recall": null
       },
       "single_hop": {
-        "cases": 4,
-        "passed": 4,
-        "pass_rate": 1.0,
-        "tool_selection_rate": 1.0,
-        "fact_group_hit_rate": 1.0,
+        "cases": 47,
+        "passed": 40,
+        "pass_rate": 0.8511,
+        "tool_selection_rate": 0.8511,
+        "fact_group_hit_rate": 0.9362,
         "required_tool_recall": null
       }
     }
@@ -40,7 +40,7 @@
     {
       "id": "E2E-01",
       "category": "single_hop",
-      "answer_chars": 701,
+      "answer_chars": 941,
       "tool": {
         "actual": [
           "search_bidding_knowledge"
@@ -77,16 +77,15 @@
       "answer_ok": true,
       "passed": true,
       "gated": false,
-      "elapsed_ms": 11787,
-      "answer_head": "# 单一来源采购\n\n**单一来源采购**是我国《政府采购法》规定的六种法定采购方式之一（《政府采购法》第二十六条：公开招标、邀请招标、竞争性谈判、**单一来源采购**、询价、国务院政府采购监督管理部门"
+      "elapsed_ms": 21322,
+      "answer_head": "# 单一来源采购\n\n## 一、概念\n\n**单一来源采购**是《政府采购法》第二十六条规定的政府采购方式之一（六种法定方式：公开招标、邀请招标、竞争性谈判、单一来源采购、询价，以及国务院政府采购监督管理"
     },
     {
       "id": "E2E-02",
       "category": "single_hop",
-      "answer_chars": 433,
+      "answer_chars": 429,
       "tool": {
         "actual": [
-          "list_bid_documents",
           "search_bidding_knowledge"
         ],
         "required": [],
@@ -124,13 +123,13 @@
       "answer_ok": true,
       "passed": true,
       "gated": false,
-      "elapsed_ms": 21283,
-      "answer_head": "**XX市智慧园区信息化建设项目（二期）**的投标截止时间为：\n\n**2025年12月15日 14:00**\n\n相关信息补充：\n\n| 项目 | 内容 |\n|---|---|\n| 项目名称 | XX市智"
+      "elapsed_ms": 26993,
+      "answer_head": "XX市智慧园区信息化建设项目（二期）的**投标截止时间是 2025年12月15日 14:00**。\n\n相关信息如下：\n\n| 项目 | 内容 |\n|---|---|\n| 项目名称 | XX市智慧园区信息"
     },
     {
       "id": "E2E-03",
       "category": "single_hop",
-      "answer_chars": 242,
+      "answer_chars": 370,
       "tool": {
         "actual": [
           "search_bidding_knowledge",
@@ -172,17 +171,16 @@
       "answer_ok": true,
       "passed": true,
       "gated": false,
-      "elapsed_ms": 19925,
-      "answer_head": "XX市智慧园区信息化建设项目（二期）的预算金额为 **人民币 8,600,000.00 元**（即 860 万元）。\n\n补充信息（同来源于该项目招标文件）：\n- 项目编号：ZB-2025-0088\n-"
+      "elapsed_ms": 24192,
+      "answer_head": "XX市智慧园区信息化建设项目（二期）的预算金额为 **人民币 8,600,000.00 元（860 万元）**。\n\n顺带补充该项目的基本信息（供参考）：\n\n| 项目信息 | 内容 |\n|---|---"
     },
     {
       "id": "E2E-04",
       "category": "single_hop",
-      "answer_chars": 1260,
+      "answer_chars": 1058,
       "tool": {
         "actual": [
-          "consult_appeal",
-          "search_bidding_knowledge"
+          "consult_appeal"
         ],
         "required": [],
         "required_hits": [],
@@ -191,7 +189,7 @@
         "any_tools": [
           "search_bidding_knowledge"
         ],
-        "any_hit": true
+        "any_hit": false
       },
       "fact": {
         "total": 1,
@@ -213,18 +211,18 @@
           }
         ]
       },
-      "tool_ok": true,
+      "tool_ok": false,
       "fact_ok": true,
       "answer_ok": true,
-      "passed": true,
+      "passed": false,
       "gated": false,
-      "elapsed_ms": 15554,
-      "answer_head": "# 对资格预审文件有异议的救济渠道\n\n投标人（潜在投标人）对资格预审文件有异议时，**不能直接投诉，必须遵循\"先异议、后投诉\"的异议前置程序**。\n\n## 一、第一步：向招标人提出异议（前置程序）\n\n"
+      "elapsed_ms": 8902,
+      "answer_head": "## 对资格预审文件有异议的救济渠道\n\n需要先明确一个关键点：**资格预审文件异议属于\"异议前置\"事项**，不能直接去投诉，必须先向招标人提出异议，对答复不满才能投诉。\n\n### 第一步：先提\"异议\""
     },
     {
       "id": "E2E-05",
       "category": "multi_hop",
-      "answer_chars": 321,
+      "answer_chars": 314,
       "tool": {
         "actual": [
           "search_bidding_knowledge",
@@ -276,15 +274,16 @@
       "answer_ok": true,
       "passed": true,
       "gated": false,
-      "elapsed_ms": 9966,
-      "answer_head": "根据检索结果，该项目（对应名称为\"北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目\"）的相关主体如下：\n\n| 角色 | 名称 |\n|------|------|\n| **采"
+      "elapsed_ms": 10886,
+      "answer_head": "根据检索到的信息，该项目（北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目）的**采购人**和**代理机构**分别如下：\n\n| 角色 | 名称 |\n|------|----"
     },
     {
       "id": "E2E-06",
       "category": "multi_hop",
-      "answer_chars": 287,
+      "answer_chars": 269,
       "tool": {
         "actual": [
+          "list_bid_documents",
           "search_bidding_knowledge"
         ],
         "required": [],
@@ -325,6 +324,7 @@
               "860.0万"
             ],
             "matched": [
+              "860万",
               "8,600,000"
             ],
             "hit": true
@@ -336,8 +336,8 @@
       "answer_ok": true,
       "passed": true,
       "gated": false,
-      "elapsed_ms": 22065,
-      "answer_head": "根据检索到的《XX市智慧园区建设项目招标文件》（项目编号：ZB-2025-0088），两个事实如下：\n\n| 事实项 | 内容 |\n|---|---|\n| **投标截止时间** | 2025年12月15"
+      "elapsed_ms": 24492,
+      "answer_head": "已检索到该项目的招标文件，以下是两个事实信息：\n\n**项目：XX市智慧园区信息化建设项目（二期）**（项目编号：ZB-2025-0088，采购人：XX市园区管理委员会）\n\n| 事项 | 内容 |\n|-"
     },
     {
       "id": "E2E-07",
@@ -345,8 +345,7 @@
       "answer_chars": 155,
       "tool": {
         "actual": [
-          "search_bidding_knowledge",
-          "search_knowledge_graph"
+          "search_bidding_knowledge"
         ],
         "required": [],
         "required_hits": [],
@@ -390,7 +389,7 @@
       "answer_ok": true,
       "passed": false,
       "gated": true,
-      "elapsed_ms": 66101,
+      "elapsed_ms": 64063,
       "answer_head": "抱歉，我未在本地权威知识库中检索到与您问题直接相关的资料。为避免给出无依据或错误的信息，我不能凭空作答。\n\n您可以：\n1. 补充项目全称、招标文件名称或条款关键词后再提问；\n2. 换用更具体的表述（如"
     },
     {
@@ -423,13 +422,13 @@
       "answer_ok": true,
       "passed": true,
       "gated": true,
-      "elapsed_ms": 6259,
+      "elapsed_ms": 14077,
       "answer_head": "抱歉，我未在本地权威知识库中检索到与您问题直接相关的资料。为避免给出无依据或错误的信息，我不能凭空作答。\n\n您可以：\n1. 补充项目全称、招标文件名称或条款关键词后再提问；\n2. 换用更具体的表述（如"
     },
     {
       "id": "E2E-09",
       "category": "cross_domain",
-      "answer_chars": 763,
+      "answer_chars": 760,
       "tool": {
         "actual": [
           "search_bidding_knowledge"
@@ -492,13 +491,13 @@
       "answer_ok": true,
       "passed": true,
       "gated": false,
-      "elapsed_ms": 37386,
-      "answer_head": "根据检索到的法规内容，回答如下：\n\n## 一、投标保证金的比例上限\n\n**不得超过招标项目估算价的 2%（百分之二）。**\n\n- **法律依据**：《招标投标法实施条例》第二十六条。\n- 投标保证金有"
+      "elapsed_ms": 33330,
+      "answer_head": "结合知识库检索到的《招标投标法》及《招标投标法实施条例》相关规定，回答如下：\n\n## 一、投标保证金的比例上限\n\n**不得超过招标项目估算价的 2%。**\n\n依据《招标投标法实施条例》第二十六条：\n-"
     },
     {
       "id": "E2E-10",
       "category": "cross_domain",
-      "answer_chars": 665,
+      "answer_chars": 574,
       "tool": {
         "actual": [
           "search_bidding_knowledge"
@@ -553,13 +552,13 @@
       "answer_ok": true,
       "passed": true,
       "gated": false,
-      "elapsed_ms": 38565,
-      "answer_head": "## 结论：依法最多为 **17.2 万元**\n\n### 计算依据\n\n**法律上限**（《招标投标法实施条例》第二十六条）：\n> 招标人在招标文件中要求投标人提交投标保证金的，**投标保证金不得超过招"
+      "elapsed_ms": 43762,
+      "answer_head": "## 计算结果\n\n**依法投标保证金最高限额 = 860 万元 × 2% = 17.2 万元**\n\n### 法律依据\n\n根据《招标投标法实施条例》**第二十六条**：\n> 招标人在招标文件中要求投标人"
     },
     {
       "id": "E2E-11",
       "category": "cross_domain",
-      "answer_chars": 982,
+      "answer_chars": 900,
       "tool": {
         "actual": [
           "consult_appeal",
@@ -614,7 +613,8 @@
               "三天"
             ],
             "matched": [
-              "3 日"
+              "3日",
+              "三日"
             ],
             "hit": true
           }
@@ -625,13 +625,13 @@
       "answer_ok": true,
       "passed": true,
       "gated": false,
-      "elapsed_ms": 29350,
-      "answer_head": "## 结论（针对 XX市智慧园区信息化建设项目（二期），项目编号 ZB-2025-0088）\n\n**一、在什么期间提出**\n- 应当在**中标候选人公示期间内**提出（不是\"知道结果后几天\"）。\n- "
+      "elapsed_ms": 20992,
+      "answer_head": "针对XX市智慧园区信息化建设项目（二期）评标结果的异议，按《招标投标法实施条例》（适用于依法必须招标的工程建设项目）处理如下：\n\n一、提出的期间\n应当在**中标候选人公示期间**内提出。依法必须进行招"
     },
     {
       "id": "E2E-12",
       "category": "cross_domain",
-      "answer_chars": 839,
+      "answer_chars": 621,
       "tool": {
         "actual": [
           "search_bidding_knowledge"
@@ -685,8 +685,1997 @@
       "answer_ok": true,
       "passed": true,
       "gated": false,
-      "elapsed_ms": 25122,
-      "answer_head": "两个问题都已检索到权威依据，回答如下：\n\n## 一、投标截止时间\n\n**XX市智慧园区信息化建设项目（二期）**\n\n| 项目 | 内容 |\n|---|---|\n| 项目编号 | ZB-2025-008"
+      "elapsed_ms": 29877,
+      "answer_head": "一、投标截止时间\n\nXX市智慧园区信息化建设项目（二期）（项目编号：ZB-2025-0088，采购人：XX市园区管理委员会，预算金额人民币8,600,000.00元）的投标截止时间为 2025年12月"
+    },
+    {
+      "id": "E2E-SH100",
+      "category": "single_hop",
+      "answer_chars": 121,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_postgresql"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "国家广播电视总局"
+            ],
+            "matched": [
+              "国家广播电视总局"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 9639,
+      "answer_head": "**国家广播电视总局282台基础设施配套改造项目**的预算金额为：\n\n**￥240.43 万元（人民币）**\n\n补充信息：\n- 采购单位：国家广播电视总局282台\n- 代理机构：国正聚源工程咨询集团有"
+    },
+    {
+      "id": "E2E-SH102",
+      "category": "single_hop",
+      "answer_chars": 47,
+      "tool": {
+        "actual": [],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": false
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "10月08日",
+              "14:00"
+            ],
+            "matched": [
+              "10月08日",
+              "14:00"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": false,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": false,
+      "gated": false,
+      "elapsed_ms": 15855,
+      "answer_head": "国家广播电视总局282台基础设施配套改造项目的开标时间为：2026年10月08日 14:00。"
+    },
+    {
+      "id": "E2E-SH105",
+      "category": "single_hop",
+      "answer_chars": 218,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_postgresql"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "北京交通大学雄安"
+            ],
+            "matched": [
+              "北京交通大学雄安"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 13397,
+      "answer_head": "根据检索结果，**北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目**的预算金额为：\n\n**￥9971.645796 万元（约 9971.65 万元人民币）**\n\n补充信息"
+    },
+    {
+      "id": "E2E-SH107",
+      "category": "single_hop",
+      "answer_chars": 225,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "10月14日",
+              "09:00"
+            ],
+            "matched": [
+              "10月14日",
+              "09:00"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 26172,
+      "answer_head": "根据检索结果，**北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目**的开标时间为：\n\n📅 **2026年10月14日 09:00**\n\n补充信息：\n- **开标方式/地点"
+    },
+    {
+      "id": "E2E-SH110",
+      "category": "single_hop",
+      "answer_chars": 44,
+      "tool": {
+        "actual": [],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": false
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "遂宁市消防救援支"
+            ],
+            "matched": [
+              "遂宁市消防救援支"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": false,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": false,
+      "gated": false,
+      "elapsed_ms": 9319,
+      "answer_head": "遂宁市消防救援支队年度食材配送服务项目的预算金额为￥307.520000万元（人民币）。"
+    },
+    {
+      "id": "E2E-SH112",
+      "category": "single_hop",
+      "answer_chars": 17,
+      "tool": {
+        "actual": [],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": false
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "10月08日",
+              "14:30"
+            ],
+            "matched": [
+              "10月08日",
+              "14:30"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": false,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": false,
+      "gated": false,
+      "elapsed_ms": 15076,
+      "answer_head": "2026年10月08日 14:30"
+    },
+    {
+      "id": "E2E-SH115",
+      "category": "single_hop",
+      "answer_chars": 15,
+      "tool": {
+        "actual": [],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": false
+      },
+      "fact": {
+        "total": 1,
+        "hit": 0,
+        "hit_rate": 0.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "联谊医院"
+            ],
+            "matched": [],
+            "hit": false
+          }
+        ]
+      },
+      "tool_ok": false,
+      "fact_ok": false,
+      "answer_ok": true,
+      "passed": false,
+      "gated": false,
+      "elapsed_ms": 255016,
+      "answer_head": "抱歉，生成回答时出现技术问题。"
+    },
+    {
+      "id": "E2E-SH117",
+      "category": "single_hop",
+      "answer_chars": 15,
+      "tool": {
+        "actual": [],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": false
+      },
+      "fact": {
+        "total": 1,
+        "hit": 0,
+        "hit_rate": 0.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "10月08日",
+              "14:00"
+            ],
+            "matched": [],
+            "hit": false
+          }
+        ]
+      },
+      "tool_ok": false,
+      "fact_ok": false,
+      "answer_ok": true,
+      "passed": false,
+      "gated": false,
+      "elapsed_ms": 13643,
+      "answer_head": "抱歉，生成回答时出现技术问题。"
+    },
+    {
+      "id": "E2E-SH120",
+      "category": "single_hop",
+      "answer_chars": 15,
+      "tool": {
+        "actual": [],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": false
+      },
+      "fact": {
+        "total": 1,
+        "hit": 0,
+        "hit_rate": 0.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "吉林大学中日联谊"
+            ],
+            "matched": [],
+            "hit": false
+          }
+        ]
+      },
+      "tool_ok": false,
+      "fact_ok": false,
+      "answer_ok": true,
+      "passed": false,
+      "gated": false,
+      "elapsed_ms": 8856,
+      "answer_head": "抱歉，生成回答时出现技术问题。"
+    },
+    {
+      "id": "E2E-SH122",
+      "category": "single_hop",
+      "answer_chars": 150,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_postgresql"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "10月10日",
+              "09:00"
+            ],
+            "matched": [
+              "10月10日",
+              "09:00"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 11092,
+      "answer_head": "吉林大学中日联谊医院双层电蒸锅采购的**开标时间是 2026年10月10日 09:00**。\n\n补充信息：\n- **开标地点**：长春市二道区东南湖大路3030号，中资国际工程咨询集团有限责任公司一楼"
+    },
+    {
+      "id": "E2E-SH125",
+      "category": "single_hop",
+      "answer_chars": 183,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_postgresql"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "天津海关化矿金属"
+            ],
+            "matched": [
+              "天津海关化矿金属"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 14793,
+      "answer_head": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的预算金额为 **￥7.000000万元（人民币）**。\n\n补充信息（供参考）：\n- **采购单位**：中华人民共和国天津海关后勤管理中心\n- *"
+    },
+    {
+      "id": "E2E-SH127",
+      "category": "single_hop",
+      "answer_chars": 160,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "10月12日",
+              "09:30"
+            ],
+            "matched": [
+              "10月12日",
+              "09:30"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 13185,
+      "answer_head": "天津海关化矿金属材料检测中心2026年仪器设备购置项目的**开标时间为 2026年10月12日 09:30**。\n\n补充信息：\n- **开标地点**：天津博汇招标有限公司评标室（天津市和平区睦南道10"
+    },
+    {
+      "id": "E2E-SH130",
+      "category": "single_hop",
+      "answer_chars": 170,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_postgresql"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "吉林大学中日联谊"
+            ],
+            "matched": [
+              "吉林大学中日联谊"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 9586,
+      "answer_head": "吉林大学中日联谊医院护士鞋采购项目的预算金额为 **￥53.00 万元（人民币）**。\n\n补充信息：\n- **采购单位**：吉林大学中日联谊医院\n- **开标地点**：长春市二道区东南湖大路3030号"
+    },
+    {
+      "id": "E2E-SH132",
+      "category": "single_hop",
+      "answer_chars": 169,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_postgresql"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "10月10日",
+              "09:00"
+            ],
+            "matched": [
+              "10月10日",
+              "09:00"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 12351,
+      "answer_head": "**吉林大学中日联谊医院护士鞋采购**的开标时间为：\n\n**2026年10月10日 09:00**\n\n补充信息：\n- **开标地点**：长春市二道区东南湖大路3030号，中资国际工程咨询集团有限责任公"
+    },
+    {
+      "id": "E2E-SH135",
+      "category": "single_hop",
+      "answer_chars": 206,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "吉林大学中日联谊"
+            ],
+            "matched": [
+              "吉林大学中日联谊"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 10301,
+      "answer_head": "吉林大学中日联谊医院2026-2027年度保安服务项目的预算金额为￥900.000000万元（人民币），即900万元[资料1][资料2]。\n\n需要注意，容易与另一个名称相近的项目混淆：同期该院的《安防"
+    },
+    {
+      "id": "E2E-SH137",
+      "category": "single_hop",
+      "answer_chars": 259,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_postgresql"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "10月08日",
+              "09:30"
+            ],
+            "matched": [
+              "10月08日",
+              "09:30"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 14616,
+      "answer_head": "检索到相关信息如下：\n\n**吉林大学中日联谊医院2026-2027年度保安服务项目**\n- **开标时间：2026年10月08日 09:30**\n- 开标地点：吉林省长春市生态大街五洲国际二期6栋30"
+    },
+    {
+      "id": "E2E-SH140",
+      "category": "single_hop",
+      "answer_chars": 159,
+      "tool": {
+        "actual": [
+          "list_bid_documents",
+          "search_bidding_knowledge"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "大连理工大学数字"
+            ],
+            "matched": [
+              "大连理工大学数字"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 8205,
+      "answer_head": "大连理工大学数字化机器人手术实验平台采购项目的预算金额为 **￥150.000000 万元（人民币）**，即 **150 万元**。\n\n补充信息：\n- **采购单位**：大连理工大学\n- **代理机构"
+    },
+    {
+      "id": "E2E-SH142",
+      "category": "single_hop",
+      "answer_chars": 183,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "10月12日",
+              "10:00"
+            ],
+            "matched": [
+              "10月12日",
+              "10:00"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 9898,
+      "answer_head": "**大连理工大学数字化机器人手术实验平台采购项目**的开标时间为：\n\n📅 **2026年10月12日 10:00**\n\n补充信息：\n- **开标地点**：大连市机电设备招标有限责任公司2楼202会议室"
+    },
+    {
+      "id": "E2E-SH145",
+      "category": "single_hop",
+      "answer_chars": 161,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_postgresql"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "南开大学实验室设"
+            ],
+            "matched": [
+              "南开大学实验室设"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 20273,
+      "answer_head": "**南开大学实验室设备处智慧安全实验室建设采购项目**的预算金额为 **￥150.165000 万元（人民币）**，约 **150.17 万元**。\n\n补充信息：\n- 采购单位：南开大学\n- 代理机构"
+    },
+    {
+      "id": "E2E-SH147",
+      "category": "single_hop",
+      "answer_chars": 178,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "10月08日",
+              "14:00"
+            ],
+            "matched": [
+              "10月08日",
+              "14:00"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 25487,
+      "answer_head": "已为您查询到该项目信息：\n\n**南开大学实验室设备处智慧安全实验室建设采购项目**\n\n- **开标时间**：2026年10月08日 14:00\n- **开标地点**：天津信诚盛德工程咨询有限公司（天津"
+    },
+    {
+      "id": "E2E-SH150",
+      "category": "single_hop",
+      "answer_chars": 128,
+      "tool": {
+        "actual": [
+          "list_bid_documents",
+          "search_bidding_knowledge"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "复旦大学国家基础"
+            ],
+            "matched": [
+              "复旦大学国家基础"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 10127,
+      "answer_head": "**复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务**的预算金额为 **148 万元**。\n\n补充信息（同一项目）：\n- 采购单位：复旦大学\n- 代理机构：上海银鑫建设咨询有限公司\n\n如"
+    },
+    {
+      "id": "E2E-SH151",
+      "category": "single_hop",
+      "answer_chars": 224,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "复旦大学国家基础"
+            ],
+            "matched": [
+              "复旦大学国家基础"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 12144,
+      "answer_head": "**复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务**的采购单位（采购人）是：\n\n## 复旦大学\n\n相关信息补充：\n\n| 项目 | 内容 |\n|---|---|\n| 采购单位（采购人） "
+    },
+    {
+      "id": "E2E-SH152",
+      "category": "single_hop",
+      "answer_chars": 201,
+      "tool": {
+        "actual": [
+          "list_bid_documents",
+          "search_bidding_knowledge"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "10月08日",
+              "10:00"
+            ],
+            "matched": [
+              "10月08日",
+              "10:00"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 11783,
+      "answer_head": "**复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务**的开标时间为：\n\n- **开标时间：2026年10月08日 10:00**\n\n相关信息补充（供参考）：\n- 开标地点：复旦大学采购与"
+    },
+    {
+      "id": "E2E-SH153",
+      "category": "single_hop",
+      "answer_chars": 173,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "复旦大学国家基础"
+            ],
+            "matched": [
+              "复旦大学国家基础"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 10558,
+      "answer_head": "**复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务的开标地点为：**\n\n**复旦大学采购与招标管理系统（网址：https://cz.fudan.edu.cn）**\n\n即采用线上电子开标方"
+    },
+    {
+      "id": "E2E-SH154",
+      "category": "single_hop",
+      "answer_chars": 345,
+      "tool": {
+        "actual": [
+          "list_bid_documents",
+          "search_bidding_knowledge"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "复旦大学国家基础",
+              "上海银鑫建设咨询有限公司"
+            ],
+            "matched": [
+              "复旦大学国家基础",
+              "上海银鑫建设咨询有限公司"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 11478,
+      "answer_head": "根据检索结果，您查询的项目信息如下：\n\n**复旦大学国家基础研究创新提升工程建设项目（化学）招标代理服务**\n\n| 项目信息 | 内容 |\n|---|---|\n| **招标代理机构** | **上海银"
+    },
+    {
+      "id": "E2E-SH155",
+      "category": "single_hop",
+      "answer_chars": 171,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_postgresql"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "年东北区域国家重"
+            ],
+            "matched": [
+              "年东北区域国家重"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 14262,
+      "answer_head": "根据检索到的信息，**2026年东北区域国家重点档案修复项目的预算金额为 ￥65.000000 万元（人民币）**。\n\n补充信息：\n- 采购单位：**国家档案局**\n- 开标时间：**2026年10月"
+    },
+    {
+      "id": "E2E-SH157",
+      "category": "single_hop",
+      "answer_chars": 164,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_postgresql"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "10月12日",
+              "09:30"
+            ],
+            "matched": [
+              "10月12日",
+              "09:30"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 14677,
+      "answer_head": "**2026年东北区域国家重点档案修复项目的开标时间为：2026年10月12日 09:30**\n\n补充信息（供参考）：\n- **开标地点**：北京市海淀区学院南路62号中关村资本大厦6层第十一会议室\n"
+    },
+    {
+      "id": "E2E-SH160",
+      "category": "single_hop",
+      "answer_chars": 169,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_postgresql"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "any",
+            "expected": [
+              "110.000000"
+            ],
+            "matched": [
+              "110.000000"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 10566,
+      "answer_head": "根据检索结果，**百炼大模型管理平台升级及运维服务项目**的预算金额为 **￥110.000000 万元（人民币）**，也就是 **110 万元**。\n\n补充相关信息：\n- **采购单位**：中华人民"
+    },
+    {
+      "id": "E2E-SH162",
+      "category": "single_hop",
+      "answer_chars": 191,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "10月08日",
+              "10:30"
+            ],
+            "matched": [
+              "10月08日",
+              "10:30"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 19589,
+      "answer_head": "**百炼大模型管理平台升级及运维服务项目**的开标信息如下：\n\n- **开标时间：2026年10月08日 10:30**\n- **开标地点：**上海市静安区长安路1001号长安大厦1号楼（办公楼）20"
+    },
+    {
+      "id": "E2E-SH165",
+      "category": "single_hop",
+      "answer_chars": 161,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "多功能分液器和非"
+            ],
+            "matched": [
+              "多功能分液器和非"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 10241,
+      "answer_head": "**多功能分液器和非接触式微孔板样品处理系统采购项目**的预算金额为 **￥160.000000 万元（人民币）**，即 **160万元**。\n\n补充信息（同一项目）：\n- 采购单位：zycgr210"
+    },
+    {
+      "id": "E2E-SH167",
+      "category": "single_hop",
+      "answer_chars": 174,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_postgresql"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "10月09日",
+              "13:30"
+            ],
+            "matched": [
+              "10月09日",
+              "13:30"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 13337,
+      "answer_head": "根据检索结果：\n\n**多功能分液器和非接触式微孔板样品处理系统采购项目**的开标时间为：\n\n📅 **2026年10月09日 13:30**\n\n补充信息：\n- 开标地点：北京市海淀区学院路30号科大天工"
+    },
+    {
+      "id": "E2E-SH170",
+      "category": "single_hop",
+      "answer_chars": 138,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_postgresql"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "高内涵成像分析仪"
+            ],
+            "matched": [
+              "高内涵成像分析仪"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 8893,
+      "answer_head": "**高内涵成像分析仪采购项目的预算金额为 ￥280.000000 万元（人民币）**。\n\n补充信息（来自检索结果）：\n- 采购单位：zycgr21071301\n- 代理机构：北京明德致信咨询有限公司\n"
+    },
+    {
+      "id": "E2E-SH172",
+      "category": "single_hop",
+      "answer_chars": 270,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_postgresql"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "10月09日",
+              "13:30"
+            ],
+            "matched": [
+              "10月09日",
+              "13:30"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 13156,
+      "answer_head": "**高内涵成像分析仪采购项目**的开标时间为：\n\n📅 **2026年10月09日 13:30**\n\n同时为您补充检索到的相关信息：\n\n| 项目信息 | 内容 |\n|---|---|\n| 开标时间 | "
+    },
+    {
+      "id": "E2E-SH176",
+      "category": "single_hop",
+      "answer_chars": 175,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_postgresql"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "代理机构",
+              "国家广播电视总局"
+            ],
+            "matched": [
+              "代理机构",
+              "国家广播电视总局"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 14800,
+      "answer_head": "**国家广播电视总局282台基础设施配套改造项目**的代理机构是：\n\n**国正聚源工程咨询集团有限公司**\n\n补充信息：\n- 采购单位（招标人）：国家广播电视总局282台\n- 开标地点：国正聚源工程咨"
+    },
+    {
+      "id": "E2E-SH177",
+      "category": "single_hop",
+      "answer_chars": 136,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_postgresql"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "预算金额"
+            ],
+            "matched": [
+              "预算金额"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 5256,
+      "answer_head": "**国家广播电视总局282台基础设施配套改造项目**的预算金额为 **￥240.43万元（人民币）**。\n\n补充信息：\n- 采购单位：国家广播电视总局282台\n- 代理机构：国正聚源工程咨询集团有限公"
+    },
+    {
+      "id": "E2E-SH178",
+      "category": "single_hop",
+      "answer_chars": 210,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "10月08日",
+              "14:00"
+            ],
+            "matched": [
+              "10月08日",
+              "14:00"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 17469,
+      "answer_head": "根据检索到的信息，**国家广播电视总局282台基础设施配套改造项目**的开标时间为：\n\n📅 **2026年10月08日 14:00**\n\n补充信息：\n- **开标地点**：国正聚源工程咨询集团有限公司"
+    },
+    {
+      "id": "E2E-SH180",
+      "category": "single_hop",
+      "answer_chars": 190,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_postgresql"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "行政区域",
+              "国家广播电视总局"
+            ],
+            "matched": [
+              "行政区域",
+              "国家广播电视总局"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 14486,
+      "answer_head": "根据检索结果：\n\n**国家广播电视总局282台基础设施配套改造项目的行政区域为：长沙县**（湖南省长沙市长沙县）。\n\n补充相关信息（同样来自检索结果）：\n- **代理机构**：国正聚源工程咨询集团有限"
+    },
+    {
+      "id": "E2E-SH182",
+      "category": "single_hop",
+      "answer_chars": 157,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "代理机构",
+              "北京交通大学雄安校区"
+            ],
+            "matched": [
+              "代理机构",
+              "北京交通大学雄安校区"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 11936,
+      "answer_head": "**北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目**的代理机构是：\n\n**中央国家机关政府采购中心**\n\n补充信息（同一项目）：\n- 采购单位：北京交通大学\n- 预算金"
+    },
+    {
+      "id": "E2E-SH183",
+      "category": "single_hop",
+      "answer_chars": 216,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_postgresql"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "预算金额"
+            ],
+            "matched": [
+              "预算金额"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 19021,
+      "answer_head": "已为您查询到该项目的预算金额：\n\n**北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目**\n- **预算金额：￥9971.645796 万元（人民币）**，约 **9971"
+    },
+    {
+      "id": "E2E-SH184",
+      "category": "single_hop",
+      "answer_chars": 213,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "10月14日",
+              "09:00"
+            ],
+            "matched": [
+              "10月14日",
+              "09:00"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 4648,
+      "answer_head": "**北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目**的开标时间为：\n\n**2026年10月14日 09:00**\n\n补充说明：\n- **开标方式/地点**：通过网上开标"
+    },
+    {
+      "id": "E2E-SH186",
+      "category": "single_hop",
+      "answer_chars": 142,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_postgresql"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "行政区域",
+              "北京交通大学雄安校区"
+            ],
+            "matched": [
+              "行政区域",
+              "北京交通大学雄安校区"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 11310,
+      "answer_head": "根据知识库检索结果，**北京交通大学雄安校区一期第三组团专项五标段智慧校园设备采购及系统集成采购项目**的行政区域为：**市辖区**。\n\n补充信息（同一项目）：\n- 采购单位：北京交通大学\n- 代理机"
+    },
+    {
+      "id": "E2E-SH188",
+      "category": "single_hop",
+      "answer_chars": 130,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "代理机构",
+              "遂宁市"
+            ],
+            "matched": [
+              "代理机构",
+              "遂宁市"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 8011,
+      "answer_head": "**遂宁市消防救援支队年度食材配送服务项目**的代理机构是：\n\n**四川煜煌盛鑫工程项目管理有限公司**\n\n（依据：知识库 ccgp 结构化数据及 ccgp.gov.cn 来源）\n\n如需了解该项目的其"
+    },
+    {
+      "id": "E2E-SH189",
+      "category": "single_hop",
+      "answer_chars": 130,
+      "tool": {
+        "actual": [
+          "search_bidding_knowledge",
+          "search_postgresql"
+        ],
+        "required": [],
+        "required_hits": [],
+        "required_miss": [],
+        "required_recall": null,
+        "any_tools": [
+          "search_bidding_knowledge",
+          "search_knowledge_graph",
+          "search_postgresql"
+        ],
+        "any_hit": true
+      },
+      "fact": {
+        "total": 1,
+        "hit": 1,
+        "hit_rate": 1.0,
+        "details": [
+          {
+            "group": 0,
+            "mode": "all",
+            "expected": [
+              "预算金额"
+            ],
+            "matched": [
+              "预算金额"
+            ],
+            "hit": true
+          }
+        ]
+      },
+      "tool_ok": true,
+      "fact_ok": true,
+      "answer_ok": true,
+      "passed": true,
+      "gated": false,
+      "elapsed_ms": 7840,
+      "answer_head": "**遂宁市消防救援支队年度食材配送服务项目的预算金额为 ￥307.52 万元（人民币）。**\n\n补充信息：\n- 采购单位：遂宁市消防救援支队\n- 代理机构：四川煜煌盛鑫工程项目管理有限公司\n\n如需了解"
     }
   ]
 }
