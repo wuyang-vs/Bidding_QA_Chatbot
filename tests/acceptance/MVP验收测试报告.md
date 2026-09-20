@@ -309,10 +309,11 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 
 | 脚本 | 结果 | 关键断言 |
 |---|---|---|
-| tests/eval/run_retrieval_eval.py | **PASS** | 17 例：HitRate@5=100%、漏检 0%、MRR=1.0000、CitationPrecision@5=32.94%、EvidenceCoverage=100%；报告 retrieval_eval_report.json/.md |
+| tests/eval/run_retrieval_eval.py | **PASS** | 17 例：HitRate@5=100%、漏检 0%、MRR=1.0000、CitationPrecision@5=32.94%、EvidenceCoverage=100%；报告 retrieval_eval_report.json/.md。**2026-09-20 增补 nDCG@K 后 top-K=20 复跑：HitRate@20=100%（即 Recall@20）、MRR=1.0、nDCG@20=0.9846、EvidenceCoverage=100%** |
+| tests/eval/run_retrieval_ablation.py | **PASS** | **四档消融（同 17 例固定题集、同候选预算、同行级隔离）**：A0 纯 dense 单路 Top-1=100%/HitRate@20=100%/nDCG=0.9756；A1 +BM25 混合 Top-1=29%/nDCG=0.6862；A2 +受控变体（无精排）Top-1=24%/nDCG=0.6520；A3 完整流水线（精排+多样性）Top-1=100%/MRR=1.0/nDCG=**0.9953**。结论：①多通道召回保覆盖，但无精排时 RRF 融合稀释前排质量，**CrossEncoder 精排是前排质量的决定性环节**（A2→A3 nDCG +34.3pp）；②完整流水线较纯 dense 基线 nDCG +2.0pp；③本语料下 Recall@20 全档 100%（覆盖到顶），架构价值在排序质量与语料增长后的多通道鲁棒性 |
 | tests/eval/test_page_chunking.py | **PASS** | 3 页注入→6 分片，page_no={1,2,3}、chunk_id 含 pN、package/bidder_name 写入、语义检索命中第 3 页且透传页码 |
 | tests/eval/test_retrieval_access.py | **PASS** | 公开 2 片/内部 2 片：匿名仅召回 public、owner 可见本人 internal、其他投标人/招标人不可见、admin/auditor 全见；pipeline 缓存按身份分桶（≥2 桶） |
-| tests/eval/test_evidence_gate.py | **PASS** | **硬闸门纯函数 44 断言**：寒暄识别 16 例；工具证据判定（RAG 高/低分阈值 0.3、PG/图谱空结果、标书工具越权文本、执行失败、未知工具）；gate_decision 三态状态机；问题特征词覆盖（通用法规 FAQ 不为虚构项目背书、纯通用问题不约束）；固定话术不含业务事实 |
+| tests/eval/test_evidence_gate.py | **PASS** | **硬闸门纯函数 54 断言**（D25 后）：寒暄识别 16 例；工具证据判定（RAG 高/低分阈值 0.3、PG/图谱空结果、标书工具越权文本、执行失败、未知工具、**R13-R16 权威目录工具实质内容/空匹配**）；gate_decision 三态状态机；问题特征词覆盖（通用法规 FAQ 不为虚构项目背书、纯通用问题不约束）；固定话术不含业务事实 |
 
 ### 4.4 OCR / Excel 离线实测（①）
 
@@ -562,6 +563,7 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 | acceptance/sample_multipage.pdf | META-01 用 2 页中文 PDF 夹具 |
 | eval/retrieval_cases.json | 17 条检索评测用例（招标事实 7/企业 3/法规 7） |
 | eval/run_retrieval_eval.py | 纯检索评测脚本（HitRate/漏检/MRR/nDCG/引用准确率/证据覆盖，--topk 可调、--min-hitrate 门禁） |
+| **eval/run_retrieval_ablation.py** | **四档检索消融（纯 dense→+BM25→+变体→完整流水线），产出优化前后量化对比 retrieval_ablation_report.json/.md** |
 | eval/retrieval_eval_report.json/.md | 检索评测报告（最新 top-K=20 复跑：HitRate=100%/MRR=1.0/nDCG=0.9846） |
 | **eval/agent_eval_cases.json** | **V2.3 Agent 端到端基准 12 题（single_hop/multi_hop/cross_domain 各 4，含 tools_any/tools_required/facts 锚点/note）** |
 | **eval/run_agent_eval.py** | **V2.3 Agent 端到端 HTTP 评测器（逐题 POST /api/chat，exec_log.tool_calls 提取工具→双指标打分→json/md 报告；--base-url/--timeout/--fact-threshold/--min-pass）** |

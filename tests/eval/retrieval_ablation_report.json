@@ -1,0 +1,528 @@
+{
+  "top_k": 20,
+  "cases": 17,
+  "configs": {
+    "A0": {
+      "name": "单路·纯 dense (优化前基线)",
+      "cases": 17,
+      "top1_rate": 1.0,
+      "hit_rate": 1.0,
+      "mrr": 1.0,
+      "ndcg": 0.9756,
+      "per_case": [
+        {
+          "id": "EV-01",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 0.9197
+        },
+        {
+          "id": "EV-02",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 0.8325
+        },
+        {
+          "id": "EV-03",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-04",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-05",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-06",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-07",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-08",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 0.8332
+        },
+        {
+          "id": "EV-09",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-10",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-11",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-12",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-13",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-14",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-15",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-16",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-17",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        }
+      ]
+    },
+    "A1": {
+      "name": "单路·+BM25 混合召回",
+      "cases": 17,
+      "top1_rate": 0.2941,
+      "hit_rate": 1.0,
+      "mrr": 0.5721,
+      "ndcg": 0.6862,
+      "per_case": [
+        {
+          "id": "EV-01",
+          "hit": true,
+          "top1": false,
+          "rr": 0.3333333333333333,
+          "ndcg": 0.5
+        },
+        {
+          "id": "EV-02",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 0.8772
+        },
+        {
+          "id": "EV-03",
+          "hit": true,
+          "top1": false,
+          "rr": 0.5,
+          "ndcg": 0.6934
+        },
+        {
+          "id": "EV-04",
+          "hit": true,
+          "top1": false,
+          "rr": 0.25,
+          "ndcg": 0.4685
+        },
+        {
+          "id": "EV-05",
+          "hit": true,
+          "top1": false,
+          "rr": 0.25,
+          "ndcg": 0.4825
+        },
+        {
+          "id": "EV-06",
+          "hit": true,
+          "top1": false,
+          "rr": 0.25,
+          "ndcg": 0.5013
+        },
+        {
+          "id": "EV-07",
+          "hit": true,
+          "top1": false,
+          "rr": 0.5,
+          "ndcg": 0.6509
+        },
+        {
+          "id": "EV-08",
+          "hit": true,
+          "top1": false,
+          "rr": 0.14285714285714285,
+          "ndcg": 0.3978
+        },
+        {
+          "id": "EV-09",
+          "hit": true,
+          "top1": false,
+          "rr": 0.5,
+          "ndcg": 0.6934
+        },
+        {
+          "id": "EV-10",
+          "hit": true,
+          "top1": false,
+          "rr": 0.5,
+          "ndcg": 0.6309
+        },
+        {
+          "id": "EV-11",
+          "hit": true,
+          "top1": false,
+          "rr": 0.5,
+          "ndcg": 0.6309
+        },
+        {
+          "id": "EV-12",
+          "hit": true,
+          "top1": false,
+          "rr": 0.5,
+          "ndcg": 0.6309
+        },
+        {
+          "id": "EV-13",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-14",
+          "hit": true,
+          "top1": false,
+          "rr": 0.5,
+          "ndcg": 0.6309
+        },
+        {
+          "id": "EV-15",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 0.8772
+        },
+        {
+          "id": "EV-16",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-17",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        }
+      ]
+    },
+    "A2": {
+      "name": "多路·+Query 受控变体",
+      "cases": 17,
+      "top1_rate": 0.2353,
+      "hit_rate": 1.0,
+      "mrr": 0.5265,
+      "ndcg": 0.652,
+      "per_case": [
+        {
+          "id": "EV-01",
+          "hit": true,
+          "top1": false,
+          "rr": 0.3333333333333333,
+          "ndcg": 0.511
+        },
+        {
+          "id": "EV-02",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 0.8772
+        },
+        {
+          "id": "EV-03",
+          "hit": true,
+          "top1": false,
+          "rr": 0.3333333333333333,
+          "ndcg": 0.5438
+        },
+        {
+          "id": "EV-04",
+          "hit": true,
+          "top1": false,
+          "rr": 0.2,
+          "ndcg": 0.4556
+        },
+        {
+          "id": "EV-05",
+          "hit": true,
+          "top1": false,
+          "rr": 0.25,
+          "ndcg": 0.4825
+        },
+        {
+          "id": "EV-06",
+          "hit": true,
+          "top1": false,
+          "rr": 0.3333333333333333,
+          "ndcg": 0.525
+        },
+        {
+          "id": "EV-07",
+          "hit": true,
+          "top1": false,
+          "rr": 0.5,
+          "ndcg": 0.6509
+        },
+        {
+          "id": "EV-08",
+          "hit": true,
+          "top1": false,
+          "rr": 0.3333333333333333,
+          "ndcg": 0.5323
+        },
+        {
+          "id": "EV-09",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 0.9197
+        },
+        {
+          "id": "EV-10",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-11",
+          "hit": true,
+          "top1": false,
+          "rr": 0.5,
+          "ndcg": 0.6309
+        },
+        {
+          "id": "EV-12",
+          "hit": true,
+          "top1": false,
+          "rr": 0.5,
+          "ndcg": 0.6309
+        },
+        {
+          "id": "EV-13",
+          "hit": true,
+          "top1": false,
+          "rr": 0.3333333333333333,
+          "ndcg": 0.5
+        },
+        {
+          "id": "EV-14",
+          "hit": true,
+          "top1": false,
+          "rr": 0.3333333333333333,
+          "ndcg": 0.5
+        },
+        {
+          "id": "EV-15",
+          "hit": true,
+          "top1": false,
+          "rr": 0.5,
+          "ndcg": 0.6934
+        },
+        {
+          "id": "EV-16",
+          "hit": true,
+          "top1": false,
+          "rr": 0.5,
+          "ndcg": 0.6309
+        },
+        {
+          "id": "EV-17",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        }
+      ]
+    },
+    "A3": {
+      "name": "完整流水线·+精排+来源多样性",
+      "cases": 17,
+      "top1_rate": 1.0,
+      "hit_rate": 1.0,
+      "mrr": 1.0,
+      "ndcg": 0.9953,
+      "per_case": [
+        {
+          "id": "EV-01",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-02",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-03",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-04",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-05",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-06",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-07",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-08",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-09",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 0.9197
+        },
+        {
+          "id": "EV-10",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-11",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-12",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-13",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-14",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-15",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-16",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        },
+        {
+          "id": "EV-17",
+          "hit": true,
+          "top1": true,
+          "rr": 1.0,
+          "ndcg": 1.0
+        }
+      ]
+    }
+  },
+  "improvement": {
+    "hit_rate_pp": 0.0,
+    "top1_pp": 0.0,
+    "ndcg_pp": 2.0,
+    "mrr_delta": 0.0
+  }
+}
