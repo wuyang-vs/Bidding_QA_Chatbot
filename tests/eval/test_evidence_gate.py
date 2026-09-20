@@ -62,6 +62,30 @@ check("工具执行失败=无证据", not tool_provided_evidence(
     "search_bidding_knowledge", [], "执行失败: connection reset"))
 check("未知工具=无证据", not tool_provided_evidence("hack_tool", [{"x": 1}], "data"))
 
+# 本地人工编排目录工具 (R13-R16): 实质内容=有证据, 空匹配=无证据
+appeal_text = (
+    "===== 指引 1：政府采购：质疑与投诉 =====\n"
+    "质疑：知道或应知权益受损之日起 7 个工作日内提出。\n"
+    "未参加该项目（无利害关系）的供应商无权质疑投诉。")
+check("异议投诉目录实质内容=有证据", tool_provided_evidence(
+    "consult_appeal", [], appeal_text))
+check("异议投诉目录空匹配=无证据", not tool_provided_evidence(
+    "consult_appeal", [], "未匹配到对应的异议投诉主题。可直接询问：对中标结果的异议。"))
+check("法条正文中的'无权质疑投诉'不算空标记", tool_provided_evidence(
+    "consult_appeal", [], appeal_text))
+check("范本目录实质内容=有证据", tool_provided_evidence(
+    "recommend_template", [], "为你找到 2 个相关范本:\n1. 工程施工招标文件范本（公开招标）"))
+check("范本目录空匹配=无证据", not tool_provided_evidence(
+    "recommend_template", [], "未匹配到「月球基地」相关范本，可尝试更通用的关键词"))
+check("操作引导实质内容=有证据", tool_provided_evidence(
+    "guide_operation", [], "===== 账号注册与企业实名认证 =====\n步骤1..."))
+check("操作引导未识别=无证据", not tool_provided_evidence(
+    "guide_operation", [], "暂未识别出对应的操作流程。支持的指引包括：账号注册、CA办理。"))
+check("异常解释实质内容=有证据", tool_provided_evidence(
+    "explain_anomaly", [], "code=P4 报价规律性一致: 原因/影响/处置/法规依据..."))
+check("异常解释未知code=无证据", not tool_provided_evidence(
+    "explain_anomaly", [], "暂无 code=MOON 的标准解释。已知异常编码: P4..P9"))
+
 # ---------- gate_decision 状态机 ----------
 Q = "XX市智慧园区项目二期的投标截止时间是什么时候？"
 

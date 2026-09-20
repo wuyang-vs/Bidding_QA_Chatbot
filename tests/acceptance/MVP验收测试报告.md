@@ -3,11 +3,11 @@
 | 项目 | 内容 |
 |---|---|
 | 系统名称 | 招投标采购智能问答与辅助评标系统（Bidding_QA_Chatbot） |
-| 报告版本 | V2.3（多专家协作接入＋Agent 端到端评测基准：V2.2 59 项基线之上，①将孤立原型 multi_agent 工作流接入主问答（前端琥珀色"多专家协作"开关＋可折叠专家过程面板，后端端点补齐鉴权/限频/行级隔离/伪工具调用防御），新增 MULTI-01 验收；②建立 Agent 端到端评测基准集 12 题（单跳/多跳/跨域，工具选择＋答案事实双指标），新增纯函数打分器与 HTTP 评测器） |
+| 报告版本 | V2.3（多专家协作接入＋Agent 端到端评测基准＋小范围可用性验证前置：V2.2 59 项基线之上，①将孤立原型 multi_agent 工作流接入主问答（前端琥珀色"多专家协作"开关＋可折叠专家过程面板，后端端点补齐鉴权/限频/行级隔离/伪工具调用防御），新增 MULTI-01 验收；②建立 Agent 端到端评测基准集 12 题（单跳/多跳/跨域，工具选择＋答案事实双指标），新增纯函数打分器与 HTTP 评测器；③可用性验证前置三项：问答交互审计落库（chat.answer/out_of_scope/vague，仅存统计量与工具名）、复杂多跳问题 gated 后 query 改写重试一次、历史中标 bidding_procurement 脱敏种子数据 30 条（scripts/seed_bidding_procurement.py）；④意图识别升级为显式三业务线分类路由（intent.py 招投标/企业/法规/通用 评分分类器，显著单域裁剪 active_tools，跨域/弱信号保守回退全集，INTENT_ROUTING_ENABLED 可关），并修复分类路由冒烟暴露的 D25（本地权威目录工具未计入证据门致法规目录题被误拒）） |
 | 测试日期 | 2026-09-20（V2.3 全量回归 60/60、Agent 评测 12 题两跑、浏览器实测，均为 PROFILE_ENC_KEYS 双密钥链环境；V2.1/V2.2 同日早些时候执行） |
 | 测试执行人 | 自动化验收套件（tests/acceptance/run_acceptance.py）＋离线确定性测试＋Agent 端到端评测器（tests/eval/run_agent_eval.py）＋浏览器 UI 实测＋真实 MinIO 手动实测（V2.2） |
 | 基线代码 | V2.2 commit `4dd4b50`（MinIO 实测版）；V2.3 在其上新增多专家接入与评测体系代码 |
-| 报告依据 | V2.3 全量执行日志（60/60，run_log_v23.txt）、evidence.json、Agent 评测报告 agent_eval_report.json/.md（11/12，工具选择 100%）、UI 截图 v23_multi_agent.png、离线 pytest 136 项（见 4.5k） |
+| 报告依据 | V2.3 全量执行日志（60/60；意图路由版复跑 run_log_route.txt，GATE-01 36.6s 仍 gated/sources=0）、evidence.json（2026-09-20 12:54 复跑）、Agent 评测报告 agent_eval_report.json/.md（11/12，工具选择 100%）、UI 截图 v23_multi_agent.png、离线 pytest 160 项（含意图路由 14 项，见 4.5l）、硬闸门 54 断言（见 4.5l/D25） |
 
 ---
 
@@ -23,7 +23,7 @@
 4. **MULTI-01 端到端实证（207.3s）**：跨域题（截止时间＋预算＋保证金法规）主管调度 CASE+LAW 两专家，均真实调用 search_bidding_knowledge，终稿 2000 字、去重来源 11 条；独立真实冒烟 185s 的终稿准确给出"2025年12月15日 14:00 / 860万元 / 保证金不得超过估算价 2%"并带 [资料N] 标注，无 DSML 标记泄漏。验收断言含终稿洁净负向断言（不得含 DSML/全角竖线）。
 5. **Agent 端到端评测基准建立**：[tests/eval/agent_eval_cases.json] 12 题（单跳/多跳/跨域各 4，ID E2E-01~12），事实全部锚定已入库真实数据（主测试文档 2025-12-15/860万/保证金2%/17.2万计算/公示期3日/逾期拒收、KG 两个真实 Project 节点、大陆-香港对比材料）；[src/agent/eval_scoring.py] 为零依赖纯函数打分器——事实组支持字符串/list(all)/{any}/{all} 嵌套、大小写不敏感，组间等权；工具指标含 tools_required 全命中召回与 tools_any 命中；通过线＝工具对＋事实覆盖≥0.6＋答案非空。[tests/eval/run_agent_eval.py] 逐题打真实 /api/chat（从 exec_log.tool_calls 提取工具），产出 agent_eval_report.json/.md（总体/分类别/逐用例，含 gated 拒答标注）。
 6. **评测结果如实记录（两跑）**：题集首跑 10/12——E2E-04（资格预审异议渠道）当轮证据门拒答、E2E-05 经查证为**坏题**（锚定的"空调采购"数据在本环境 PG bidding_procurement 表未部署、KG 亦无供应商节点，直连两库实证），E2E-05 替换为锚定 KG 真实节点（北京交通大学雄安校区项目→采购人/代理机构两跳）后复跑：**11/12 通过，工具选择正确率 100%，事实组覆盖 0.909**；单跳 4/4、跨域 4/4、多跳 3/4。复跑中 E2E-07（大陆/香港跨法域对比）证据门拒答（该题首跑曾 PASS）——工具选择正确但复杂多跳检索稳定性存在波动，作为**已观测缺陷**记录（见第 5/6 章），未改动任何事实标准去凑分。
-7. **零回退**：V2.2 及以前 59 项存量防线本轮全量 60/60 中持续有效（CERT-01、PROFILE-03 双密钥链、GATE-01、BID-06 整本、ALERT-01 等全过）；硬闸门纯函数 44 断言全过；本轮相关 pytest 136 项全绿（test_new_tools 102＋test_multi_agent 5＋test_agent_eval_scoring 15＋test_tool_text_parsing 14）；tsc 0；浏览器实测开关/徽标/面板/事实终稿/来源五项全过且 console 无错误（截图 v23_multi_agent.png）。
+7. **零回退**：V2.2 及以前 59 项存量防线本轮全量 60/60 中持续有效（CERT-01、PROFILE-03 双密钥链、GATE-01、BID-06 整本、ALERT-01 等全过）；硬闸门纯函数 54 断言全过（意图路由新增目录工具证据 10 条）；本轮相关 pytest 160 项全绿（含 test_intent_routing 14、test_new_tools 102、test_multi_agent 5、test_agent_eval_scoring 15、test_tool_text_parsing 14 及 react_loop/sse）；tsc 0；浏览器实测开关/徽标/面板/事实终稿/来源五项全过且 console 无错误（截图 v23_multi_agent.png）。
 
 ---
 
@@ -189,6 +189,7 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | **⑰ V2.0 异议投诉+操作引导** | 11 主题异议投诉专项库（渠道/时限/材料/流程/法规，工程招投标与政采两套区分）+ consult_appeal 工具 + /api/appeal 三件套；7 流程 27 阶段操作引导（投标人/招标人/评标专家，含阶段识别+前后衔接）+ guide_operation 工具 + /api/guide 三件套 | APPEAL-01、GUIDE-01 |
 | **⑱ V2.1 检测主动预警** | 五类检测（合规高/中风险、资格不满足/部分满足、废标 risk/uncertain、响应性负偏离/未响应、报价 error/warning 异常码）完成后前端主动弹红/黄预警，AlertModal 通用组件+锚点定位详情，无异常不弹窗 | ALERT-01 |
 | **⑳ V2.3 多专家协作接入＋Agent 评测基准** | multi_agent（主管 LLM 拆解→LAW/CASE/PRICE 专家并行 ReAct→WRITER 综合）接入主问答：琥珀色开关+专家过程可折叠面板，端点鉴权/限频/行级隔离 ContextVar 传播/伪 DSML 工具调用防御；Agent 端到端基准 12 题（单跳/多跳/跨域），工具选择+事实组双指标纯函数打分器+HTTP 评测器 | MULTI-01（评测见 4.5k） |
+| **㉑ V2.3 三业务线显式意图路由** | 招投标/企业/法规/通用 规则评分分类器（强弱信号词＋分差阈值＋零信号历史继承），显著单域才裁剪 active_tools（法规 3/企业 7），跨域弱信号保守回退全集；RAG 底座恒保留；INTENT_ROUTING_ENABLED 开关；并修复 D25（R13-R16 权威目录工具纳入证据门证据集合） | test_intent_routing 14 项＋硬闸门 54 断言（见 4.5l） |
 | Workflow | 预置清单、合规 DAG、评标辅助 DAG | WF-01 ~ WF-03 |
 | **离线专项** | 检索质量评测（17 例 5 指标）、页码切分、RAG 召回行级隔离、**硬闸门纯函数 44 断言**、**占位符回填/跨 chunk 流式/prompt 注入离线自测、pytest（test_new_tools.py 67 项：含证书 OCR 正则/LLM/存储隔离、对照表校验+缓存、字段加密+掩码、存储抽象、多密钥轮换、S3 Stubber 全链路；全量 250 passed，test_intent 3 项为基线既有失败）** | tests/eval/ 四个脚本＋tests/test_new_tools.py |
 | **① OCR/Excel** | 扫描件 OCR、xlsx 提取（离线手工实测，见 4.4） | 离线实测 |
@@ -446,6 +447,14 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 - 两跑差异如实记录：首跑 10/12——E2E-04 当轮证据门拒答（复跑 PASS，改写措辞即能命中，定性检索措辞敏感）、E2E-05 经 PG/KG **直连查证为坏题**（PG bidding_procurement 表未部署、KG 仅 2 Project/2 Buyer/2 Agency 无供应商节点，"空调"数据不存在），替换为 KG 真实节点两跳题（北京交通大学雄安校区项目→采购人/代理机构，复跑 PASS）；第二跑唯一失败 E2E-07（大陆/香港跨法域对比）gated 拒答（首跑曾 PASS），工具选择正确、事实 0 分，定性为**复杂多跳问题的检索/证据门稳定性波动**（D22，第 5 章）。全过程未改任何事实判定标准凑分。
 - 说明：E2E-08（采购量最多标的物下钻）因依赖未部署的 PG 表，设计上 facts 为空只评工具选择（gated 拒答仍 PASS）；评测器 CLI：--base-url/--timeout/--fact-threshold/--min-pass，health 不 ready 退出码 2。
 
+### 4.5l V2.3 三业务线显式意图分类路由（pytest 离线＋直连/HTTP 冒烟，均通过）
+
+- 背景：V2.3 前工具选择完全依赖 LLM 在 9 工具全集内自选。本期把意图识别升级为**显式三业务线分类路由**：[src/agent/intent.py] 新增 `classify_domain(question, history)`（规则评分：强信号词权重 2、弱信号词 1，显著单域需强信号命中＋总分≥2＋与次高域分差≥2；零信号时继承上一轮用户消息的域）与 `select_tools_for_domain(domain, base)`（保序去重裁剪），返回 `{domain, scores, confident, inherited}`。
+- 裁剪策略（保守：宁可多给工具不可误裁）：**search_bidding_knowledge 为跨域底座恒保留**；法规域＝底座＋consult_appeal/recommend_template（3 工具）；企业域＝底座＋KG/PG/标书列表/标书生成/范本/操作引导（7 工具）；招投标域/通用/低置信/跨域一律保留全集（9 工具）。接入点 [src/agent/core.py] `_build_context`，开关 [src/config.py] `INTENT_ROUTING_ENABLED`（默认 true，关闭即回退全集自选），每次问答输出"意图路由"观测日志（domain/confident/scores/工具数 9→N）。
+- 离线 pytest：新建 [tests/test_intent_routing.py] **14 项全绿**（纯法规→regulation/3 工具、纯企业查询→enterprise/7 工具、标书生成→tender/全集、GATE-01 月球题与采购人/价格/CA/保证金等弱信号→general/全集、历史继承、开关无关的保序去重）；本轮相关 pytest 合计 **160 passed**（react_loop/sse/multi_agent/eval_scoring/tool_text_parsing/new_tools/intent_routing）。
+- 真实冒烟：直连 `_build_context` 法规题 9→3、标书题 9→9、预算题 9→9；HTTP 法规题"政府采购的质疑期限是几天？"路由日志 domain=regulation tools 9->3，gated=False、consult_appeal 作答"7 个工作日"；GATE-01 月球无证据题在路由改动后直连复测仍 gated=True/sources=0/无编造数字。
+- 路由暴露并修复既有缺口 **D25**（见第 5 章）：四个 R13-R16 本地权威目录工具此前不在证据门证据工具集合内，裁剪后单走目录即被误判无证据；修复后硬闸门离线断言由 44 增至 **54 项全过**（新增目录实质内容=证据、空匹配/未识别=无证据、法条正文"无权质疑投诉"不误杀共 10 条）。
+
 ### 4.6 浏览器 UI 实测（V1.3：2026-09-18；V1.4 补测：2026-09-19，admin/admin123）
 
 | 验证点 | 结果 | 证据 |
@@ -491,7 +500,10 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | D19 | 高（V2.3 修） | **multi-agent 端点一触即 500（2.0s 内）：`RateLimiter.acquire` 方法不存在**。端点自原型创建后从未被前端/验收调用，潜伏至今；真实冒烟首次调用即在限频行抛 AttributeError | 改用 RateLimiter 真实接口 `is_allowed(client_ip)`（全局 30 次/60s 策略），超限返回 429；client IP 由原恒为 unknown 的 `getattr(req,"_client_ip")` 改为 `request.client.host` | MULTI-01 PASS（207.3s）；端点真实冒烟 HTTP 200 | 已关闭 |
 | D20 | 高（V2.3 修） | **多专家线程池并发进入同一个 contextvars.Context 必崩**：`pool.submit(ctx.run, ...)` 让多个专家线程共享同一 Context 对象，Python 规定 Context 不可重入，专家并行阶段（72s 处）抛 "cannot enter context: ... is already entered" 后 500。同时 ThreadPoolExecutor 默认不继承主线程 ContextVar，直接写还会让 RAG 行级隔离退回匿名 public（与 D12 同类、新代码重犯） | 主线程 `base_ctx = copy_context()`，每个专家任务独立 `pool.submit(base_ctx.copy().run, agent.run, task)`；离线测试以 `threading.Barrier(3)` 强制三专家并发在场，断言各工作线程 scope 均为 ("owner",7) | 强化后的 test_workflow_structure_and_scope_propagation PASS（Barrier 下旧代码必崩、新代码通过）；MULTI-01 中多专家真实检索成功 | 已关闭 |
 | D21 | 中（V2.3 修） | **专家循环无伪工具调用防御，DeepSeek 全角 `｜｜DSML｜｜` 标记直接泄漏到用户终稿**：首次 200 冒烟终稿开头即为 `<｜｜DSML｜｜ calls>...`，且法规专家空答案（0 字）。主 ReAct 循环早有 tool_defense，专家循环是复制时遗漏 | ①tool_defense 增加全角竖线 DSML 变体检測与归一化（open/close 令牌正则→半角 XML→既有 invoke/parameter 解析）；②专家循环解析文本工具调用后真实执行（仅限本专家工具白名单，越权不执行），不可解析标记则追加纯文本纠偏提示继续；③轮次耗尽仍无干净文本则强制一次 tools=[] 纯文本生成；④终稿仍含标记则丢弃，写作终稿为空时拼接各专家有效结论兜底 | 新增 2 条全角 DSML 解析单测；修复后两次真实冒烟终稿均为干净 Markdown（含事实与 [资料N] 标注），MULTI-01 增加终稿洁净负向断言 | 已关闭 |
-| D22 | 中（V2.3 观测，未关闭） | **复杂多跳问题检索/证据门存在轮次波动**：Agent 评测 E2E-04（资格预审异议渠道）首跑 gated 拒答、复跑 PASS（改写问法即可命中在库 FAQ 254）；E2E-07（大陆/香港对比）首跑 PASS、复跑 gated 拒答（66.1s，工具选择正确但证据文本未覆盖问题特征）。工具选择 100%，失败均发生在检索命中/证据门环节 | 未改证据门与事实标准（避免放松硬闸门）；评测两跑如实记录并保留报告 | Agent 评测双指标持续监控；后续方向：query 改写多样性/多跳问题拆子问题分别检索/同类多跑稳定性统计 | 观测中（评测体系已能稳定复现） |
+| D22 | 中（V2.3 观测，已缓解） | **复杂多跳问题检索/证据门存在轮次波动**：Agent 评测 E2E-04（资格预审异议渠道）首跑 gated 拒答、复跑 PASS（改写问法即可命中在库 FAQ 254）；E2E-07（大陆/香港对比）首跑 PASS、复跑 gated 拒答（66.1s，工具选择正确但证据文本未覆盖问题特征）。工具选择 100%，失败均发生在检索命中/证据门环节 | **V2.3 可用性前置阶段缓解**：react_loop 最终 gated 前增加复杂多跳问题（对比/分别/和/与/哪些等特征词＋长度阈值）的 query 改写重试一次——注入拆分子问题提示后再调一轮检索，命中证据则放行作答，仍无证据才拒答；未改证据门阈值与事实标准。E2E-07 复跑直接 PASS（gated=False，6 来源） | 复杂多跳题直连冒烟 gated=False/6 来源；react_loop 离线单测＋硬闸门 44 断言全过 | 已缓解（重试仅一次，极端波动仍可能拒答） |
+| D23 | 中（V2.3 可用性前置，已关闭） | **问答交互无审计留痕**：原 audit_logs 仅覆盖企业资料/证书 OCR/密钥轮换三类敏感操作，用户每次问答（/api/chat、/api/chat/stream）不落库，小范围试用无法收集 badcase 与用量统计 | 在 core.py `_chat_events` 的 done 分支调用 `record_audit`，action 为 `chat.answer`/`chat.gated`/`chat.out_of_scope`/`chat.vague`；detail 仅存 q_len/ans_len/sources/web/gated/elapsed_ms，changed_fields 存实际调用工具名列表，**不存问题原文与回答原文**；失败降级不阻断主流程；server.py 透传 user 与 request.client.host | 直查 audit_logs 表：chat.answer 记录含 q_len=28 sources=6 gated=False elapsed_ms=39711 等字段，问答均落库 | 已关闭 |
+| D24 | 中（V2.3 可用性前置，已关闭） | **PRICE 专家与价格分析依赖的 bidding_procurement 表未部署**：postgresql_client 仅查询不建表，price_analyzer/search_postgresql 报"数据缺口"，价格类问题直接拒答 | 新增 scripts/seed_bidding_procurement.py：建表（11 字段，含 project_code 唯一键＋purchaser/subject/amount 索引）＋写入 30 条脱敏合成数据（覆盖货物/工程/服务三类、多采购人多地域、含同名项目跨地域对比行）；幂等 UPSERT，--reset 可重灌 | 直连 PG：avg winning_amount=374.33、top_by_amount 返回 3450/1280/920、keyword "办公设备"命中 3 条；price_analyzer 链路可用 | 已关闭 |
+| D25 | 中（V2.3 意图路由，已关闭） | **四个本地权威目录工具未计入证据门，返回实质内容仍被判"无证据"拒答**：consult_appeal/recommend_template/guide_operation/explain_anomaly 是 R13-R16 人工编排的受控目录，但不在 evidence_gate 的 `_EVIDENCE_TOOLS` 内。此前 LLM 多并行调用 search_bidding_knowledge 而未暴露；意图路由把纯法规题裁剪为 3 工具后，LLM 先调 consult_appeal（返回"质疑 7 个工作日"实质指引），证据门仍 gated 拒答。另裸"无权"空标记会误命中合法法条正文"供应商无权质疑投诉" | ①新增 `_CURATED_CATALOG_TOOLS` 四目录工具并入 `_EVIDENCE_TOOLS`，实质文本（不含空匹配措辞）即证据；②空标记补 未匹配/暂无/暂未识别，裸"无权"收紧为 无权访问/无权查看（真实越权文案均含"无权访问"，已全仓 grep 核实）；③特征词覆盖校验保持不变，GATE-01 虚构项目即使误中目录仍 gated | 新增 10 条目录证据硬闸门断言（共 54 断言全过）；法规题 HTTP 冒烟 gated=False、consult_appeal 作答"7 个工作日"；GATE-01 直连复测仍 gated=True/sources=0/无编造数字 | 已关闭 |
 
 V1.1 的 D1-D6 修复在本轮回归中持续有效。
 
@@ -558,6 +570,7 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 | eval/test_retrieval_access.py | RAG 召回行级隔离离线测试 |
 | eval/test_evidence_gate.py | **硬闸门纯函数离线测试（44 断言，无需 HTTP/LLM）** |
 | acceptance/manual_minio_live.py | **V2.2 真实 MinIO 端到端连通手动实测脚本（13 断言，需真实 MinIO server；非自动套件，脚本头部含下载/启动/运行步骤，自动收尾清桶）** |
+| **scripts/seed_bidding_procurement.py** | **V2.3 可用性前置：bidding_procurement 建表＋30 条脱敏历史中标种子数据（货物/工程/服务三类，含跨地域对比行），幂等 UPSERT，--reset 重灌；使 PRICE 专家与价格分析可用** |
 
 ### 7.2 UI 截图证据（acceptance/screenshots/）
 

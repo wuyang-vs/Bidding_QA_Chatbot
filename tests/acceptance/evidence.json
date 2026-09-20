@@ -1,5 +1,5 @@
 {
-  "run_at": "2026-09-20T04:00:52",
+  "run_at": "2026-09-20T12:54:26",
   "base_url": "http://localhost:8001",
   "db_id": 6,
   "total": 60,
@@ -143,15 +143,15 @@
       "id": "ENV-01",
       "name": "后端服务存活 /api/health",
       "status": "PASS",
-      "ms": 2110,
-      "note": "{'ready': True, 'agent_ready': True, 'graph_ready': True, 'pg_ready': True, 'points_count': 551, 'la"
+      "ms": 2102,
+      "note": "{'ready': True, 'agent_ready': True, 'graph_ready': True, 'pg_ready': True, 'points_count': 606, 'la"
     },
     {
       "suite": "环境",
       "id": "ENV-02",
       "name": "PostgreSQL 已连接",
       "status": "PASS",
-      "ms": 2044,
+      "ms": 2038,
       "note": "pg_ready=true"
     },
     {
@@ -159,23 +159,23 @@
       "id": "ENV-03",
       "name": "Qdrant 向量库已连接且有向量",
       "status": "PASS",
-      "ms": 2040,
-      "note": "向量点数=551, rag_ready=true"
+      "ms": 2034,
+      "note": "向量点数=606, rag_ready=true"
     },
     {
       "suite": "MVP1文档库",
       "id": "M1-01",
       "name": "文档列表可分页查询",
       "status": "PASS",
-      "ms": 2046,
-      "note": "共 160 份文档"
+      "ms": 2063,
+      "note": "共 200 份文档"
     },
     {
       "suite": "MVP1文档库",
       "id": "M1-02",
       "name": "文档含结构化字段+全文",
       "status": "PASS",
-      "ms": 2068,
+      "ms": 2083,
       "note": "#6 test_bid.txt 全文1736字"
     },
     {
@@ -183,24 +183,24 @@
       "id": "M1-03",
       "name": "上传招标文件→解析入库+自动向量化",
       "status": "PASS",
-      "ms": 3980,
-      "note": "db_id=161, 解析状态=ok, 向量化分片=1"
+      "ms": 4803,
+      "note": "db_id=201, 解析状态=ok, 向量化分片=1"
     },
     {
       "suite": "MVP2检索",
       "id": "M2-01",
       "name": "问答接口返回带引用来源的答案(命中文档库)",
       "status": "PASS",
-      "ms": 21158,
-      "note": "答案388字, 引用2条(招标分片2), 事实命中: 截止=True 预算=True",
-      "answer_head": "根据招标文件（项目编号：ZB-2025-0088），**XX市智慧园区信息化建设项目（二期）** 的关键信息如下：\n\n| 项目 | 内容 |\n|---|---|"
+      "ms": 19849,
+      "note": "答案349字, 引用2条(招标分片2), 事实命中: 截止=True 预算=True",
+      "answer_head": "根据招标文件检索结果，**XX市智慧园区信息化建设项目（二期）** 的这两项信息如下：\n\n| 项目信息 | 内容 |\n|---|---|\n| **投标截止时间*"
     },
     {
       "suite": "MVP2检索",
       "id": "GATE-01",
       "name": "硬闸门: 知识库无证据的问题禁止LLM自由生成",
       "status": "PASS",
-      "ms": 32346,
+      "ms": 36566,
       "note": "gated=True, sources=0, 返回受控拒答话术(155字)"
     },
     {
@@ -208,7 +208,7 @@
       "id": "M3-01",
       "name": "评分办法已结构化提取",
       "status": "PASS",
-      "ms": 2062,
+      "ms": 2056,
       "note": "综合评分法，总分100分：价格分40分、技术分35分、商务分15分、业绩分10分"
     },
     {
@@ -216,7 +216,7 @@
       "id": "M3-02",
       "name": "资格要求列表非空",
       "status": "PASS",
-      "ms": 2044,
+      "ms": 2040,
       "note": "12 条资格要求"
     },
     {
@@ -224,7 +224,7 @@
       "id": "M4-01",
       "name": "合规性扫描(排他性条款)",
       "status": "PASS",
-      "ms": 20237,
+      "ms": 17931,
       "note": "发现 3 个风险项, status=attention, 分级={'high': 0, 'medium': 3, 'low': 0, 'total_checked': 15, 'risks_found': 3}"
     },
     {
@@ -232,7 +232,7 @@
       "id": "M4-02",
       "name": "资格条件逐条比对",
       "status": "PASS",
-      "ms": 9126,
+      "ms": 6875,
       "note": "结果项 0, keys=['summary', 'checks', 'gap_report', 'verdict', 'action_suggestions']"
     },
     {
@@ -240,23 +240,23 @@
       "id": "M4-03",
       "name": "废标条款提取",
       "status": "PASS",
-      "ms": 15735,
-      "note": "提取 18 条废标条款"
+      "ms": 18417,
+      "note": "提取 20 条废标条款"
     },
     {
       "suite": "P4响应性",
       "id": "P4-01",
       "name": "投标逐条响应判定(正偏离识别)",
       "status": "PASS",
-      "ms": 39576,
-      "note": "总19 响应2 正偏离3 verdict=attention"
+      "ms": 43198,
+      "note": "总21 响应2 正偏离3 verdict=attention"
     },
     {
       "suite": "P5评分辅助表",
       "id": "P5-01",
       "name": "评分办法→结构化打分表(权重合计100)",
       "status": "PASS",
-      "ms": 3496,
+      "ms": 3560,
       "note": "['价格分', '技术分', '商务分', '业绩分'], 合计100.0分"
     },
     {
@@ -264,15 +264,15 @@
       "id": "P6-01",
       "name": "三家投标关键字段并排对比",
       "status": "PASS",
-      "ms": 8631,
-      "note": "字段9个; 报价列: ['人民币 820 万元', '950万元', '880万元']"
+      "ms": 9865,
+      "note": "字段9个; 报价列: ['820万元', '950万元', '880万元']"
     },
     {
       "suite": "P7报价计算",
       "id": "P7-01",
       "name": "正确报价表: 算术/汇总/大写/价格分",
       "status": "PASS",
-      "ms": 2056,
+      "ms": 2038,
       "note": "合计740000.0 大写校验一致 价格分100.0 verdict=pass"
     },
     {
@@ -280,7 +280,7 @@
       "id": "P7-02",
       "name": "异常检出: 行内算术不符+超最高限价",
       "status": "PASS",
-      "ms": 2032,
+      "ms": 2034,
       "note": "verdict=fail, 异常=['OVER_CONTROL_PRICE', 'ROW_ARITHMETIC', 'SUM_MISMATCH']"
     },
     {
@@ -288,7 +288,7 @@
       "id": "P7-03",
       "name": "大小写金额不一致检出",
       "status": "PASS",
-      "ms": 2033,
+      "ms": 2053,
       "note": "大写750000 vs 数字740000 → CN_MISMATCH"
     },
     {
@@ -296,7 +296,7 @@
       "id": "P8-01",
       "name": "单份投标→商务/技术/资格三维度结构化",
       "status": "PASS",
-      "ms": 3733,
+      "ms": 4761,
       "note": "商务6/6 技术4/4 资质1条 报价=人民币 820 万元 工期=100 个日历天"
     },
     {
@@ -304,7 +304,7 @@
       "id": "P9-01",
       "name": "雷同文本+接近报价→线索输出(不定性)",
       "status": "PASS",
-      "ms": 2046,
+      "ms": 2068,
       "note": "2条线索 维度={'报价规律', '文本雷同'}; 高2 中0; 仅提示不定性"
     },
     {
@@ -312,7 +312,7 @@
       "id": "P9-02",
       "name": "内容独立的投标→无线索 clean",
       "status": "PASS",
-      "ms": 2059,
+      "ms": 2057,
       "note": "两家内容/报价独立, verdict=clean"
     },
     {
@@ -320,7 +320,7 @@
       "id": "P9-03",
       "name": "少于2份投标被拒(400)",
       "status": "PASS",
-      "ms": 2026,
+      "ms": 2040,
       "note": "400 输入校验生效"
     },
     {
@@ -328,7 +328,7 @@
       "id": "P9-04",
       "name": "围串标已注册为工作流节点(自定义配置)",
       "status": "PASS",
-      "ms": 2058,
+      "ms": 2059,
       "note": "collusion_check 节点执行成功, 线索2条"
     },
     {
@@ -336,15 +336,15 @@
       "id": "AUTH-01",
       "name": "注册→登录→/auth/me 全链路",
       "status": "PASS",
-      "ms": 6577,
-      "note": "acpt_user01_1789847178 role=bidder"
+      "ms": 6521,
+      "note": "acpt_user01_1789879185 role=bidder"
     },
     {
       "suite": "Auth权限",
       "id": "AUTH-02",
       "name": "错误密码登录被拒(401)",
       "status": "PASS",
-      "ms": 4453,
+      "ms": 4462,
       "note": "401 用户名或密码错误"
     },
     {
@@ -352,7 +352,7 @@
       "id": "AUTH-03",
       "name": "无token访问/auth/me被拒(401)",
       "status": "PASS",
-      "ms": 2031,
+      "ms": 2052,
       "note": "401 未登录"
     },
     {
@@ -360,7 +360,7 @@
       "id": "AUTH-04",
       "name": "默认管理员 admin/admin123 可用",
       "status": "PASS",
-      "ms": 2231,
+      "ms": 2232,
       "note": "admin 登录成功, role=admin"
     },
     {
@@ -368,15 +368,15 @@
       "id": "M5-01",
       "name": "管理员建专家号→登录提交复核→user_id自动关联",
       "status": "PASS",
-      "ms": 10787,
-      "note": "admin建 auditor acpt_reviewer_1789847193; review id=27, user_id=515 已关联"
+      "ms": 10848,
+      "note": "admin建 auditor acpt_reviewer_1789879200; review id=32, user_id=654 已关联"
     },
     {
       "suite": "MVP5复核留痕",
       "id": "M5-02",
       "name": "非法review_type被拒(400)",
       "status": "PASS",
-      "ms": 2042,
+      "ms": 2033,
       "note": "400 非法类型已拦截"
     },
     {
@@ -384,15 +384,15 @@
       "id": "RBAC-01",
       "name": "投标人自助注册; 冒充admin注册被强制降级",
       "status": "PASS",
-      "ms": 6711,
-      "note": "bidder=acpt_rbac_bidder_1789847206; role=admin 自助注册已降级为 bidder"
+      "ms": 6697,
+      "note": "bidder=acpt_rbac_bidder_1789879213; role=admin 自助注册已降级为 bidder"
     },
     {
       "suite": "RBAC权限隔离",
       "id": "RBAC-02",
       "name": "投标人被禁: 写复核/查复核/围串标检测 均403",
       "status": "PASS",
-      "ms": 10585,
+      "ms": 10575,
       "note": "reviews POST/GET=403/403, collusion=403"
     },
     {
@@ -400,7 +400,7 @@
       "id": "RBAC-02B",
       "name": "管理员建号端点: 匿名401/投标人403",
       "status": "PASS",
-      "ms": 8533,
+      "ms": 8570,
       "note": "anonymous=401, bidder=403"
     },
     {
@@ -408,47 +408,47 @@
       "id": "RBAC-03",
       "name": "招标人上传内部文档→按角色行级可见性隔离",
       "status": "PASS",
-      "ms": 27509,
-      "note": "internal doc_id=162: A可见/B不可见/bidder不可见/admin可见, package=PKG-A"
+      "ms": 27930,
+      "note": "internal doc_id=202: A可见/B不可见/bidder不可见/admin可见, package=PKG-A"
     },
     {
       "suite": "RBAC权限隔离",
       "id": "RBAC-04",
       "name": "投标人/匿名访问内部文档检查端点均403",
       "status": "PASS",
-      "ms": 8563,
-      "note": "doc 162: bidder=403, anonymous=403"
+      "ms": 8550,
+      "note": "doc 202: bidder=403, anonymous=403"
     },
     {
       "suite": "RBAC权限隔离",
       "id": "RBAC-05",
       "name": "投标人不得公开上传; 默认为internal且本人可见他人不可见",
       "status": "PASS",
-      "ms": 18639,
-      "note": "public 上传 403; auto→internal doc=163, 本人可见/他人不可见"
+      "ms": 19448,
+      "note": "public 上传 403; auto→internal doc=203, 本人可见/他人不可见"
     },
     {
       "suite": "RBAC权限隔离",
       "id": "META-01",
       "name": "PDF按页解析页数回传 + 包件元数据持久化",
       "status": "PASS",
-      "ms": 12087,
-      "note": "pdf doc=164 page_count=2, package=PKG-PDF, chunks=4"
+      "ms": 11302,
+      "note": "pdf doc=204 page_count=2, package=PKG-PDF, chunks=4"
     },
     {
       "suite": "评审状态机",
       "id": "STAGE-01",
       "name": "初评→质疑→复审→结案 合法流转+历史留痕+非法流转拦截",
       "status": "PASS",
-      "ms": 24214,
-      "note": "doc=165 全链路4步, history=['start', 'challenge', 'start_recheck', 'close'], 非法流转均400"
+      "ms": 24545,
+      "note": "doc=205 全链路4步, history=['start', 'challenge', 'start_recheck', 'close'], 非法流转均400"
     },
     {
       "suite": "评审状态机",
       "id": "STAGE-02",
       "name": "状态机端点权限: 匿名401/投标人403/跨租户internal 403",
       "status": "PASS",
-      "ms": 32830,
+      "ms": 33701,
       "note": "anon=401/401 bidder=403 cross-tenant=403 missing=404 owner=200"
     },
     {
@@ -456,7 +456,7 @@
       "id": "WF-01",
       "name": "预置工作流清单可查询",
       "status": "PASS",
-      "ms": 2048,
+      "ms": 2036,
       "note": "compliance_review, eval_assist"
     },
     {
@@ -464,7 +464,7 @@
       "id": "WF-02",
       "name": "合规审查一条龙 DAG 执行(3节点+降级容错)",
       "status": "PASS",
-      "ms": 24215,
+      "ms": 30091,
       "note": "verdict=ok 成功3/3 (降级容错机制保留, 本轮无失败节点)"
     },
     {
@@ -472,7 +472,7 @@
       "id": "WF-03",
       "name": "评标辅助一条龙 DAG 执行",
       "status": "PASS",
-      "ms": 38936,
+      "ms": 48540,
       "note": "verdict=ok 成功2/2"
     },
     {
@@ -480,63 +480,63 @@
       "id": "BID-01",
       "name": "对话内触发 generate_bid_draft 工具生成标书章节",
       "status": "PASS",
-      "ms": 42758,
-      "note": "工具=['generate_bid_draft'], 答案1667字, gated=False"
+      "ms": 38873,
+      "note": "工具=['generate_bid_draft'], 答案1438字, gated=False"
     },
     {
       "suite": "标书生成闭环",
       "id": "BID-02",
       "name": "/api/bid/section 单章同步生成(公开招标文件)",
       "status": "PASS",
-      "ms": 23783,
-      "note": "title=技术方案, 1005字, 案例=3, 非法章节=400"
+      "ms": 12967,
+      "note": "title=技术方案, 1618字, 案例=3, 非法章节=400"
     },
     {
       "suite": "标书生成闭环",
       "id": "BID-03",
       "name": "单章生成行级权限: 投标人对internal 403/owner 200",
       "status": "PASS",
-      "ms": 48031,
-      "note": "doc=168 bidder=403/anon=403/owner=200(734字)"
+      "ms": 42812,
+      "note": "doc=208 bidder=403/anon=403/owner=200(929字)"
     },
     {
       "suite": "V14企业资料库",
       "id": "PROFILE-01",
       "name": "企业资料库 1:1: 空档案→PUT→GET回显; 匿名401",
       "status": "PASS",
-      "ms": 12660,
-      "note": "company=华信闭环测试有限公司47540, 完整度=5/12, 匿名=401"
+      "ms": 12677,
+      "note": "company=华信闭环测试有限公司79544, 完整度=5/12, 匿名=401"
     },
     {
       "suite": "V14占位符回填",
       "id": "BID-04",
       "name": "单章生成按企业资料自动回填占位符(fill_info)",
       "status": "PASS",
-      "ms": 55534,
-      "note": "1184字, 占位符回填0项: LLM直接引用资料"
+      "ms": 49589,
+      "note": "1350字, 占位符回填0项: LLM直接引用资料"
     },
     {
       "suite": "V14响应对照表",
       "id": "BID-05",
       "name": "空投标稿对照表 verdict=fail/red>0/含🔴; 无原文400",
       "status": "PASS",
-      "ms": 9796,
-      "note": "要求18条, 红18, 非法=400"
+      "ms": 12473,
+      "note": "要求19条, 红19, 非法=400"
     },
     {
       "suite": "V14整本合稿",
       "id": "BID-06",
       "name": "/api/bid/full/stream SSE: 封面目录+fill_info+对照表",
       "status": "PASS",
-      "ms": 80040,
-      "note": "事件={'meta': 1, 'section_start': 2, 'section_done': 2, 'matrix_done': 1, 'done': 1, 'error': 0}, 整本4506字, 对照20条, verdict=fail"
+      "ms": 90896,
+      "note": "事件={'meta': 1, 'section_start': 2, 'section_done': 2, 'matrix_done': 1, 'done': 1, 'error': 0}, 整本4098字, 对照18条, verdict=fail"
     },
     {
       "suite": "V15证书OCR",
       "id": "CERT-01",
       "name": "证书图片上传→OCR结构化→私有预览鉴权→保存→孤儿清理",
       "status": "PASS",
-      "ms": 33415,
+      "ms": 33313,
       "note": "字体=simhei.ttf, source=llm, 编号=BZ-2025-777888, 有效期=2029-12-31, 匿名=401/越权=404/穿越=404/非法格式=400/孤儿=404"
     },
     {
@@ -544,31 +544,31 @@
       "id": "PROFILE-02",
       "name": "敏感字段Fernet加密入库+GET掩码+掩码回传保护",
       "status": "PASS",
-      "ms": 11133,
-      "note": "PG密文=gAAAAABqrui11JXu..., 掩码回传保护OK, 脱敏字段=bank/phone/email/legal"
+      "ms": 11096,
+      "note": "PG密文=gAAAAABqr2XBn-Ly..., 掩码回传保护OK, 脱敏字段=bank/phone/email/legal"
     },
     {
       "suite": "V17密钥轮换",
       "id": "PROFILE-03",
       "name": "多密钥链: 历史密钥密文服务端可解+新写入当前密钥+重加密闭环",
       "status": "PASS",
-      "ms": 10686,
-      "note": "K1新写/K2历史密文HTTP可解/dry-run扫描101行/重加密后key_index=0"
+      "ms": 10660,
+      "note": "K1新写/K2历史密文HTTP可解/dry-run扫描135行/重加密后key_index=0"
     },
     {
       "suite": "V16对照表缓存",
       "id": "MATRIX-02",
       "name": "相同招标+投标稿二次请求命中缓存(cached=True)",
       "status": "PASS",
-      "ms": 23868,
-      "note": "首次cached=False 二次cached=True, 共20条 verdict=fail"
+      "ms": 36698,
+      "note": "首次cached=False 二次cached=True, 共18条 verdict=fail"
     },
     {
       "suite": "V18审计留痕",
       "id": "AUDIT-01",
       "name": "敏感操作审计落库: 资料变更→admin按字段名可查(不含值)→RBAC 401/403",
       "status": "PASS",
-      "ms": 18996,
+      "ms": 19074,
       "note": "admin按user_id+action可查≥2条字段名审计/无明文泄露/bidder403/anon401/PG实证/过滤空"
     },
     {
@@ -576,7 +576,7 @@
       "id": "ANOMALY-01",
       "name": "异常预警解释层: 按code返回原因/影响/处置/法规依据 + 批量解释",
       "status": "PASS",
-      "ms": 8163,
+      "ms": 8167,
       "note": "单条/批量解释返回完整原因-影响-处置-法规, 未知code 404, 围串标线索可解释"
     },
     {
@@ -584,7 +584,7 @@
       "id": "TEMPLATE-01",
       "name": "范本推荐: 按项目类型匹配招标/合同/表单范本 + 详情/列表",
       "status": "PASS",
-      "ms": 10225,
+      "ms": 10231,
       "note": "工程施工招标首推TPL-BID-001/类别过滤生效/详情含章节/列表3类≥10份"
     },
     {
@@ -592,7 +592,7 @@
       "id": "APPEAL-01",
       "name": "异议投诉咨询: 渠道/时限/材料/流程/法规检索 + 政采质疑区分",
       "status": "PASS",
-      "ms": 12220,
+      "ms": 12197,
       "note": "结果异议3日答复/投诉材料≥5项/投诉流程含异议前置与第六十条/政采质疑走财政7+15工作日/列表≥10主题"
     },
     {
@@ -600,7 +600,7 @@
       "id": "GUIDE-01",
       "name": "操作引导: 识别当前操作阶段并给出针对性步骤 + 三类角色流程",
       "status": "PASS",
-      "ms": 16306,
+      "ms": 16322,
       "note": "上传失败定位up-3/开标解密dec-2含同一把CA提示/仅角色不锁定阶段/招标人tdr-3/三角色≥7流程/404"
     },
     {
@@ -608,7 +608,7 @@
       "id": "ALERT-01",
       "name": "检测预警弹窗数据契约: error级anomalies驱动前端红弹窗, 无异常不弹",
       "status": "PASS",
-      "ms": 6138,
+      "ms": 6132,
       "note": "SUM_MISMATCH error→fail弹红窗契约/CN_MISMATCH大写不符/一致→pass空异常不弹窗"
     },
     {
@@ -616,9 +616,9 @@
       "id": "MULTI-01",
       "name": "多Agent工作流: 主管拆解→专家并行ReAct→写作综合, 返回计划/专家结果/终稿",
       "status": "PASS",
-      "ms": 207324,
-      "note": "调度['CASE', 'LAW'] 专家2位 终稿2000字 来源11条 用时205.3s 专家调工具=['search_bidding_knowledge', 'search_bidding_knowledge']",
-      "answer_head": "# 关于XX市智慧园区信息化建设项目（二期）投标截止时间、预算金额及投标保证金法规要求的答复\n\n## 一、简明结论\n\n1. **项目信息（来自已上传招标文件原文"
+      "ms": 196958,
+      "note": "调度['LAW', 'CASE'] 专家2位 终稿2000字 来源10条 用时194.9s 专家调工具=['search_bidding_knowledge', 'search_bidding_knowledge']",
+      "answer_head": "## 一、结论\n\n1. **XX市智慧园区信息化建设项目（二期）**：投标截止时间为 **2025年12月15日 14:00**，预算金额为 **人民币 8,6"
     }
   ]
 }

@@ -46,7 +46,17 @@ class BiddingAgent(ReActMixin, GenerationMixin):
         messages = [{"role": "system", "content": system}]
         messages.extend(_truncate_history(history))
         messages.append({"role": "user", "content": question})
+        # 显式三业务线意图路由: 显著单域时裁剪 active_tools, 跨域/弱信号保守回退全集
+        from src.config import settings
         active_names = list(BASE_TOOL_NAMES)
+        if getattr(settings, "intent_routing_enabled", True):
+            verdict = classify_domain(question, history)
+            before = len(active_names)
+            active_names = select_tools_for_domain(verdict["domain"], active_names)
+            logger.info(
+                "意图路由: domain=%s confident=%s inherited=%s scores=%s tools %d->%d",
+                verdict["domain"], verdict["confident"], verdict["inherited"],
+                verdict["scores"], before, len(active_names))
         if web_search_enabled:
             active_names += WEB_TOOL_NAMES
         active_tools = [t.to_openai_schema() for t in ALL_TOOLS if t.name in active_names]

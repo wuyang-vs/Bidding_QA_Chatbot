@@ -36,15 +36,22 @@ _CHITCHAT_RE = re.compile(
 # 工具返回"空/失败/越权"的文本标记
 _EMPTY_MARKERS = ("未找到", "未检索", "未查询", "未连接", "未返回", "查询失败",
                   "没有相关", "无相关", "执行失败", "执行超时", "参数解析失败",
-                  "未知工具", "无权访问", "无权")
+                  "未知工具", "无权访问", "无权查看",
+                  # 本地结构化目录工具的空匹配措辞
+                  "未匹配", "暂无", "暂未识别")
 
 # 结构化库工具: sources 恒为空, 证据看文本是否为实质数据
 _STRUCTURED_TOOLS = {"search_knowledge_graph", "search_postgresql"}
 # 有依据的动作类工具: 返回内容直接基于本地招标文件生成/列举
 _GROUNDED_ACTION_TOOLS = {"list_bid_documents", "generate_bid_draft"}
+# 本地人工编排的权威目录: 异议投诉/范本/操作引导/异常解释,
+# 返回的是受控结构化知识(非 LLM 自由生成), 实质内容可作为答案依据
+_CURATED_CATALOG_TOOLS = {
+    "consult_appeal", "recommend_template", "guide_operation", "explain_anomaly"}
 # 可作为权威证据的全部工具
-_EVIDENCE_TOOLS = _STRUCTURED_TOOLS | _GROUNDED_ACTION_TOOLS | {
-    "search_bidding_knowledge", "search_web", "search_exa"}
+_EVIDENCE_TOOLS = (_STRUCTURED_TOOLS | _GROUNDED_ACTION_TOOLS
+                   | _CURATED_CATALOG_TOOLS | {
+                       "search_bidding_knowledge", "search_web", "search_exa"})
 
 # RAG 检索均分低于该值视为"仅有低相关噪声", 不算证据
 # (实测相关问题 0.9+, 跨领域无关问题 0.01 以下, 间隔极大)
@@ -112,7 +119,8 @@ def tool_provided_evidence(tool_name: str, sources: list | None,
             if not scores or sum(scores) / len(scores) < _RAG_MIN_AVG_SCORE:
                 return False
         return True
-    if tool_name in _STRUCTURED_TOOLS | _GROUNDED_ACTION_TOOLS:
+    if tool_name in (_STRUCTURED_TOOLS | _GROUNDED_ACTION_TOOLS
+                     | _CURATED_CATALOG_TOOLS):
         t = (text or "").strip()
         if not t:
             return False

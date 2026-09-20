@@ -56,6 +56,8 @@ class Settings:
     auth_enabled: bool = field(default_factory=lambda: os.getenv("AUTH_ENABLED", "false").lower() in ("true", "1", "yes"))
     # 受控问答硬闸门: 知识类问题无权威证据时禁止LLM自由生成; LLM未调工具时强制补检索1次
     evidence_gate_enabled: bool = field(default_factory=lambda: os.getenv("EVIDENCE_GATE_ENABLED", "true").lower() in ("true", "1", "yes"))
+    # 三业务线显式意图路由: 招投标/企业/法规分类后裁剪 active_tools; 关闭则回退全集(LLM 自选)
+    intent_routing_enabled: bool = field(default_factory=lambda: os.getenv("INTENT_ROUTING_ENABLED", "true").lower() in ("true", "1", "yes"))
     # R11: 证书原件存储 (local | s3); s3 兼容 AWS S3 / MinIO (endpoint_url)
     cert_storage_type: str = field(default_factory=lambda: os.getenv("CERT_STORAGE_TYPE", "local").lower())
     cert_s3_bucket: str = field(default_factory=lambda: os.getenv("CERT_S3_BUCKET", "bid-certs"))
