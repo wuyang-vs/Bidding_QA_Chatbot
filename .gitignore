@@ -27,3 +27,7 @@ backend_run.log
 frontend/next_dev.log
 tests/acceptance/run_log*.txt
 
+
+# Office 临时锁文件 / 约定不提交的 UI 证书源图
+~$*
+_ui_cert_source.png

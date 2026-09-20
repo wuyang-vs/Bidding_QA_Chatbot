@@ -556,7 +556,8 @@ def dashboard(user: dict | None = Depends(require_roles(*_INTERNAL_ROLES))):
     kb_count = 0
     if rag_pipeline.ready:
         try:
-            kb_count = rag_pipeline.vector_store.count()
+            from src.rag.vector_store import vector_store
+            kb_count = vector_store.count()
         except Exception:
             pass
 
@@ -571,7 +572,7 @@ def dashboard(user: dict | None = Depends(require_roles(*_INTERNAL_ROLES))):
     try:
         from src.database.postgresql_client import postgresql_client
         if postgresql_client.ready:
-            rows = postgresql_client.query("SELECT COUNT(*) AS cnt FROM bidding_procurement")
+            rows = postgresql_client._run("SELECT COUNT(*) AS cnt FROM bidding_procurement")
             db_count = rows[0]["cnt"] if rows else 0
     except Exception:
         pass
@@ -635,20 +636,24 @@ def graph_subgraph(keyword: str = "", limit: int = 30):
             if len(nodes_set) >= limit:
                 break
     else:
-        # 以 keyword 为中心
-        detail = neo4j_client.query("entity_detail", keyword=keyword)
-        if detail:
+        # 以 keyword 为中心 (支持部分匹配: 先解析实体名, 最多展开 5 个标的物)
+        hits = neo4j_client.query("search_entity", keyword=keyword)
+        names = [h["name"] for h in hits if h.get("name")] or [keyword]
+        for name in names[:5]:
+            detail = neo4j_client.query("entity_detail", keyword=name)
+            if not detail:
+                continue
             d = detail[0]
-            subject = d.get("subject", keyword)
+            subject = d.get("subject", name)
             nodes_set[subject] = {"id": subject, "name": subject, "type": "SubjectMatter"}
             for p in d.get("purchasers", []):
-                if p not in nodes_set:
+                if p and p not in nodes_set:
                     nodes_set[p] = {"id": p, "name": p, "type": "Purchaser"}
-                edges.append({"source": subject, "target": p, "relation": "PURCHASED_BY"})
+                    edges.append({"source": subject, "target": p, "relation": "PURCHASED_BY"})
             for s in d.get("suppliers", []):
-                if s not in nodes_set:
+                if s and s not in nodes_set:
                     nodes_set[s] = {"id": s, "name": s, "type": "Supplier"}
-                edges.append({"source": subject, "target": s, "relation": "SUPPLIED_BY"})
+                    edges.append({"source": subject, "target": s, "relation": "SUPPLIED_BY"})
 
     return {
         "nodes": list(nodes_set.values())[:limit],
