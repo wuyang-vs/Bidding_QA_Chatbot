@@ -268,6 +268,7 @@ class FeedbackRequest(BaseModel):
 
 @app.post("/api/chat/stream")
 def chat_stream(req: ChatRequest,
+                request: Request,
                 user: dict | None = Depends(get_current_user_optional)):
     if not req.question.strip():
         raise HTTPException(400, "问题不能为空")
@@ -275,13 +276,16 @@ def chat_stream(req: ChatRequest,
     if not bidding_agent.ready:
         raise HTTPException(503, "知识库未就绪")
 
+    client_ip = request.client.host if request.client else ""
+
     def _gen():
         # 行级隔离: 整个流式生成期间按当前用户身份过滤 RAG 召回
         from src.auth.access_scope import use_access_scope
         with use_access_scope(user):
             yield from bidding_agent.chat_stream(
                 req.question, req.history, req.web_search_enabled,
-                req.provider, req.deep_thinking_enabled)
+                req.provider, req.deep_thinking_enabled,
+                audit_user=user, audit_ip=client_ip)
 
     return StreamingResponse(_gen(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache",
@@ -290,15 +294,18 @@ def chat_stream(req: ChatRequest,
 
 @app.post("/api/chat")
 def chat(req: ChatRequest,
+         request: Request,
          user: dict | None = Depends(get_current_user_optional)):
     from src.agent.core import bidding_agent
     if not bidding_agent.ready:
         raise HTTPException(503, "知识库未就绪")
     from src.auth.access_scope import use_access_scope
+    client_ip = request.client.host if request.client else ""
     with use_access_scope(user):
         return bidding_agent.chat(req.question, req.history,
                                   req.web_search_enabled, req.provider,
-                                  req.deep_thinking_enabled)
+                                  req.deep_thinking_enabled,
+                                  audit_user=user, audit_ip=client_ip)
 
 
 @app.post("/api/ask")

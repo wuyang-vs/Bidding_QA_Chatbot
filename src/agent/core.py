@@ -8,6 +8,7 @@ from src.agent.constants import BASE_TOOL_NAMES, WEB_TOOL_NAMES
 from src.agent.intent import (
     is_out_of_scope, is_vague_question,
     scope_rejection_message, vague_guidance_message,
+    classify_domain, select_tools_for_domain,
 )
 from src.agent.prompts import SYSTEM_PROMPT
 from src.agent.react_loop import ReActMixin
@@ -52,13 +53,35 @@ class BiddingAgent(ReActMixin, GenerationMixin):
         return messages, active_tools
 
     def _chat_events(self, question, history=None, web_search_enabled=False,
-                     provider="", deep_thinking_enabled=False):
+                     provider="", deep_thinking_enabled=False,
+                     audit_user: dict | None = None, audit_ip: str = ""):
         if not self._ready:
             yield ("error", {"content": "知识库未就绪"})
             return
 
         exec_log = ExecutionLogger()
         exec_log.set_context(question, provider, web_search_enabled, deep_thinking_enabled)
+
+        # 问答交互审计辅助 (失败降级, 永不阻断主流程)
+        def _audit_chat(action_suffix: str, *, sources: int = 0, web_sources: int = 0,
+                        gated: bool = False, answer_len: int = 0, tool_names: list | None = None,
+                        elapsed_ms: int = 0):
+            try:
+                from src.tools.audit_log import record_audit
+                uid = audit_user.get("id") if isinstance(audit_user, dict) else None
+                uname = (audit_user.get("username") or audit_user.get("display_name")
+                         or "anonymous") if isinstance(audit_user, dict) else "anonymous"
+                # 只存工具名/统计量, 不存问题原文与回答原文
+                detail = (f"q_len={len(question)} ans_len={answer_len} "
+                          f"sources={sources} web={web_sources} gated={gated} "
+                          f"elapsed_ms={elapsed_ms}")
+                record_audit(user_id=uid, username=uname,
+                             action=f"chat.{action_suffix}",
+                             target_type="conversation",
+                             changed_fields=list(tool_names or []),
+                             ip=audit_ip, detail=detail)
+            except Exception as e:
+                logger.warning("[问答审计-异常] %s: %s", action_suffix, e)
 
         # ---- 前置意图检测 ----
         if is_out_of_scope(question, history):
@@ -72,6 +95,7 @@ class BiddingAgent(ReActMixin, GenerationMixin):
             exec_log.add_phase("前置检测", 0)
             exec_log.set_result(ans, 0, 0, None)
             exec_log.finish()
+            _audit_chat("out_of_scope", answer_len=len(ans))
             return
         if is_vague_question(question, history):
             yield ("status", {"content": "问题信息不足"})
@@ -84,6 +108,7 @@ class BiddingAgent(ReActMixin, GenerationMixin):
             exec_log.add_phase("前置检测", 0)
             exec_log.set_result(ans, 0, 0, None)
             exec_log.finish()
+            _audit_chat("vague", answer_len=len(ans))
             return
 
         t0 = time.time()
@@ -110,6 +135,19 @@ class BiddingAgent(ReActMixin, GenerationMixin):
                     exec_log.finish()
                     # 供非流式 /api/chat 返回完整工具调用轨迹 (含多轮工具)
                     kwargs["exec_log"] = exec_log.to_dict()
+                    # 问答交互审计: 提取实际调用的工具名
+                    tool_names = [tc.get("name") for tc in
+                                  (kwargs.get("exec_log", {}) or {}).get("tool_calls", [])
+                                  if isinstance(tc, dict)]
+                    _audit_chat(
+                        "gated" if kwargs.get("gated") else "answer",
+                        sources=len(kwargs.get("sources", []) or []),
+                        web_sources=len(kwargs.get("web_sources", []) or []),
+                        gated=bool(kwargs.get("gated")),
+                        answer_len=len(kwargs.get("answer", "") or ""),
+                        tool_names=tool_names,
+                        elapsed_ms=kwargs["elapsed_ms"],
+                    )
                 yield (evt_type, kwargs)
         except Exception as e:
             logger.exception("Agent 处理异常")
@@ -118,19 +156,23 @@ class BiddingAgent(ReActMixin, GenerationMixin):
             yield ("error", {"content": "生成回答时出现异常，请稍后重试"})
 
     def chat_stream(self, question, history=None, web_search_enabled=False,
-                    provider="", deep_thinking_enabled=False):
+                    provider="", deep_thinking_enabled=False,
+                    audit_user: dict | None = None, audit_ip: str = ""):
         yield ": " + " " * 2048 + "\n\n"
         for evt_type, kwargs in self._chat_events(
-                question, history, web_search_enabled, provider, deep_thinking_enabled):
+                question, history, web_search_enabled, provider, deep_thinking_enabled,
+                audit_user=audit_user, audit_ip=audit_ip):
             yield _sse(evt_type, **kwargs)
 
     def chat(self, question, history=None, web_search_enabled=False,
-             provider="", deep_thinking_enabled=False) -> dict:
+             provider="", deep_thinking_enabled=False,
+             audit_user: dict | None = None, audit_ip: str = "") -> dict:
         result = {"answer": "", "sources": [], "web_sources": [],
                   "tool_called": False, "tool_name": "", "gated": False,
                   "exec_log": {"tool_calls": []}}
         for evt_type, kwargs in self._chat_events(
-                question, history, web_search_enabled, provider, deep_thinking_enabled):
+                question, history, web_search_enabled, provider, deep_thinking_enabled,
+                audit_user=audit_user, audit_ip=audit_ip):
             if evt_type == "token":
                 result["answer"] += kwargs.get("content", "")
             elif evt_type == "done":

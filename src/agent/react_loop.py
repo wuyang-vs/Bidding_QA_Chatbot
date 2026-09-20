@@ -28,6 +28,30 @@ _FORCE_RETRIEVAL_TEXT = (
     "再明确告知用户未检索到相关内容。"
 )
 
+# 复杂多跳问题特征词: 对比/枚举/跨域类问题首检易漏证据, 触发一次 query 改写重试
+_COMPLEX_MULTI_HOP_WORDS = (
+    "对比", "比较", "区别", "不同", "差异", "分别", "各自", "哪些",
+    "和", "与", "及", "以及", "还是", "或者",
+)
+
+
+def _is_complex_multi_hop(question: str) -> bool:
+    q = question or ""
+    if len(q) < 12:
+        return False
+    hits = sum(1 for w in _COMPLEX_MULTI_HOP_WORDS if w in q)
+    # 至少命中 1 个特征词且问题有一定长度, 或命中 2 个以上
+    return hits >= 2 or (hits >= 1 and len(q) >= 20)
+
+
+# 复杂多跳问题首检 gated 后的 query 改写重试提示
+_COMPLEX_RETRY_TEXT = (
+    "【服务端提示】上一轮检索未命中权威证据。该问题涉及多实体对比/跨域信息，"
+    "请将问题拆成 2-3 个更具体的子问题，分别调用 search_bidding_knowledge / "
+    "search_knowledge_graph / search_postgresql 检索后再综合作答；"
+    "若仍无结果，再如实告知用户。"
+)
+
 
 class ReActMixin:
     def _chat_stream_tools(self, messages, question, llm, active_tools, web_search_enabled, exec_log=None):
@@ -45,6 +69,7 @@ class ReActMixin:
         evidence_found = False       # 是否拿到过实质证据(分片/来源/结构化数据)
         evidence_texts: list[str] = []  # 证据原文(用于问题特征词覆盖校验)
         forced_retry_used = False    # 已强制补检索一次
+        complex_retry_used = False   # 复杂多跳问题已 query 改写重试一次
 
         for round_idx in range(1, MAX_TOOL_ROUNDS + 1):
             if exec_log:
@@ -178,26 +203,74 @@ class ReActMixin:
         if gate_enabled and gate_decision(
                 question, tool_attempted, evidence_found,
                 forced_retry_used, evidence_texts=evidence_texts) == "refuse":
-            from src.agent.utils import _pace_stream_chunks
-            if exec_log:
-                exec_log.set_status("no_evidence")
-            logger.info("硬闸门: 检索无证据, 返回固定拒答话术 (tool_attempted=%s)",
-                        tool_attempted)
-            yield ("status", {"content": "知识库未命中，按受控原则不予自由作答"})
-            notice = NO_EVIDENCE_NOTICE
-            phase_times.append(("硬闸门拦截", 0))
-            if exec_log:
-                exec_log.add_phase("硬闸门拦截", 0)
-            audit = audit_answer(notice, [])
-            for chunk in _pace_stream_chunks(notice):
-                yield ("token", {"content": chunk})
-            yield ("done", {"sources": [], "web_sources": [],
-                            "tool_called": tool_attempted, "tool_name": last_tool,
-                            "phase_times": phase_times, "audit": audit,
-                            "gated": True, "answer": notice})
-            return
+            # 复杂多跳问题首检易漏证据: 允许一次 query 改写重试 (仅一次, 不无限循环)
+            if (not complex_retry_used) and _is_complex_multi_hop(question):
+                complex_retry_used = True
+                logger.info("硬闸门: 复杂多跳问题首检无证据, 触发 query 改写重试")
+                yield ("status", {"content": "正在拆分问题重新检索..."})
+                messages.append({"role": "user", "content": _COMPLEX_RETRY_TEXT})
+                try:
+                    retry_resp = llm.chat_raw(messages, tools=active_tools)
+                    retry_msg = retry_resp.choices[0].message
+                    retry_tc = getattr(retry_msg, "tool_calls", None)
+                    if retry_tc:
+                        retry_content = _normalize_tool_content(
+                            getattr(retry_msg, "content", "") or "")
+                        messages.append({"role": "assistant", "content": retry_content,
+                                         "tool_calls": [tc.model_dump() if hasattr(tc, "model_dump") else tc
+                                                        for tc in retry_tc]})
+                        retry_results = ToolRunner.run_parallel(
+                            retry_tc, question, TOOL_EXECUTORS)
+                        for tc, r in zip(retry_tc, retry_results):
+                            text = self._validate_result(r.name, r.text, r.sources)
+                            messages.append({"role": "tool", "tool_call_id": tc.id,
+                                             "content": text})
+                            if r.name in ("search_web", "search_exa"):
+                                if r.sources:
+                                    web_sources.extend(r.sources)
+                            else:
+                                if r.sources:
+                                    all_sources.extend(r.sources)
+                            last_tool = r.name
+                            tool_attempted = True
+                            if tool_provided_evidence(r.name, r.sources, r.text):
+                                evidence_found = True
+                                evidence_texts.append(r.text or "")
+                except Exception as e:
+                    logger.warning("复杂多跳重试失败, 维持拒答: %s", e)
+                # 重试后重新评估证据门 (仅以 gate_decision 为准, evidence_found 仅表示有来源不代表覆盖特征)
+                if gate_decision(
+                        question, tool_attempted, evidence_found,
+                        forced_retry_used, evidence_texts=evidence_texts) != "refuse":
+                    # 重试拿到合格证据: 交给后续 final_messages 生成回答
+                    final_messages = self._clean_for_final(messages, question, tool_msgs_start)
+                else:
+                    # 重试仍无合格证据: 走拒答
+                    final_messages = None
+            else:
+                final_messages = None
 
-        final_messages = self._clean_for_final(messages, question, tool_msgs_start)
+            if final_messages is None:
+                from src.agent.utils import _pace_stream_chunks
+                if exec_log:
+                    exec_log.set_status("no_evidence")
+                logger.info("硬闸门: 检索无证据, 返回固定拒答话术 (tool_attempted=%s)",
+                            tool_attempted)
+                yield ("status", {"content": "知识库未命中，按受控原则不予自由作答"})
+                notice = NO_EVIDENCE_NOTICE
+                phase_times.append(("硬闸门拦截", 0))
+                if exec_log:
+                    exec_log.add_phase("硬闸门拦截", 0)
+                audit = audit_answer(notice, [])
+                for chunk in _pace_stream_chunks(notice):
+                    yield ("token", {"content": chunk})
+                yield ("done", {"sources": [], "web_sources": [],
+                                "tool_called": tool_attempted, "tool_name": last_tool,
+                                "phase_times": phase_times, "audit": audit,
+                                "gated": True, "answer": notice})
+                return
+        else:
+            final_messages = self._clean_for_final(messages, question, tool_msgs_start)
 
         # 闸门关闭时的旧软约束: 工具全空 → 注入提示词要求 LLM 说未找到
         if (not gate_enabled) and last_tool and not all_sources and not web_sources:
