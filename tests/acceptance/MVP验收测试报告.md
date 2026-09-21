@@ -3,15 +3,35 @@
 | 项目 | 内容 |
 |---|---|
 | 系统名称 | 招投标采购智能问答与辅助评标系统（Bidding_QA_Chatbot） |
-| 报告版本 | V2.3（多专家协作接入＋Agent 端到端评测基准＋小范围可用性验证前置：V2.2 59 项基线之上，①将孤立原型 multi_agent 工作流接入主问答（前端琥珀色"多专家协作"开关＋可折叠专家过程面板，后端端点补齐鉴权/限频/行级隔离/伪工具调用防御），新增 MULTI-01 验收；②建立 Agent 端到端评测基准集 12 题（单跳/多跳/跨域，工具选择＋答案事实双指标），新增纯函数打分器与 HTTP 评测器；③可用性验证前置三项：问答交互审计落库（chat.answer/out_of_scope/vague，仅存统计量与工具名）、复杂多跳问题 gated 后 query 改写重试一次、历史中标 bidding_procurement 脱敏种子数据 30 条（scripts/seed_bidding_procurement.py）；④意图识别升级为显式三业务线分类路由（intent.py 招投标/企业/法规/通用 评分分类器，显著单域裁剪 active_tools，跨域/弱信号保守回退全集，INTENT_ROUTING_ENABLED 可关），并修复分类路由冒烟暴露的 D25（本地权威目录工具未计入证据门致法规目录题被误拒）） |
-| 测试日期 | 2026-09-20（V2.3 全量回归 60/60、Agent 评测 12 题两跑、浏览器实测，均为 PROFILE_ENC_KEYS 双密钥链环境；V2.1/V2.2 同日早些时候执行） |
+| 报告版本 | V2.5（纯文档增补，无产品代码变更：新增第 8 章「选型报告与工程落地偏差说明（ADR）」，将三份桌面选型报告（embidding选型(2) 选 Qwen3-Emb-0.6B、vector_db_final_report_v4 选 Milvus、llm_evaluation_report_v2 选 GLM-4-9B）的结论与本仓库实际实现（BGE-M3／Qdrant／DeepSeek 云端＋本地 vLLM Qwen2.5-3B-AWQ）逐项比对，记录环境约束下的选型降级依据、已落地的防御性要求、未复刻评测资产的原因与回迁触发条件；第 6 章新增 R14 索引项）。前序 V2.4（架构优化建议 #9「官网爬取入库」补齐：财政部/中国政府采购网/住建部三个权威信息源声明式注册，requests+bs4 静态爬取（限速/重试/robots/域名白名单/正文长度阈值），content_sha 状态去重，500/80 滑窗分片＋BGE-M3 入 Qdrant（doc_type=official_web、visibility=public、source_url/publish_date 回传），确定性哈希点 ID 幂等覆盖；WebCrawlScheduler 默认关闭随服务启停，admin 管理端点 2 个；真机实测 9 篇 65 分片 618→683、二跑全跳过、政策类问题 hybrid top5 全部命中并带回官网链接；新增离线单测 9 项。前端零改动）。前序 V2.3：多专家协作接入＋Agent 端到端评测基准＋小范围可用性验证前置（multi_agent 接入主问答、12 题评测基准、交互审计落库/query 改写重试/脱敏种子数据、意图三业务线路由及 D25 修复） |
+| 测试日期 | 2026-09-21（V2.5 文档增补：选型报告 vs 源码逐项核对，纯文档无代码变更；V2.4 官网爬取 dry-run＋真实入库＋检索命中实测、admin 端点 401 闸门冒烟、离线 pytest 全量）；2026-09-20（V2.3 全量回归 60/60、Agent 评测 12 题两跑、浏览器实测，均为 PROFILE_ENC_KEYS 双密钥链环境；V2.1/V2.2 同日早些时候执行） |
 | 测试执行人 | 自动化验收套件（tests/acceptance/run_acceptance.py）＋离线确定性测试＋Agent 端到端评测器（tests/eval/run_agent_eval.py）＋浏览器 UI 实测＋真实 MinIO 手动实测（V2.2） |
 | 基线代码 | V2.2 commit `4dd4b50`（MinIO 实测版）；V2.3 在其上新增多专家接入与评测体系代码 |
-| 报告依据 | V2.3 全量执行日志（60/60；意图路由版复跑 run_log_route.txt，GATE-01 36.6s 仍 gated/sources=0）、evidence.json（2026-09-20 12:54 复跑）、Agent 评测报告 agent_eval_report.json/.md（11/12，工具选择 100%）、UI 截图 v23_multi_agent.png、离线 pytest 160 项（含意图路由 14 项，见 4.5l）、硬闸门 54 断言（见 4.5l/D25） |
+| 报告依据 | V2.5：三份桌面选型报告（临港目录 embidding选型(2).html、vector_db_final_report_v4.html、llm_evaluation_report_v2.html）与仓库源码逐项核对——src/rag/embedder.py（BGE_MODEL_NAME/RERANKER_MODEL_NAME）、src/rag/vector_store.py（Distance.COSINE＋Qdrant dense/sparse 双向量）、docker-compose.yml（qdrant 服务，全仓 0 处 milvus）、src/config.py＋src/clients/llm_factory.py（deepseek/zhipu/vllm/ollama 四 provider）、src/agent/evidence_gate.py＋src/agent/audit.py（无证据硬拒＋引用解析＋忠实度）、tests/eval/（retrieval_cases.json 70 例、run_retrieval_ablation.py A0-A3、run_agent_eval.py 12 题）。V2.4 真机执行日志（dry-run 3×3、真实入库 9 篇 65 分片、二跑去重、hybrid 3 问命中）、tests/test_web_crawler.py 9 项离线测试、TestClient admin 401 冒烟；V2.3 全量执行日志（60/60；意图路由版复跑 run_log_route.txt，GATE-01 36.6s 仍 gated/sources=0）、evidence.json（2026-09-20 12:54 复跑）、Agent 评测报告 agent_eval_report.json/.md（11/12，工具选择 100%）、UI 截图 v23_multi_agent.png、离线 pytest 160 项（含意图路由 14 项，见 4.5l）、硬闸门 54 断言（见 4.5l/D25） |
 
 ---
 
 ## 1. 验收结论
+
+**V2.4（架构优化建议 #9）补齐「官网权威信息源自动化爬取＋结构化入库」：财政部政策发布、中国政府采购网政策法规、住房城乡建设部三个源声明式注册，纯 requests+bs4 静态解析（无浏览器依赖），礼貌爬取（UA/1.5s 限速/重试/robots/域名白名单/正文长度阈值），content_sha 状态持久化增量去重，政策正文复用既有 500/80 滑窗＋BGE-M3 dense/sparse 入 Qdrant（doc_type=official_web、business_line=regulation、visibility=public、source_url/publish_date 元数据全链路透传），点 ID 由 url 哈希确定性生成、重爬幂等覆盖。定时调度默认关闭（WEB_CRAWL_ENABLED=false）随 API 生命周期启停，另提供 admin-only 状态查询与手动触发端点。真机实测：dry-run 9/9 抽取成功；真实入库 9 篇 65 分片，Qdrant 618→683；同参二跑 3 源全部 skipped；3 个政策类问题 hybrid_search top5 全部命中 official_web 分片并带回官网原文链接（前端 SourceCard 既有 url 契约自动渲染"打开链接"，本期前端零改动，无 tsc 项）。**
+
+本轮（㉑ 官网爬取入库）交付的关键结论：
+
+1. **声明式信息源注册表** [config/web_sources.json]：每源含 entry_url/allowed_domains/link_pattern/标题长度窗口/正文 class 候选/min_content_chars/request_delay_sec/verify_tls；新增省级平台只需加配置不改代码。住建部列表页为 jpaas CMS 的 JS 渲染（POST/GET 其 build/unit 接口均取不到数据），经真机探测改用**首页 art 链接发现**（pattern 限定 /gongkai/zc/wjk/art/）；上海公共资源交易首页无匹配中文锚点，本轮未纳入。
+2. **爬虫模块** [src/ingestion/web_crawler.py]：extract_links（域名白名单＋正则＋标题 8-80 字窗口＋去重，title 属性优先兜底截断锚点）、parse_detail（候选 class 取最长文本节点、噪声标签/行剔除、<200 字返 None）、normalize_date 均为不发网络请求的纯函数；RobotsCache 对 robots.txt 404/超时按惯例视为允许；make_session 以 trust_env=False 绕过本机已失效的 127.0.0.1:6518 系统代理；fetch 重试 2 次＋apparent_encoding 解决 GBK 页面乱码。
+3. **发布日期抽取修复（真机发现的真实缺陷）**：财政部页面模板含静态"2017年11月21日 星期二"装饰块，初版扫整页 HTML 全部误取该日期；改为可信度优先级 `<meta name="PubDate">` → 正文容器头部 800 字 → h1 邻近文本，不扫整页。修复后 MOF 三篇日期正确为 2026-09-14/09-11/09-01，并有离线单测锁定"meta 胜过模板噪声"回归点。
+4. **入库管道** [src/ingestion/web_ingest.py]：复用 src.rag.ingest 的 `_chunk_tender_text`(500/80) 与 `_heading_of`；article_uid=url sha1 前 16 位，点 ID=md5(web::uid::idx) 截 63 位整数，与既有 FAQ/tender ID 段零冲突；每篇入库前按 article_uid 删旧分片，兼容文章变短；sparse 词表按**本批全部分片统一 fit 一次**（与 FAQ 全量入库路径一致，避免逐篇小语料反复覆盖全局词表）；原文 JSONL 快照落 data/web/articles/YYYYMMDD/，爬取状态落 data/web/.crawl_state.json（均已加 .gitignore）。
+5. **调度与管理端点**：WebCrawlScheduler（src/rag/scheduler.py，间隔 WEB_CRAWL_INTERVAL_HOURS 默认 24h、每源上限 WEB_CRAWL_MAX_PER_SOURCE 默认 10）在 api/server.py lifespan 中 start_web_crawl/stop_web_crawl；手动触发走进程内互斥锁 run_web_crawl_once（定时线程与端点共用 execute_web_crawl，并发返回 busy）。GET `/api/knowledge/web-sources`（注册表＋各源已跟踪 URL 数＋调度状态）、POST `/api/knowledge/web-crawl/run?max_per_source=N`（1-30 限幅）均 `require_roles(ROLE_ADMIN, allow_anonymous=False)`，TestClient 实测匿名 401。
+6. **CLI** [scripts/crawl_official_sources.py]：--list/--source/--all-enabled/--max-per-source/--dry-run/--ignore-robots/--reset-state，可挂 Windows 任务计划；无新增文章时不加载嵌入模型直接退出（二跑实测秒退）。
+7. **检索回显链路**：vector_store.hybrid_search 元数据白名单加入 source_url/publish_date/article_uid（upsert 与检索两处），检索结果对官网点自动补 `url` 字段，与既有联网搜索 web_sources 的前端契约一致；SourceCard 对含 url 的来源渲染"打开链接"外链。
+8. **真机实证（2026-09-21）**：①dry-run --max-per-source 3：3 源列表分别发现 25/54/45 链接，各取 3 篇详情全部成功（正文 215-6815 字，住建部通知正文短是因附件承载正文，阈值 200 保留其标题级信号＋原文链接）；②真实入库：9 篇 65 分片（11/11/1/11/11/17/1/1/1），Qdrant 总点 618→683，official_web 过滤计数=65；③同参二跑：新增=0 跳过=3×3，向量库不变；④hybrid 检索三问（紧急采购程序/本国产品标准/投资审批精简）top5 全部为 official_web 点，payload 含 source_url＋publish_date=2026-09-14 等。
+9. **离线测试 9 项全过**（tests/test_web_crawler.py，不发网络/不加载模型）：链接域名过滤/正则/标题长度/去重、normalize_date 多格式与非法日期、正文 class 抽取＋噪声行剔除＋短页丢弃、meta PubDate 优先级、build_web_points 点 ID 确定性/重爬幂等/跨 URL 不碰撞/元数据完整、crawl_source 两轮增量状态（首轮新增/次轮跳过，fetcher 注入）、注册表三源、状态文件 JSON 往返。全量 pytest **330 passed**；test_intent 3 项失败与 V1.7 起基线记录一致（意图分类模块，本期未触碰），非本期回归；py_compile 全部改动文件通过。
+
+---
+
+**V2.5 为纯文档增补（无产品代码变更、无验收回归）：新增第 8 章「选型报告与工程落地偏差说明（ADR）」。起因是三份选型报告（Embedding 端到端评测、向量库最终报告 v4、LLM 评测报告 v2，均在 V100 32GB 服务器环境产出）的首选结论——Qwen3-Embedding-0.6B、Milvus、GLM-4-9B——与本仓库实际落地（BGE-M3、Qdrant、DeepSeek 云端＋本地 vLLM Qwen2.5-3B-AWQ）全部不一致。本期以源码为准逐项核对后，将差异定性为"环境约束下有据的工程降级"而非"报告失效"：报告实测精度差本身不构成切换理由（Embedding R@10 差仅 1.81pp 且无置信区间；4 向量库 Recall@20 最大差 <0.4%），Milvus/GLM-4-9B 的中选理由（分布式演进、~26GB 显存）在本机 RTX 4050 6GB／683 点规模下均不成立；同时报告真正的防御性结论（LLM 端事实校验防幻觉、D 档诚实拒答、混合检索＋重排序）在代码中均已实现并有验收断言（evidence_gate 54 断言、audit 忠实度、A0-A3 检索消融）。ADR 同时列明未复刻评测资产（4 库 benchmark 台、V3 五指标、2000 题/400 人工标注、ABCD 四档分层）的原因与重新对齐的触发条件，第 6 章新增 R14 索引项。**
+
+---
 
 **V2.3 验收套件共 60 项，全量回归 60 PASS / 0 FAIL / 0 ERROR（通过率 100%，PROFILE_ENC_KEYS 双密钥链环境，验收脚本与后端以同一密钥链启动）。本期完成两件事：①多专家协作（multi_agent）从"仅有孤立端点的原型"正式接入主问答——前端新增琥珀色"多专家协作"开关与可折叠专家过程面板，后端端点补齐鉴权、限频、行级隔离上下文传播与伪工具调用防御，新增 MULTI-01 端到端验收（真实 207.3s）；②建立 Agent 端到端评测基准集——12 道多跳/跨域题＋"工具选择正确率＋答案事实组覆盖率"双指标纯函数打分体系，HTTP 评测器产出可复现报告。**
 
@@ -545,6 +565,7 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 | R11（新增 V1.5） | ~~证书原件存本地 `uploads/certs/{uid}/`，未接入对象存储/CDN；OCR 识别准确度依赖图片清晰度~~ **V1.6 部分关闭**：存储抽象为 `CertStorage` 基类＋`LocalCertStorage`（默认）＋`S3CertStorage`（接口占位）；OCR 前加灰度化+小图放大预处理。**V1.7 完全关闭对象存储**：boto3 实际接入 S3CertStorage（put/get/delete/list 批量清理、s3v4 预签名 307、MinIO endpoint+path-style 适配、auto_bucket 自动建桶、中文原名 URL 编码 D18），OCR 改字节流、预览双通道，7 项 Stubber 单测全过。**V2.2 真实连通实测关闭**：真实 MinIO server 端到端 13/13 PASS（含 D18 metadata 真实服务复验、s3v4 预签名匿名 GET、批删/404 映射，manual_minio_live.py） | 多实例部署/生产可靠性、识别准确度 | Local/S3 双后端均已可用且经真实服务实证（CERT_STORAGE_TYPE 切换，.env.example 已补全部配置，复测步骤见 7.3）；剩余：商用 AWS S3 未实测（同 S3v4+path-style 协议，风险低）；复杂版式/手写/印章遮挡仍需人工核对 |
 | R12（新增 V1.9） | ~~智慧问答四类功能覆盖不完整~~ **V2.0 四类已全部关闭**：②范本智能推荐（R14，11 份静态范本库+中文分词匹配）、③异常预警问答（R13，12 code 原因/处置/法规解释层，检测能力 P4-P9 早已具备）、④异议投诉咨询（R15，11 主题专项库，工程招投标与政采两套渠道区分）、①操作智能引导（R16，7 流程 27 阶段，三角色阶段识别+前后衔接）。**V2.1 另关闭"检测结果前端主动弹窗预警"（R17）**：合规/资格/废标/响应性/报价五类检测完成即红/黄弹窗（ALERT-01+浏览器实测全过） | 面向交易平台用户的服务完整性 | 后续增强：范本/流程/异常知识库接运营后台动态维护、异常 code 与操作 stage 随业务扩展持续补录；弹窗阈值可随业务反馈分级调优 |
 | R13（新增 V2.3） | ①~~multi_agent 多专家工作流为孤立原型（仅 /api/multi-agent/run，前端无入口、验收无覆盖）~~ **V2.3 已接入主问答**（开关/面板/MULTI-01/浏览器全过，D19-D21 已修）；遗留：调度计划为一次性 LLM 拆解，不支持中途追加专家/人工修正；非流式整链路 185-242s，仅适合复杂问题，不宜默认开启（前端默认关闭）；PRICE 专家依赖 PG bidding_procurement 历史中标表，**本环境未部署该表**（浏览器实测中价格专家如实报告数据缺口，不编造；price_analyzer 早有"请先部署 PG 并导入数据"降级提示）。②Agent 端到端基准仅 12 题、事实判定为关键词组匹配，复杂多跳存在 D22 轮次波动（E2E-07 两跑一过一拒） | 多专家的速度/可干预性、价格分析在无历史库环境不可用；评测基准覆盖与稳定性统计尚浅 | 部署方导入 bidding_procurement 后复跑评测（题集锚点需随库扩充）；评测扩至 50+ 题、多跑取 flaky 率、引入语义级事实判定；多专家改流式/子问题级进度推送、支持计划人工修订（后续版本） |
+| R14（新增 V2.5） | 三份外部选型报告首选（Qwen3-Emb-0.6B／Milvus／GLM-4-9B）与本仓库落地栈（BGE-M3／Qdrant／DeepSeek＋本地 Qwen2.5-3B-AWQ）不一致；报告中的 V3 五指标评测器、2000 题/400 人工标注、4 库 benchmark 台、ABCD 四档分层未复刻 | 外部审计/答辩时可能被质疑"报告结论未落地"；本地模型 vLLM 部署（#11）尚在进行（权重已就位、镜像待拉取），内网闭环未最终验证 | 差异依据与回迁触发条件已形成 ADR（见第 8 章）：精度差距不构成切换理由、硬件/规模约束不满足报告中选前提；#11 完成后补本地模型端到端延迟与质量记录；获 24GB+ GPU 或向量规模触达迁移门槛时按 ADR 第 4 节重评 |
 
 ---
 
@@ -622,3 +643,77 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
    - 执行：`.venv\Scripts\python.exe tests/acceptance/manual_minio_live.py`，预期末行 `13/13 PASS`；脚本自行设置 CERT_S3_* 环境变量并在结束时清空删除测试桶，无需改 .env。
 7. **V2.3 Agent 端到端评测复跑（需后端＋LLM，约 5-7 分钟）**：确认 /api/health ready 后执行 `.venv\Scripts\python.exe tests/eval/run_agent_eval.py`（12 题逐题打 /api/chat，默认超时 280s/题；可用 `--base-url/--timeout/--fact-threshold/--min-pass`），末行打印通过率并生成 tests/eval/agent_eval_report.json/.md；注意 LLM/检索波动会使个别题（当前观测为 E2E-07）在 gated 拒答与通过间波动，**不得修改题集事实锚点凑分**，扩库后需同步更新锚点。
 8. **V2.3 多专家协作复测**：接口侧 POST /api/multi-agent/run `{"question": "...跨域问题...", "deep_thinking": false}`（非流式，约 1-4 分钟，返回 plan/expert_results/final_answer/sources）；UI 侧首页打开"多专家协作"琥珀开关后发问，验证徽标＋可折叠专家过程面板＋终稿＋来源（参考 4.6 v23_multi_agent.png）。
+
+---
+
+## 8. 附录：选型报告与工程落地偏差说明（ADR，V2.5 新增）
+
+> 本章为纯文档 ADR（Architecture Decision Record），不含代码变更。目的：当外部评审发现"选型报告的首选模型/组件与系统实际实现不一致"时，提供可核对的差异清单、决策依据与回迁条件。所有"落地实现"均以 2026-09-21 仓库源码为准核对。
+
+### 8.1 背景与环境差异
+
+项目前期在**独立 GPU 服务器（Tesla V100 32GB，8.153.82.13，数据卷 ~1.9TB）**完成三份选型评测报告（存放于项目外交付目录 `临港/`）：
+
+| 报告文件 | 评测对象 | 首选结论 |
+|---|---|---|
+| embidding选型(2).html | 3 个 Embedding（4807 条真实查询、Milvus/FAISS） | **Qwen3-Embedding-0.6B** |
+| vector_db_final_report_v4.html | 4 个向量库（FAISS/Chroma/Qdrant/Milvus，4541 chunks/200 干扰项） | **Milvus Standalone**（HNSW+COSINE） |
+| llm_evaluation_report_v2.html | 4 个 vLLM 开源模型（2000 题抽样＋400 人工标注，V3 五指标） | **GLM-4-9B** |
+
+本系统实际开发/演示环境为**单机笔记本：RTX 4050 Laptop 6GB 显存、单人开发、当前 Qdrant 683 个分片点（V2.4 实测）**。两个环境的硬件预算与数据规模相差一个数量级，是全部三项偏差的共同根因。
+
+### 8.2 偏差总览
+
+| 选型项 | 报告首选 | 仓库落地（源码出处） | 偏差性质 |
+|---|---|---|---|
+| Embedding | Qwen3-Embedding-0.6B | **BAAI/bge-m3**（1024 维）＋自实现 BM25 sparse＋**bge-reranker-v2-m3** CrossEncoder 精排（[src/rag/embedder.py L12-L20]、vector_store.py dense/sparse 双向量） | 保持已落地方案，精度差不显著 |
+| 向量库 | Milvus Standalone | **Qdrant**（[docker-compose.yml L34-L41] qdrant/qdrant:latest、6333、命名卷持久化；Distance.COSINE） | 规模触发式降级，未达迁移门槛 |
+| 生成 LLM | GLM-4-9B（vLLM，~26GB 显存） | **云端 DeepSeek 为主**（默认 LLM_PROVIDER=deepseek）；智谱云端可选；**本地 vLLM Qwen2.5-3B-Instruct-AWQ 进行中**（#11，OpenAI 兼容通道已就绪，[src/clients/llm_factory.py L26-L35] 四 provider） | 硬件硬约束降级，双轨保质量/保内网 |
+
+### 8.3 逐项决策依据
+
+**① Embedding：BGE-M3 保持，不切 Qwen3-Embedding**
+
+1. 报告自身数据：Qwen3-Emb 对 BGE-M3 的 Recall@10 为 0.6855 vs 0.6674（仅 **+1.81pp**），且报告未给出 bootstrap 置信区间/显著性检验——按项目选型任务 PPT 第 9 页"95% CI 不呈明显劣势则不判负向"的规则，该差距不足以支撑切换。
+2. 报告仅测 dense 单路；落地栈是 **dense＋BM25 RRF 混合＋CrossEncoder 精排**三件套，A0(dense)→A1(+BM25)→A2(+变体)→A3(+rerank 完整流水线) 消融有量化报告（tests/eval/run_retrieval_ablation.py，retrieval_ablation_report.json/.md）。单路冠军在完整流水线中的优势不可直接迁移。
+3. BGE-M3 已全量入库（FAQ/招标/官网三类分片，683 点）并跑通权限预过滤；换模型需全量重建索引，收益不确定。
+
+**② 向量库：Qdrant 保持，不引 Milvus**
+
+1. 报告"公平版"实测四库 Recall@20 最大差异 **<0.4%**（Qdrant 0.7238 / Milvus 0.7265），精度无差；Milvus 的中选理由全部是**工程演进项**：分布式扩展、千万级数据上限、K8s/存算分离路线图。
+2. 触发式迁移的前提（选型任务 PPT 第 11 页：pgvector/单机库 P95 不达标、多向量 P0 需求、独立扩缩、压测收益＞新增运维成本）当前**一条都不满足**：683 点 vs Milvus 路线图针对的千万级，单机 Qdrant 单容器零额外运维成本。
+3. 报告要求的安全能力（元数据过滤/权限隔离/数据隔离等级）Qdrant 已实现：RAG 召回层按 owner_id/visibility 预过滤（V1.3 修复真实越权漏洞，RBAC 8 用例＋离线隔离专项锁定），官网分片 visibility=public 入同一集合。
+
+**③ LLM：GLM-4-9B 不可行 → 云端保质量＋本地小模型保内网**
+
+1. **硬件硬约束**：GLM-4-9B FP16 需 ~26GB 显存，4bit 量化亦超 6GB，本机物理不可行；报告环境为 32GB V100。
+2. 双轨替代：云端 DeepSeek（glm-4.7-flashx 为智谱备选）承担默认问答质量；#11 正在本机 Docker 部署 **Qwen2.5-3B-Instruct-AWQ（2.5GB 权重，6GB 显存可运行）**实现"数据不出内网"的降级轨——对应架构优化 #11 的原始诉求（减少外部依赖、内网闭环），而非报告的模型冠军诉求。
+3. 接入层无差异：vLLM 走标准 OpenAI 兼容协议（llm_factory provider=vllm，.env 切换 LLM_PROVIDER/VLLM_MODEL 即可换轨），未来获 24GB+ GPU 后可无代码改动改挂 GLM-4-9B 复评。
+4. 诚实状态：#11 尚未验收（模型权重已校验就位，vLLM 镜像受网络限制未拉完），本地轨端到端延迟与质量数据**暂无，不在本报告虚构**，完成后在本章补实测。
+
+### 8.4 报告的防御性要求——已全部落地（且更严格）
+
+报告真正的工程价值不在"冠军是谁"，而在其风险结论；以下逐条已在代码中实现并有验收断言：
+
+| 报告要求（出处） | 落地实现 |
+|---|---|
+| 向量库报告："向量库无法识别幻觉/干扰项，必须在 LLM 端加事实校验" | [src/agent/evidence_gate.py] 无证据不放行硬闸门（低相关噪声/通用 FAQ 不背书，固定拒答话术）＋[src/agent/audit.py] 引用解析＋句级 n-gram 忠实度＋幻觉计数；GATE-01＋纯函数 **54 断言**（test_evidence_gate.py） |
+| LLM 报告：答案必须带来源标注（【来源1】规范），无来源断言扣分/红线 | ReAct 提示词强制 `[资料N]` 引用（react_loop.py 注入），audit.py 解析校验；MULTI-01 含终稿来源去重断言 |
+| LLM 报告：D 档（证据极弱 0.35 以下）应诚实拒答 | evidence_gate 以 0.3 相关阈值统一硬拒（三态纯函数），gated=True/sources=0 可验收，效果等价于四档分层中 D 档目标，且无中间档"弱证据硬答"风险 |
+| LLM 报告"后续优化建议"：混合检索（向量+BM25 RRF）、CrossEncoder 重排序 | 已实现并经 A0-A3 四档消融量化（见 4.5/7.1） |
+| LLM 报告：temperature=0 保证可复现 | 条款抽取/评测路径固定 temperature=0（M5 人工复核兜底非确定性残留） |
+
+### 8.5 未复刻的评测资产与原因
+
+| 报告资产 | 不复刻原因 | 现有替代评测 |
+|---|---|---|
+| 4 库 benchmark 台（FAISS/Chroma/Qdrant/Milvus 同机 P50/P99/QPS/内存对比） | 报告已证明精度等价、选型依据是分布式演进；在 683 点单机上重跑四库结论不会改变，属表演性工作 | V2.4 真机入库/检索计时；规模触发门槛见 8.6 |
+| V3 五指标评估器＋5 条红线＋2000 QA 抽样＋400 条人工标注 | 依赖 4 个 vLLM 模型同时在 V100 运行与大规模人工标注，本环境不具备；评测对象 GLM-4-9B 本身不可运行 | Agent 端到端 12 题双指标（工具选择正确率＋事实组覆盖率，11/12，agent_eval_report）、检索离线评测集 70 例 5 指标（HitRate/漏检/MRR/nDCG/引用准确率，run_retrieval_eval.py；历史复跑记录见 7.1 retrieval_eval_report）、硬闸门 54 断言、RAGAS 5 题 LLM 评审（eval/ragas_eval.py，非 V3 rubric，不冒充） |
+| ABCD 四档检索质量分层 Prompt | 机制已被更严格的"无证据硬拒"单点闸门覆盖（见 8.4 第 3 行）；四档中间态在招投标高风险问答中收益不明确 | evidence_gate 全量验收 |
+
+### 8.6 重新对齐报告结论的触发条件
+
+1. **向量库**：分片点增长至十万级、出现 P95 延迟不达标、或需要多向量独立扩缩时，按报告参数（HNSW M=16/efConstruct=200/COSINE）启动 Milvus POC，以 Qdrant 为基线做同机对比，收益＞运维成本才迁移。
+2. **生成 LLM**：项目获得 24GB+ 显存设备时，用**项目冻结题集**（tests/eval/agent_eval_cases.json 12 题＋扩充集）按 V3 五指标口径复跑 GLM-4-9B/Qwen 同代模型，经 llm_factory 无代码切换，凭项目实测（非报告分数）决策。
+3. **Embedding**：语料显著扩充（如批量导入历史标书）后，在同一 70 例题集上补 Qwen3-Embedding 与 BGE-M3 的**带 bootstrap CI** 对比；若 95% CI 支持 Qwen3 显著更优且全量重建成本可接受，再切换并新建索引（不得覆盖旧索引）。
+4. 任何模型 revision 更新或迁移完成后，均需重跑 run_retrieval_eval/run_agent_eval/硬闸门全套回归并在本报告升版记录。
