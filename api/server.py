@@ -45,7 +45,8 @@ async def lifespan(app: FastAPI):
     from src.database.postgresql_client import postgresql_client
     from src.web_search import web_search_client
     from src.mcp.web_search_exa import exa_search_client
-    from src.rag.scheduler import start_auto_ingest, stop_auto_ingest
+    from src.rag.scheduler import (start_auto_ingest, stop_auto_ingest,
+                                   start_web_crawl, stop_web_crawl)
     from src.tools.system_monitor import system_monitor
     rag_pipeline.initialize()
     bidding_agent.initialize()
@@ -66,6 +67,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning("默认 admin 初始化失败: %s", e)
     start_auto_ingest()
+    start_web_crawl()
     system_monitor.start()
 
     # RAG 首次查询需懒加载 reranker/稀疏检索(实测冷启 >120s), 后台预热避免首个用户请求超时
@@ -88,6 +90,7 @@ async def lifespan(app: FastAPI):
     yield
     system_monitor.stop()
     stop_auto_ingest()
+    stop_web_crawl()
     logger.info("API 服务已关闭")
 
 
@@ -689,6 +692,40 @@ def knowledge_status():
         "data_dir": settings.auto_ingest_data_dir,
         "tracked_files": len(s._state) if s else 0,
     }
+
+
+@app.get("/api/knowledge/web-sources")
+def knowledge_web_sources(
+        user: dict = Depends(require_roles(ROLE_ADMIN, allow_anonymous=False))):
+    """列出官网权威信息源注册表与爬取状态(仅 admin)."""
+    from src.ingestion.web_crawler import load_sources
+    from src.rag.scheduler import get_web_crawl_scheduler
+    from src.config import settings
+    from src.ingestion.web_ingest import load_state
+    sources = load_sources(include_disabled=True)
+    state = load_state()
+    sched = get_web_crawl_scheduler()
+    return {
+        "enabled": settings.web_crawl_enabled,
+        "interval_hours": settings.web_crawl_interval_hours,
+        "scheduler_running": sched.is_running if sched else False,
+        "crawling": sched.is_crawling if sched else False,
+        "last_result": sched.last_result if sched else None,
+        "sources": [
+            {"name": s["name"], "label": s.get("label", ""),
+             "enabled": s.get("enabled", False), "entry_url": s["entry_url"],
+             "tracked_urls": len(state.get(s["name"], {}))}
+            for s in sources],
+    }
+
+
+@app.post("/api/knowledge/web-crawl/run")
+def knowledge_web_crawl_run(max_per_source: int = 10,
+                            user: dict = Depends(require_roles(ROLE_ADMIN, allow_anonymous=False))):
+    """手动触发一轮官网爬取入库(仅 admin). 耗时较长, 同步返回本轮统计."""
+    from src.rag.scheduler import run_web_crawl_once
+    limit = max(1, min(int(max_per_source), 30))
+    return run_web_crawl_once(limit)
 
 
 @app.post("/api/document/upload")

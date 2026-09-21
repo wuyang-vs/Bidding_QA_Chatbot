@@ -198,6 +198,128 @@ class AutoIngestScheduler:
         return self._running_import
 
 
+# ---------- 官网爬取定时调度(默认关闭) ----------
+class WebCrawlScheduler:
+    """按小时间隔爬取官网权威信息源并入向量库, 进程内单例."""
+
+    def __init__(self, interval_hours: int = 24, max_per_source: int = 10):
+        self._interval = interval_hours * 3600
+        self._max_per_source = max_per_source
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+        self._last_result: dict[str, Any] | None = None
+
+    def _tick(self) -> dict[str, Any]:
+        result = execute_web_crawl(self._max_per_source)
+        self._last_result = result
+        if result.get("status") != "busy":
+            logger.info("官网定时爬取完成: %s", result)
+        return result
+
+    def _loop(self) -> None:
+        logger.info("🕷️ 官网定时爬取已启动 (间隔 %d h)", self._interval // 3600)
+        self._tick()
+        while not self._stop.wait(self._interval):
+            self._tick()
+
+    def start(self) -> None:
+        if self._thread and self._thread.is_alive():
+            return
+        self._stop.clear()
+        self._thread = threading.Thread(target=self._loop, daemon=True, name="web-crawl")
+        self._thread.start()
+
+    def stop(self, timeout: float = 10) -> None:
+        self._stop.set()
+        if self._thread:
+            self._thread.join(timeout=timeout)
+            self._thread = None
+
+    def trigger_now(self) -> dict[str, Any]:
+        return self._tick()
+
+    @property
+    def is_running(self) -> bool:
+        return bool(self._thread and self._thread.is_alive())
+
+    @property
+    def is_crawling(self) -> bool:
+        return _manual_lock.locked()
+
+    @property
+    def last_result(self) -> dict[str, Any] | None:
+        return self._last_result
+
+
+_web_scheduler: WebCrawlScheduler | None = None
+_manual_lock = threading.Lock()
+
+
+def execute_web_crawl(max_per_source: int = 10) -> dict:
+    """执行一轮官网爬取入库(定时线程与管理端点共用, 进程内互斥)."""
+    if not _manual_lock.acquire(blocking=False):
+        return {"status": "busy", "message": "已有爬取任务在执行"}
+    try:
+        from src.ingestion.web_crawler import load_sources, run as crawl_run
+        from src.ingestion.web_ingest import load_state, save_state, ingest_articles
+
+        sources = load_sources()
+        state = load_state()
+        stats_list, articles = crawl_run(sources, state,
+                                         max_per_source=max_per_source)
+        ingested = {"ingested_articles": 0, "ingested_chunks": 0, "failed": 0}
+        if articles:
+            ingested = ingest_articles(articles, state)
+            save_state(state)
+        return {
+            "status": "ok",
+            "sources": len(sources),
+            "per_source": [
+                {"source": s.source, "discovered": s.discovered, "new": s.new,
+                 "updated": s.updated, "skipped": s.skipped, "failed": s.failed}
+                for s in stats_list],
+            "articles": ingested["ingested_articles"],
+            "chunks": ingested["ingested_chunks"],
+            "skipped": sum(s.skipped for s in stats_list),
+            "failed": sum(s.failed for s in stats_list) + ingested["failed"],
+            "ran_at": int(time.time()),
+        }
+    except Exception as e:
+        logger.exception("官网爬取失败: %s", e)
+        return {"status": "error", "message": str(e)}
+    finally:
+        _manual_lock.release()
+
+
+# 管理端点手动触发(与定时线程共用 execute_web_crawl)
+run_web_crawl_once = execute_web_crawl
+
+
+def start_web_crawl() -> WebCrawlScheduler | None:
+    from src.config import settings
+    global _web_scheduler
+    if not settings.web_crawl_enabled:
+        logger.info("WEB_CRAWL_ENABLED=false, 跳过官网定时爬取")
+        return None
+    if _web_scheduler is None:
+        _web_scheduler = WebCrawlScheduler(
+            interval_hours=settings.web_crawl_interval_hours,
+            max_per_source=settings.web_crawl_max_per_source)
+    _web_scheduler.start()
+    return _web_scheduler
+
+
+def stop_web_crawl() -> None:
+    global _web_scheduler
+    if _web_scheduler:
+        _web_scheduler.stop()
+        _web_scheduler = None
+
+
+def get_web_crawl_scheduler() -> WebCrawlScheduler | None:
+    return _web_scheduler
+
+
 # ---------- 单例 ----------
 _scheduler: AutoIngestScheduler | None = None
 

@@ -1,0 +1,74 @@
+{
+  "_comment": "官网权威信息源注册表。新增省级公共资源交易平台时只需在此追加配置, 无需改代码。",
+  "sources": [
+    {
+      "name": "mof_policy",
+      "label": "财政部-政策发布",
+      "enabled": true,
+      "business_line": "regulation",
+      "entry_url": "http://www.mof.gov.cn/zhengwuxinxi/zhengcefabu/",
+      "list": {
+        "type": "static",
+        "link_pattern": "^https?://[^/]*\\.mof\\.gov\\.cn/.+\\.html?$",
+        "title_min": 8,
+        "title_max": 80
+      },
+      "detail": {
+        "title_selectors": ["h1"],
+        "content_classes": ["box_content", "TRS_Editor", "article_con", "content"],
+        "min_content_chars": 200
+      },
+      "allowed_domains": ["mof.gov.cn"],
+      "request_delay_sec": 1.5,
+      "timeout_sec": 15,
+      "verify_tls": false,
+      "encoding": null
+    },
+    {
+      "name": "ccgp_regulation",
+      "label": "中国政府采购网-政策法规",
+      "enabled": true,
+      "business_line": "regulation",
+      "entry_url": "http://www.ccgp.gov.cn/zcfg/",
+      "list": {
+        "type": "static",
+        "link_pattern": "^https?://www\\.ccgp\\.gov\\.cn/zcfg/.+\\.html?$",
+        "title_min": 8,
+        "title_max": 80
+      },
+      "detail": {
+        "title_selectors": ["h1"],
+        "content_classes": ["main_container", "vF_detail_content", "TRS_Editor", "content"],
+        "min_content_chars": 200
+      },
+      "allowed_domains": ["ccgp.gov.cn"],
+      "request_delay_sec": 1.5,
+      "timeout_sec": 15,
+      "verify_tls": false,
+      "encoding": null
+    },
+    {
+      "name": "mohurd_latest",
+      "label": "住房城乡建设部-最新政策文件(首页)",
+      "enabled": true,
+      "business_line": "regulation",
+      "entry_url": "https://www.mohurd.gov.cn/",
+      "list": {
+        "type": "static",
+        "link_pattern": "^https?://www\\.mohurd\\.gov\\.cn/gongkai/zc/wjk/art/.+\\.html$",
+        "title_min": 8,
+        "title_max": 80
+      },
+      "detail": {
+        "title_selectors": ["h1"],
+        "content_classes": ["editorContent-box", "TRS_Editor", "article-content", "content"],
+        "min_content_chars": 200
+      },
+      "allowed_domains": ["mohurd.gov.cn"],
+      "request_delay_sec": 1.5,
+      "timeout_sec": 15,
+      "verify_tls": false,
+      "encoding": null
+    }
+  ]
+}

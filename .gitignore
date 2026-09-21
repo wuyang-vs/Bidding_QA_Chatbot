@@ -6,6 +6,7 @@ data/vocab.json
 data/raw/*
 data/processed/*
 data/batch/*
+data/web/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 !data/batch/.gitkeep

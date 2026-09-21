@@ -74,7 +74,8 @@ class VectorStore:
                 for meta_key in ("source_file", "section_title", "doc_type",
                                  "chunk_id", "business_line", "db_id",
                                  "page_no", "package", "bidder_name",
-                                 "visibility", "owner_id"):
+                                 "visibility", "owner_id",
+                                 "source_url", "publish_date", "article_uid"):
                     if meta_key in p and p[meta_key] not in (None, ""):
                         payload[meta_key] = p[meta_key]
                 qdrant_points.append(PointStruct(
@@ -164,10 +165,14 @@ class VectorStore:
             # 透传元数据
             for meta_key in ("source_file", "section_title", "doc_type",
                              "chunk_id", "business_line", "db_id",
-                             "page_no", "package", "bidder_name"):
+                             "page_no", "package", "bidder_name",
+                             "source_url", "publish_date", "article_uid"):
                 val = h.payload.get(meta_key)
                 if val not in (None, ""):
                     item[meta_key] = val
+            # 官网政策点: 前端 SourceCard 按 url 渲染"打开链接"
+            if item.get("source_url"):
+                item["url"] = item["source_url"]
             results.append(item)
         return results
 

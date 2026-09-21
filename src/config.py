@@ -46,6 +46,10 @@ class Settings:
     auto_ingest_enabled: bool = field(default_factory=lambda: os.getenv("AUTO_INGEST_ENABLED", "true").lower() in ("true", "1", "yes"))
     auto_ingest_interval_min: int = field(default_factory=lambda: int(os.getenv("AUTO_INGEST_INTERVAL_MIN", "30")))
     auto_ingest_data_dir: str = field(default_factory=lambda: os.getenv("AUTO_INGEST_DATA_DIR", "data/raw"))
+    # 官网权威信息源定时爬取(默认关闭, 由 CLI/管理端点显式触发或置 WEB_CRAWL_ENABLED=true)
+    web_crawl_enabled: bool = field(default_factory=lambda: os.getenv("WEB_CRAWL_ENABLED", "false").lower() in ("true", "1", "yes"))
+    web_crawl_interval_hours: int = field(default_factory=lambda: int(os.getenv("WEB_CRAWL_INTERVAL_HOURS", "24")))
+    web_crawl_max_per_source: int = field(default_factory=lambda: int(os.getenv("WEB_CRAWL_MAX_PER_SOURCE", "10")))
     # 对话历史压缩
     history_compress_enabled: bool = field(default_factory=lambda: os.getenv("HISTORY_COMPRESS_ENABLED", "true").lower() in ("true", "1", "yes"))
     history_compress_after_rounds: int = field(default_factory=lambda: int(os.getenv("HISTORY_COMPRESS_AFTER_ROUNDS", "10")))
