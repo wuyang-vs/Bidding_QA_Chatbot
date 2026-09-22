@@ -3,8 +3,8 @@
 | 项目 | 内容 |
 |---|---|
 | 系统名称 | 招投标采购智能问答与辅助评标系统（Bidding_QA_Chatbot） |
-| 报告版本 | V2.5（纯文档增补，无产品代码变更：新增第 8 章「选型报告与工程落地偏差说明（ADR）」，将三份桌面选型报告（embidding选型(2) 选 Qwen3-Emb-0.6B、vector_db_final_report_v4 选 Milvus、llm_evaluation_report_v2 选 GLM-4-9B）的结论与本仓库实际实现（BGE-M3／Qdrant／DeepSeek 云端＋本地 vLLM Qwen2.5-3B-AWQ）逐项比对，记录环境约束下的选型降级依据、已落地的防御性要求、未复刻评测资产的原因与回迁触发条件；第 6 章新增 R14 索引项）。前序 V2.4（架构优化建议 #9「官网爬取入库」补齐：财政部/中国政府采购网/住建部三个权威信息源声明式注册，requests+bs4 静态爬取（限速/重试/robots/域名白名单/正文长度阈值），content_sha 状态去重，500/80 滑窗分片＋BGE-M3 入 Qdrant（doc_type=official_web、visibility=public、source_url/publish_date 回传），确定性哈希点 ID 幂等覆盖；WebCrawlScheduler 默认关闭随服务启停，admin 管理端点 2 个；真机实测 9 篇 65 分片 618→683、二跑全跳过、政策类问题 hybrid top5 全部命中并带回官网链接；新增离线单测 9 项。前端零改动）。前序 V2.3：多专家协作接入＋Agent 端到端评测基准＋小范围可用性验证前置（multi_agent 接入主问答、12 题评测基准、交互审计落库/query 改写重试/脱敏种子数据、意图三业务线路由及 D25 修复） |
-| 测试日期 | 2026-09-21（V2.5 文档增补：选型报告 vs 源码逐项核对，纯文档无代码变更；V2.4 官网爬取 dry-run＋真实入库＋检索命中实测、admin 端点 401 闸门冒烟、离线 pytest 全量）；2026-09-20（V2.3 全量回归 60/60、Agent 评测 12 题两跑、浏览器实测，均为 PROFILE_ENC_KEYS 双密钥链环境；V2.1/V2.2 同日早些时候执行） |
+| 报告版本 | V2.6（#11 vLLM 实际部署完成：阿里云 GPU 服务器 NVIDIA L20 48GB 上 vLLM v0.30.0 运行 GLM-4-9B-Chat，`.env` 切 LLM_PROVIDER=vllm，前端端到端实测通过；延迟对比实测 vLLM 3142ms vs DeepSeek 1517ms，延迟降低 50%+ 目标未达成但"减少外部依赖/数据不出内网/无 API 费用"三项目标全部达成；第 8 章 ADR 8.3③ 诚实状态从"尚未验收"更新为已完成并补实测数据）。前序 V2.5（纯文档增补，无产品代码变更：新增第 8 章「选型报告与工程落地偏差说明（ADR）」，将三份桌面选型报告（embidding选型(2) 选 Qwen3-Emb-0.6B、vector_db_final_report_v4 选 Milvus、llm_evaluation_report_v2 选 GLM-4-9B）的结论与本仓库实际实现（BGE-M3／Qdrant／DeepSeek 云端＋本地 vLLM Qwen2.5-3B-AWQ）逐项比对，记录环境约束下的选型降级依据、已落地的防御性要求、未复刻评测资产的原因与回迁触发条件；第 6 章新增 R14 索引项）。前序 V2.4（架构优化建议 #9「官网爬取入库」补齐：财政部/中国政府采购网/住建部三个权威信息源声明式注册，requests+bs4 静态爬取（限速/重试/robots/域名白名单/正文长度阈值），content_sha 状态去重，500/80 滑窗分片＋BGE-M3 入 Qdrant（doc_type=official_web、visibility=public、source_url/publish_date 回传），确定性哈希点 ID 幂等覆盖；WebCrawlScheduler 默认关闭随服务启停，admin 管理端点 2 个；真机实测 9 篇 65 分片 618→683、二跑全跳过、政策类问题 hybrid top5 全部命中并带回官网链接；新增离线单测 9 项。前端零改动）。前序 V2.3：多专家协作接入＋Agent 端到端评测基准＋小范围可用性验证前置（multi_agent 接入主问答、12 题评测基准、交互审计落库/query 改写重试/脱敏种子数据、意图三业务线路由及 D25 修复） |
+| 测试日期 | 2026-09-22（V2.6 #11 vLLM 部署：服务器 GLM-4-9B 容器启动、`.env` 切 vllm、前端端到端实测、延迟对比 3 次）；2026-09-21（V2.5 文档增补：选型报告 vs 源码逐项核对，纯文档无代码变更；V2.4 官网爬取 dry-run＋真实入库＋检索命中实测、admin 端点 401 闸门冒烟、离线 pytest 全量）；2026-09-20（V2.3 全量回归 60/60、Agent 评测 12 题两跑、浏览器实测，均为 PROFILE_ENC_KEYS 双密钥链环境；V2.1/V2.2 同日早些时候执行） |
 | 测试执行人 | 自动化验收套件（tests/acceptance/run_acceptance.py）＋离线确定性测试＋Agent 端到端评测器（tests/eval/run_agent_eval.py）＋浏览器 UI 实测＋真实 MinIO 手动实测（V2.2） |
 | 基线代码 | V2.2 commit `4dd4b50`（MinIO 实测版）；V2.3 在其上新增多专家接入与评测体系代码 |
 | 报告依据 | V2.5：三份桌面选型报告（临港目录 embidding选型(2).html、vector_db_final_report_v4.html、llm_evaluation_report_v2.html）与仓库源码逐项核对——src/rag/embedder.py（BGE_MODEL_NAME/RERANKER_MODEL_NAME）、src/rag/vector_store.py（Distance.COSINE＋Qdrant dense/sparse 双向量）、docker-compose.yml（qdrant 服务，全仓 0 处 milvus）、src/config.py＋src/clients/llm_factory.py（deepseek/zhipu/vllm/ollama 四 provider）、src/agent/evidence_gate.py＋src/agent/audit.py（无证据硬拒＋引用解析＋忠实度）、tests/eval/（retrieval_cases.json 70 例、run_retrieval_ablation.py A0-A3、run_agent_eval.py 12 题）。V2.4 真机执行日志（dry-run 3×3、真实入库 9 篇 65 分片、二跑去重、hybrid 3 问命中）、tests/test_web_crawler.py 9 项离线测试、TestClient admin 401 冒烟；V2.3 全量执行日志（60/60；意图路由版复跑 run_log_route.txt，GATE-01 36.6s 仍 gated/sources=0）、evidence.json（2026-09-20 12:54 复跑）、Agent 评测报告 agent_eval_report.json/.md（11/12，工具选择 100%）、UI 截图 v23_multi_agent.png、离线 pytest 160 项（含意图路由 14 项，见 4.5l）、硬闸门 54 断言（见 4.5l/D25） |
@@ -689,7 +689,7 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 1. **硬件硬约束**：GLM-4-9B FP16 需 ~26GB 显存，4bit 量化亦超 6GB，本机物理不可行；报告环境为 32GB V100。
 2. 双轨替代：云端 DeepSeek（glm-4.7-flashx 为智谱备选）承担默认问答质量；#11 正在本机 Docker 部署 **Qwen2.5-3B-Instruct-AWQ（2.5GB 权重，6GB 显存可运行）**实现"数据不出内网"的降级轨——对应架构优化 #11 的原始诉求（减少外部依赖、内网闭环），而非报告的模型冠军诉求。
 3. 接入层无差异：vLLM 走标准 OpenAI 兼容协议（llm_factory provider=vllm，.env 切换 LLM_PROVIDER/VLLM_MODEL 即可换轨），未来获 24GB+ GPU 后可无代码改动改挂 GLM-4-9B 复评。
-4. 诚实状态：#11 尚未验收（模型权重已校验就位，vLLM 镜像受网络限制未拉完），本地轨端到端延迟与质量数据**暂无，不在本报告虚构**，完成后在本章补实测。
+4. **诚实状态（V2.6 更新）**：#11 已在阿里云 GPU 服务器（NVIDIA L20 48GB，47.117.189.10）上完成部署——vLLM v0.30.0 容器运行 GLM-4-9B-Chat，OpenAI 兼容 API `http://47.117.189.10:8000/v1`，served-model-name=`glm-4-9b-chat`，gpu-memory-utilization=0.90，max-model-len=8192，显存占用 42.9GB/49.1GB。`.env` 已切 `LLM_PROVIDER=vllm`、`VLLM_BASE_URL=http://47.117.189.10:8000/v1`、`VLLM_MODEL=glm-4-9b-chat`；前端端到端实测通过（"招投标中质疑期限"问题正确引用《政府采购法》第五十一条至第五十六条，7 个工作日）。延迟对比实测（3 次平均）：vLLM 3142ms / 44 tok/s vs DeepSeek API 1517ms / 133.7 tok/s——**延迟降低 50%+ 目标未达成**，vLLM 反慢约 1 倍，主因是笔记本→服务器网络 RTT + 9B 模型单卡推理 vs DeepSeek 集群优化推理；但"减少外部依赖、数据不出内网、无 API 费用"三项目标全部达成。延迟优化路径：将 RAG 栈整体部署到服务器消除 RTT、或用更小模型做日常问答。
 
 ### 8.4 报告的防御性要求——已全部落地（且更严格）
 
@@ -714,6 +714,6 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 ### 8.6 重新对齐报告结论的触发条件
 
 1. **向量库**：分片点增长至十万级、出现 P95 延迟不达标、或需要多向量独立扩缩时，按报告参数（HNSW M=16/efConstruct=200/COSINE）启动 Milvus POC，以 Qdrant 为基线做同机对比，收益＞运维成本才迁移。
-2. **生成 LLM**：项目获得 24GB+ 显存设备时，用**项目冻结题集**（tests/eval/agent_eval_cases.json 12 题＋扩充集）按 V3 五指标口径复跑 GLM-4-9B/Qwen 同代模型，经 llm_factory 无代码切换，凭项目实测（非报告分数）决策。
+2. **生成 LLM**：V2.6 已在阿里云 L20 48GB 服务器上部署 GLM-4-9B-Chat（vLLM v0.30.0），`.env` 已切 vllm provider，端到端实测通过。下一步：用**项目冻结题集**（tests/eval/agent_eval_cases.json 12 题＋扩充集）按 V3 五指标口径复跑 GLM-4-9B vs DeepSeek，凭项目实测决策是否将默认 provider 从 vllm 切回 deepseek（当前 vllm 延迟高于 deepseek，但内网闭环价值仍在）；同时可尝试 LoRA 领域微调以提升 GLM-4-9B 在招投标域的输出质量。
 3. **Embedding**：语料显著扩充（如批量导入历史标书）后，在同一 70 例题集上补 Qwen3-Embedding 与 BGE-M3 的**带 bootstrap CI** 对比；若 95% CI 支持 Qwen3 显著更优且全量重建成本可接受，再切换并新建索引（不得覆盖旧索引）。
 4. 任何模型 revision 更新或迁移完成后，均需重跑 run_retrieval_eval/run_agent_eval/硬闸门全套回归并在本报告升版记录。
