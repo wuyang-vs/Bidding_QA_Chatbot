@@ -322,7 +322,6 @@ def s_fe_chat(prs):
     slide = slide_base(prs, "五、前端展示 — 对话问答页 (SSE 流式 + 来源卡片)")
     _ = add_image_fit(slide, SHOT / "06_chat_sources.png", Inches(0.5),
                       Inches(1.15), Inches(8.6), Inches(6.0))
-
     items = [
         ("左侧栏: 历史会话 + 功能导航", 0.15, 0.19),
         ("回答区: SSE 流式逐字渲染", 0.60, 0.20),
@@ -348,7 +347,6 @@ def s_fe_agent(prs):
     slide = slide_base(prs, "六、前端展示 — 多专家协作过程可视化")
     _ = add_image_fit(slide, SHOT / "v23_multi_agent.png", Inches(0.5),
                       Inches(1.15), Inches(8.6), Inches(6.0))
-
     items = [
         ("用户问题: 多实体对比", 0.70, 0.145),
         ("输入框 \"多专家协作\" 开关入口", 0.59, 0.958),
@@ -363,20 +361,114 @@ def s_fe_agent(prs):
                  [("▸ " + text, {"size": 12, "bold": True, "color": PRIMARY})])
         y = Emu(int(y) + Inches(0.66))
     add_text(slide, Inches(9.35), y + Inches(0.15), Inches(3.6), Inches(1.6), [
-        ("评测看板 (Dashboard)", {"size": 13, "bold": True, "color": GREEN}),
-        ("检索/Agent 指标可视化", {"size": 11, "color": GRAY}),
-        ("HitRate / MRR / nDCG / 通过率", {"size": 11, "color": GRAY}),
+        ("Agent 过程页 (/agent)", {"size": 13, "bold": True, "color": GREEN}),
+        ("执行历史 + 状态筛选 + 自动刷新", {"size": 11, "color": GRAY}),
+        ("阶段耗时条 + 工具调用批次 + Trace ID", {"size": 11, "color": GRAY}),
+    ])
+
+
+def s_fe_dashboard(prs):
+    slide = slide_base(prs, "七、前端展示 — 数据看板 (实时聚合监控)")
+    _ = add_image_fit(slide, SHOT / "fe_test_dashboard_fixed.png", Inches(0.5),
+                      Inches(1.15), Inches(8.6), Inches(6.0))
+    items = [
+        ("知识库向量点数 (683 点)", 0.08, 0.15),
+        ("业务数据库记录 (30 条)", 0.25, 0.15),
+        ("知识图谱规模 (68/52)", 0.42, 0.15),
+        ("Agent 总请求 / 平均耗时", 0.59, 0.15),
+        ("状态分布: ok/no_evidence/error", 0.08, 0.45),
+        ("工具调用排行 Top5", 0.50, 0.45),
+        ("CPU/内存/磁盘 实时监控", 0.08, 0.75),
+    ]
+    y = Inches(1.28)
+    for text, fx, fy in items:
+        add_text(slide, Inches(9.35), y, Inches(3.6), Inches(0.44),
+                 [("▸ " + text, {"size": 12, "bold": True, "color": PRIMARY})])
+        y = Emu(int(y) + Inches(0.58))
+    add_text(slide, Inches(9.35), y + Inches(0.1), Inches(3.6), Inches(1.2), [
+        ("定时自动刷新 (10s)", {"size": 11, "color": GRAY}),
+        ("修复后统计正确显示", {"size": 11, "color": GRAY}),
+        ("一键跳转图谱页", {"size": 11, "color": GRAY}),
+    ])
+
+
+def s_fe_documents(prs):
+    slide = slide_base(prs, "八、前端展示 — 文件解析页 (上传 → 解析 → 合规检查)")
+    _ = add_image_fit(slide, SHOT / "fe_test_compliance.png", Inches(0.5),
+                      Inches(1.15), Inches(8.6), Inches(6.0))
+    items = [
+        ("上传: PDF / DOCX / XLSX / TXT", 0.08, 0.12),
+        ("自动抽取 8 字段 (项目名/预算等)", 0.50, 0.15),
+        ("自动入向量库 (vector_indexed)", 0.50, 0.25),
+        ("15 条合规规则扫描 (高/中/低)", 0.50, 0.40),
+        ("人工确认 + 审计留痕 (复核/驳回)", 0.50, 0.55),
+        ("文档列表实时更新", 0.08, 0.85),
+    ]
+    y = Inches(1.28)
+    for text, fx, fy in items:
+        add_text(slide, Inches(9.35), y, Inches(3.6), Inches(0.44),
+                 [("▸ " + text, {"size": 12, "bold": True, "color": PRIMARY})])
+        y = Emu(int(y) + Inches(0.58))
+    add_text(slide, Inches(9.35), y + Inches(0.1), Inches(3.6), Inches(1.6), [
+        ("审查工具链 (4 项)", {"size": 13, "bold": True, "color": GREEN}),
+        ("资格审查: FULL/PARTIAL/NO_MATCH", {"size": 11, "color": GRAY}),
+        ("废标自检: safe/risk/uncertain", {"size": 11, "color": GRAY}),
+        ("响应性检查 + 评分辅助表", {"size": 11, "color": GRAY}),
+    ])
+
+
+def s_fe_bid(prs):
+    slide = slide_base(prs, "九、前端展示 — 一键生成标书 (单章流式 + 整本合稿)")
+    _ = add_image_fit(slide, SHOT / "v14_bid_tabs.png", Inches(0.5),
+                      Inches(1.15), Inches(8.6), Inches(6.0))
+    items = [
+        ("单章生成: 5 章节可选", 0.08, 0.10),
+        ("流式 SSE 实时渲染 Markdown", 0.50, 0.12),
+        ("[占位符] 黄色高亮 (如 [公司全称])", 0.50, 0.30),
+        ("整本合稿: 5 章 + 招标要求对照表", 0.50, 0.45),
+        ("体检表: 不合格项标红", 0.50, 0.60),
+        ("复制 Markdown / 导出 DOCX", 0.50, 0.75),
+    ]
+    y = Inches(1.28)
+    for text, fx, fy in items:
+        add_text(slide, Inches(9.35), y, Inches(3.6), Inches(0.44),
+                 [("▸ " + text, {"size": 12, "bold": True, "color": PRIMARY})])
+        y = Emu(int(y) + Inches(0.58))
+    add_text(slide, Inches(9.35), y + Inches(0.1), Inches(3.6), Inches(1.4), [
+        ("实测: 技术方案 ~2500 字", {"size": 11, "color": GRAY}),
+        ("商务报价 ~2765 字, 含报价表", {"size": 11, "color": GRAY}),
+        ("企业资料已填字段自动回填", {"size": 11, "color": GRAY}),
+    ])
+
+
+def s_fe_graph_profile(prs):
+    slide = slide_base(prs, "十、前端展示 — 知识图谱 + 企业资料库")
+    _ = add_image_fit(slide, SHOT / "fe_test_graph.png", Inches(0.4),
+                      Inches(1.15), Inches(6.0), Inches(4.5))
+    _ = add_image_fit(slide, SHOT / "fe_test_profile.png", Inches(6.6),
+                      Inches(1.15), Inches(6.0), Inches(4.5))
+    add_text(slide, Inches(0.4), Inches(5.8), Inches(6.0), Inches(1.4), [
+        ("知识图谱可视化", {"size": 14, "bold": True, "color": PRIMARY}),
+        ("▸ 全图 68 节点 / 52 关系 (三类节点)", {"size": 11, "color": GRAY}),
+        ("▸ 力导向布局 + 标的物搜索 + 模糊匹配", {"size": 11, "color": GRAY}),
+        ("▸ 页面渲染 TOP 子图 39/31, hover 详情", {"size": 11, "color": GRAY}),
+    ])
+    add_text(slide, Inches(6.6), Inches(5.8), Inches(6.0), Inches(1.4), [
+        ("企业资料库 (登录鉴权)", {"size": 14, "bold": True, "color": GREEN}),
+        ("▸ 12 项基础字段, 敏感字段脱敏显示", {"size": 11, "color": GRAY}),
+        ("▸ 资质证书 OCR + 业绩管理", {"size": 11, "color": GRAY}),
+        ("▸ 保存后标书占位符自动回填", {"size": 11, "color": GRAY}),
     ])
 
 
 _TOOL_PAGES = [
-    ("七、前端展示 — 招投标专项工具 (1/2): 评估分析", [
+    ("十一、前端展示 — 招投标专项工具 (1/2): 评估分析", [
         ("07_price_panel.png", "价格分析面板",
          ["投标报价对比分析, 异常报价提示", "总价/单价构成透明可查"]),
         ("08_bid_parse_panel.png", "标书解析 + 逐条响应矩阵",
          ["招标要求 vs 投标响应逐条对照", "响应/偏离自动判定, 偏差项高亮"]),
     ]),
-    ("七、前端展示 — 招投标专项工具 (2/2): 核验风控", [
+    ("十一、前端展示 — 招投标专项工具 (2/2): 核验风控", [
         ("v15_cert_ocr.png", "企业资料 + 证书 OCR",
          ["营业执照/资质证书自动识别录入", "敏感字段 Fernet 加密入库"]),
         ("09_collusion_dialog.png", "围串标检测",
@@ -402,7 +494,7 @@ def s_fe_tools(prs):
 
 
 def s_quality(prs):
-    slide = slide_base(prs, "八、质量保障 — 评测体系与验收数据")
+    slide = slide_base(prs, "十二、质量保障 — 评测体系与验收数据")
     rows = [
         ("检索评测", "70 题 × 6 指标", "HitRate@5 = 100% · MRR = 1.0 · nDCG = 0.9933 · EvidenceCoverage = 100%", GREEN),
         ("消融对比", "17 题 × 4 档", "A0 纯 Dense 0.9756 → A3 完整 0.9953; 精排单贡献 +34.3pp", GREEN),
@@ -431,7 +523,7 @@ def s_quality(prs):
 
 
 def s_deploy(prs):
-    slide = slide_base(prs, "九、本地部署 — 两种方式一键启动")
+    slide = slide_base(prs, "十三、本地部署 — 两种方式一键启动")
     add_box(slide, Inches(0.4), Inches(1.2), Inches(6.1), Inches(4.9), fill=LIGHT)
     add_text(slide, Inches(0.65), Inches(1.4), Inches(5.6), Inches(0.45),
              [("方式 A: 原生部署 (开发常用)", {"size": 16, "bold": True, "color": PRIMARY})])
@@ -469,9 +561,11 @@ def s_deploy(prs):
 def s_end(prs):
     slide = slide_base(prs)
     add_box(slide, 0, 0, SLIDE_W, SLIDE_H, fill=PRIMARY, radius=False)
-    add_text(slide, Inches(1), Inches(2.6), Inches(11.3), Inches(1.0),
+    add_text(slide, Inches(1), Inches(1.6), Inches(11.3), Inches(0.8),
+             [("十四、总结", {"size": 30, "bold": True, "color": RGBColor(0xBF, 0x8F, 0x00)})])
+    add_text(slide, Inches(1), Inches(2.8), Inches(11.3), Inches(1.0),
              [("从 \"能回答\" 到 \"有依据地回答\"", {"size": 36, "bold": True, "color": WHITE})])
-    add_text(slide, Inches(1), Inches(3.8), Inches(11.3), Inches(1.2), [
+    add_text(slide, Inches(1), Inches(4.0), Inches(11.3), Inches(1.2), [
         ("业务价值并非回答更多, 而是回答时更有可靠依据", {"size": 18, "color": RGBColor(0xBD, 0xD7, 0xEE)}),
         ("准确性基础 · 幻觉风险降低 · 可信问答增强", {"size": 15, "color": RGBColor(0xBD, 0xD7, 0xEE)}),
     ])
@@ -488,6 +582,10 @@ def main():
     s_agent(prs)
     s_fe_chat(prs)
     s_fe_agent(prs)
+    s_fe_dashboard(prs)
+    s_fe_documents(prs)
+    s_fe_bid(prs)
+    s_fe_graph_profile(prs)
     s_fe_tools(prs)
     s_quality(prs)
     s_deploy(prs)
