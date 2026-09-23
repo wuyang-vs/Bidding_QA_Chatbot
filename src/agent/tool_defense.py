@@ -24,6 +24,8 @@ def _looks_like_tool_call(text: str) -> bool:
                    "search_postgresql(", "search_web(", "search_exa("):
         if marker in low:
             return True
+    if _GLM_TEXT_RE.search(text) or _GLM_BARE_RE.search(text):
+        return True
     return False
 
 
@@ -38,7 +40,16 @@ _INVOKE_RE = re.compile(
 _PARAM_RE = re.compile(r'<parameter\s+name="([^"]+)"[^>]*>(.*?)</parameter>', re.S)
 _TOOLCALL_RE = re.compile(r'<tool_call>(.*?)</tool_call>', re.S)
 _NAME_RE = re.compile(r'<name>(.*?)</name>', re.S)
-_JSON_RE = re.compile(r'\{"name":\s*"(search_\w+)",\s*"arguments":\s*(\{.*?\})\}', re.S)
+# GLM-4 原生工具调用为 {"name": ..., "parameters": ...}, OpenAI 风格为 "arguments", 两者都接受
+_JSON_RE = re.compile(
+    r'\{"name":\s*"(search_\w+)",\s*"(?:arguments|parameters)":\s*(\{.*?\})\}', re.S)
+
+# GLM-4 原生文本形态: <|assistant|> tool_name 换行 {args json} (vLLM 无 glm4 parser 时的文本输出)
+_GLM_TEXT_RE = re.compile(
+    r'<\|assistant\|>\s*(search_\w+)[ \t]*\r?\n[ \t]*(\{.*?\})', re.S)
+# 同形态的裸变体: 工具名在行首 (后续轮次模型可能不再输出 <|assistant|> 标记)
+_GLM_BARE_RE = re.compile(
+    r'^[ \t]*(search_\w+)[ \t]*\r?\n[ \t]*(\{[^\n\r]*\})', re.M)
 
 
 # 全角竖线 DSML 控制令牌: <｜｜DSML｜｜ invoke ...> / </｜｜DSML｜｜ invoke>
@@ -71,6 +82,20 @@ def _parse_text_tool_calls(text: str):
                 if pm.group(1) != "name"}
         calls.append({"name": nm.group(1).strip(), "arguments": args})
     for m in _JSON_RE.finditer(text):
+        try:
+            args = json.loads(m.group(2))
+            if isinstance(args, dict):
+                calls.append({"name": m.group(1), "arguments": args})
+        except json.JSONDecodeError:
+            continue
+    for m in _GLM_TEXT_RE.finditer(cleaned):
+        try:
+            args = json.loads(m.group(2))
+            if isinstance(args, dict):
+                calls.append({"name": m.group(1), "arguments": args})
+        except json.JSONDecodeError:
+            continue
+    for m in _GLM_BARE_RE.finditer(cleaned):
         try:
             args = json.loads(m.group(2))
             if isinstance(args, dict):
