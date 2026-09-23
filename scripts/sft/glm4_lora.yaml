@@ -1,0 +1,37 @@
+### GLM-4-9B-Chat LoRA 领域微调配置
+### 用法: llamafactory-cli train glm4_lora.yaml
+
+### 模型
+model_name_or_path: /home/admin/group_3/model/glm-4-9b-chat
+trust_remote_code: true
+stage: sft
+do_train: true
+finetuning_type: lora
+lora_target: all
+lora_rank: 16
+lora_alpha: 32
+lora_dropout: 0.05
+
+### 数据
+template: glm4
+dataset: bid_sft_train
+cutoff_len: 2048
+dataset_dir: /home/admin/sft
+
+### 训练
+output_dir: /home/admin/sft/glm4-lora-bid
+num_train_epochs: 3
+learning_rate: 5.0e-5
+per_device_train_batch_size: 2
+gradient_accumulation_steps: 8
+warmup_ratio: 0.03
+lr_scheduler_type: cosine
+bf16: true
+save_strategy: epoch
+logging_steps: 10
+plot_loss: true
+
+### 评估
+val_size: 0.05
+eval_strategy: epoch
+per_device_eval_batch_size: 2

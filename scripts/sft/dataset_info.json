@@ -1,0 +1,12 @@
+{
+  "bid_sft_train": {
+    "file_name": "sft_train.json",
+    "formatting": "sharegpt",
+    "messages": "conversations"
+  },
+  "bid_sft_val": {
+    "file_name": "sft_val.json",
+    "formatting": "sharegpt",
+    "messages": "conversations"
+  }
+}
