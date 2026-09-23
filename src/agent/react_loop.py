@@ -134,11 +134,13 @@ class ReActMixin:
             if parsed:
                 valid = [c for c in parsed if c["name"] in TOOL_EXECUTORS]
                 if valid:
+                    messages.append({"role": "assistant", "content": _normalize_tool_content(raw)})
                     fake = to_fake_tool_calls(valid)
                     results = ToolRunner.run_parallel(fake, question, TOOL_EXECUTORS)
                     for r in results:
+                        text = self._validate_result(r.name, r.text, r.sources)
                         messages.append({"role": "user",
-                                         "content": f"工具 {r.name} 返回：\n{r.text}\n\n请判断信息是否足够，足够则直接回答。"})
+                                         "content": f"工具 {r.name} 返回：\n{text}\n\n请根据以上检索结果直接回答用户问题，引用相关法规或数据。"})
                         if r.name in ("search_web", "search_exa"):
                             web_sources.extend(r.sources)
                         else:
