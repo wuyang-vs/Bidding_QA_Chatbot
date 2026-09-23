@@ -1,4 +1,6 @@
 """FastAPI 全部端点 + 限流中间件 + lifespan 初始化"""
+from __future__ import annotations
+
 import logging
 import threading
 import time

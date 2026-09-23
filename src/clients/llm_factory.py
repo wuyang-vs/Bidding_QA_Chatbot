@@ -4,7 +4,6 @@ import threading
 from src.config import settings
 from src.clients.base_client import BaseLLMClient
 from src.clients.deepseek_client import DeepSeekClient
-from src.clients.zhipu_client import ZhipuClient
 from src.clients.openai_compatible_client import OpenAICompatibleClient
 
 _cache: dict[tuple, BaseLLMClient] = {}
@@ -26,6 +25,7 @@ def get_llm_client(provider: str = "", deep_thinking: bool = False) -> BaseLLMCl
         if provider == "deepseek":
             client = DeepSeekClient(model=model_override or None)
         elif provider == "zhipu":
+            from src.clients.zhipu_client import ZhipuClient
             client = ZhipuClient(model=model_override or None)
         elif provider == "vllm":
             client = OpenAICompatibleClient("vllm", settings.vllm_base_url,
