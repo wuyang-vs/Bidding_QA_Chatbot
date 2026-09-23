@@ -62,6 +62,7 @@ class ReActMixin:
         t0 = time.time()
         t_first = None
         t_tools = None
+        llm_ms = 0.0  # LLM 决策调用累计耗时 (第1~N轮 chat_raw, 不含最终流式生成)
         # ---- 硬闸门证据跟踪 ----
         from src.config import settings
         gate_enabled = settings.evidence_gate_enabled
@@ -77,7 +78,9 @@ class ReActMixin:
             if round_idx > 1:
                 yield ("status", {"content": "正在分析检索结果..."})
             try:
+                tc_llm = time.perf_counter()
                 response = llm.chat_raw(messages, tools=active_tools)
+                llm_ms += (time.perf_counter() - tc_llm) * 1000
             except Exception as e:
                 logger.error("LLM 调用失败: %s", e)
                 if round_idx == 1:
@@ -179,6 +182,11 @@ class ReActMixin:
             if exec_log:
                 exec_log.add_phase("检索与搜索", int((t_tools - t_first) * 1000))
 
+        if llm_ms:
+            phase_times.append(("LLM决策", int(llm_ms)))
+            if exec_log:
+                exec_log.add_phase("LLM决策", int(llm_ms))
+
         if answer:
             from src.agent.utils import _pace_stream_chunks
             # 硬闸门开启时, 能走到这里说明有证据或属寒暄, 不再加"缺乏依据"软警告;
@@ -210,7 +218,9 @@ class ReActMixin:
                 yield ("status", {"content": "正在拆分问题重新检索..."})
                 messages.append({"role": "user", "content": _COMPLEX_RETRY_TEXT})
                 try:
+                    tc_llm = time.perf_counter()
                     retry_resp = llm.chat_raw(messages, tools=active_tools)
+                    llm_ms += (time.perf_counter() - tc_llm) * 1000
                     retry_msg = retry_resp.choices[0].message
                     retry_tc = getattr(retry_msg, "tool_calls", None)
                     if retry_tc:

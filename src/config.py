@@ -25,6 +25,11 @@ class Settings:
     qdrant_collection: str = field(default_factory=lambda: os.getenv("QDRANT_COLLECTION", "bid_qa_v2"))
     qdrant_vector_size: int = field(default_factory=lambda: int(os.getenv("QDRANT_VECTOR_SIZE", "1024")))
     qdrant_timeout: int = field(default_factory=lambda: int(os.getenv("QDRANT_TIMEOUT", "30")))
+    # 远端 embedding/rerank 服务 (vLLM: /v1/embeddings + /v1/rerank)
+    # 空字符串 = 使用本地 sentence-transformers 模型; 远端失败自动回退本地
+    remote_embed_base: str = field(default_factory=lambda: os.getenv("REMOTE_EMBED_BASE", ""))
+    remote_rerank_base: str = field(default_factory=lambda: os.getenv("REMOTE_RERANK_BASE", ""))
+    remote_embed_timeout: float = field(default_factory=lambda: float(os.getenv("REMOTE_EMBED_TIMEOUT", "8")))
     # RAG 高级配置
     query_variants_max: int = field(default_factory=lambda: int(os.getenv("QUERY_VARIANTS_MAX", "0")))
     source_diversity_max: int = field(default_factory=lambda: int(os.getenv("SOURCE_DIVERSITY_MAX", "2")))

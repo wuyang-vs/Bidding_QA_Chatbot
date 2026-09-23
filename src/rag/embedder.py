@@ -1,11 +1,20 @@
 from __future__ import annotations
-"""Embedder (BGE-M3 Dense + BM25 Sparse) / Reranker (bge-reranker-v2-m3 CrossEncoder)"""
+"""Embedder (BGE-M3 Dense + BM25 Sparse) / Reranker (bge-reranker-v2-m3 CrossEncoder)
+
+支持远端推理服务 (vLLM: /v1/embeddings + /v1/rerank), 由 REMOTE_EMBED_BASE /
+REMOTE_RERANK_BASE 配置; 远端失败自动回退本地 sentence-transformers 模型 (懒加载)。
+"""
 import json
 import logging
 import math
 import threading
+import time
 from collections import Counter
 from pathlib import Path
+
+import httpx
+
+from src.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -80,10 +89,43 @@ class SparseEncoder:
 
 
 class Embedder:
+    # 远端失败后的熔断窗口: 该时间内直接走本地, 避免每个请求都吃超时
+    REMOTE_COOLDOWN_S = 60.0
+
     def __init__(self):
         self._dense_model = None
         self._dense_lock = threading.Lock()
         self._sparse = SparseEncoder()
+        self._remote_down_until = 0.0
+
+    def _encode_remote(self, texts: list[str]) -> list[list[float]] | None:
+        """调远端 Infinity /v1/embeddings; 失败返回 None 并熔断 60s."""
+        base = settings.remote_embed_base
+        if not base or time.monotonic() < self._remote_down_until:
+            return None
+        try:
+            resp = httpx.post(
+                base.rstrip("/") + "/v1/embeddings",
+                json={"model": BGE_MODEL_NAME, "input": texts},
+                timeout=settings.remote_embed_timeout)
+            resp.raise_for_status()
+            items = resp.json()["data"]
+            vecs: list[list[float] | None] = [None] * len(items)
+            for item in items:
+                vecs[item["index"]] = item["embedding"]
+            out = []
+            for v in vecs:
+                if v is None:
+                    return None
+                # 与本地 normalize_embeddings=True 保持同一向量空间
+                norm = math.sqrt(sum(x * x for x in v)) or 1.0
+                out.append([x / norm for x in v])
+            return out
+        except Exception as e:
+            self._remote_down_until = time.monotonic() + self.REMOTE_COOLDOWN_S
+            logger.warning("远端 embeddings 调用失败 (%.0fs 内走本地): %s",
+                           self.REMOTE_COOLDOWN_S, e)
+            return None
 
     def _load_dense(self):
         if self._dense_model is not None:
@@ -105,9 +147,15 @@ class Embedder:
             return model
 
     def encode_query_dense(self, text: str) -> list[float]:
+        vecs = self._encode_remote([BGE_QUERY_PREFIX + text])
+        if vecs is not None:
+            return vecs[0]
         return self._load_dense().encode(BGE_QUERY_PREFIX + text, normalize_embeddings=True).tolist()
 
     def encode_document_dense(self, text: str) -> list[float]:
+        vecs = self._encode_remote([BGE_DOC_PREFIX + text])
+        if vecs is not None:
+            return vecs[0]
         return self._load_dense().encode(BGE_DOC_PREFIX + text, normalize_embeddings=True).tolist()
 
     def fit_sparse(self, documents): self._sparse.fit(documents)
@@ -118,9 +166,39 @@ class Embedder:
 
 
 class Reranker:
+    REMOTE_COOLDOWN_S = 60.0
+
     def __init__(self):
         self._model = None
         self._lock = threading.Lock()
+        self._remote_down_until = 0.0
+
+    def _rerank_remote(self, query: str, docs: list[dict]) -> list[dict] | None:
+        """调远端 vLLM /v1/rerank, 返回按分数降序的 docs; 失败返回 None 并熔断."""
+        base = settings.remote_rerank_base
+        if not base or time.monotonic() < self._remote_down_until:
+            return None
+        try:
+            resp = httpx.post(
+                base.rstrip("/") + "/v1/rerank",
+                json={"model": RERANKER_MODEL_NAME, "query": query,
+                      "documents": [d.get("question", "") + " " + d.get("answer", "")
+                                    for d in docs]},
+                timeout=settings.remote_embed_timeout)
+            resp.raise_for_status()
+            results = resp.json()["results"]
+            scored: list[dict] = []
+            for r in results:
+                d = docs[r["index"]]
+                d["score"] = float(r["relevance_score"])
+                scored.append(d)
+            scored.sort(key=lambda d: -d["score"])
+            return scored
+        except Exception as e:
+            self._remote_down_until = time.monotonic() + self.REMOTE_COOLDOWN_S
+            logger.warning("远端 rerank 调用失败 (%.0fs 内走本地): %s",
+                           self.REMOTE_COOLDOWN_S, e)
+            return None
 
     def _load(self):
         if self._model is not None:
@@ -141,6 +219,9 @@ class Reranker:
     def rerank(self, query: str, docs: list[dict], top_k: int) -> list[dict]:
         if len(docs) <= 1:
             return docs
+        remote = self._rerank_remote(query, docs)
+        if remote is not None:
+            return remote[:top_k]
         model = self._load()
         pairs = [(query, d.get("question", "") + " " + d.get("answer", "")) for d in docs]
         scores = model.predict(pairs)
