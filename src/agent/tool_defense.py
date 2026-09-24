@@ -41,15 +41,17 @@ _PARAM_RE = re.compile(r'<parameter\s+name="([^"]+)"[^>]*>(.*?)</parameter>', re
 _TOOLCALL_RE = re.compile(r'<tool_call>(.*?)</tool_call>', re.S)
 _NAME_RE = re.compile(r'<name>(.*?)</name>', re.S)
 # GLM-4 原生工具调用为 {"name": ..., "parameters": ...}, OpenAI 风格为 "arguments", 两者都接受
+# 工具名用通用标识符 (非 search_ 前缀的 generate_bid_draft/list_bid_documents 等同样覆盖);
+# 非法名由 react_loop 的 TOOL_EXECUTORS 白名单兜底过滤
 _JSON_RE = re.compile(
-    r'\{"name":\s*"(search_\w+)",\s*"(?:arguments|parameters)":\s*(\{.*?\})\}', re.S)
+    r'\{"name":\s*"([a-z_]\w*)",\s*"(?:arguments|parameters)":\s*(\{.*?\})\}', re.S)
 
 # GLM-4 原生文本形态: <|assistant|> tool_name 换行 {args json} (vLLM 无 glm4 parser 时的文本输出)
 _GLM_TEXT_RE = re.compile(
-    r'<\|assistant\|>\s*(search_\w+)[ \t]*\r?\n[ \t]*(\{.*?\})', re.S)
+    r'<\|assistant\|>\s*([a-z_]\w*)[ \t]*\r?\n[ \t]*(\{.*?\})', re.S)
 # 同形态的裸变体: 工具名在行首 (后续轮次模型可能不再输出 <|assistant|> 标记)
 _GLM_BARE_RE = re.compile(
-    r'^[ \t]*(search_\w+)[ \t]*\r?\n[ \t]*(\{[^\n\r]*\})', re.M)
+    r'^[ \t]*([a-z_]\w*)[ \t]*\r?\n[ \t]*(\{[^\n\r]*\})', re.M)
 
 
 # 全角竖线 DSML 控制令牌: <｜｜DSML｜｜ invoke ...> / </｜｜DSML｜｜ invoke>

@@ -1,6 +1,7 @@
 from __future__ import annotations
 """ReAct 多轮工具循环 + _clean_for_final + 来源合并/质量标签"""
 import logging
+import re
 import time
 
 from src.agent.audit import audit_answer, build_citation_prompt_suffix
@@ -52,9 +53,23 @@ _COMPLEX_RETRY_TEXT = (
     "若仍无结果，再如实告知用户。"
 )
 
+# 标书生成意图: 领域模型对生成类请求倾向直接作答不调工具 (BID-01 根因),
+# 服务端在进入 ReAct 循环前定向引导其调用 generate_bid_draft
+_BID_TOOL_INTENT_RE = re.compile(
+    r"(生成|撰写|起草|编写|帮我写)[^。；]{0,20}"
+    r"(标书|投标文件|技术方案|商务报价|资格声明|项目管理方案|售后服务方案|章节|草稿)")
+_BID_TOOL_HINT = (
+    "【服务端提示】检测到标书章节生成需求。"
+    "请调用 generate_bid_draft 工具生成对应章节草稿"
+    "（可先用 search_bidding_knowledge 检索招标文件要点），"
+    "不要凭空直接撰写。" )
+
 
 class ReActMixin:
     def _chat_stream_tools(self, messages, question, llm, active_tools, web_search_enabled, exec_log=None):
+        # 标书生成意图引导 (在 tool_msgs_start 之前注入, 不进入本轮工具消息切片)
+        if _BID_TOOL_INTENT_RE.search(question or ""):
+            messages.append({"role": "user", "content": _BID_TOOL_HINT})
         tool_msgs_start = len(messages)
         all_sources, web_sources, last_tool = [], [], ""
         answer = ""
@@ -136,7 +151,9 @@ class ReActMixin:
                 if valid:
                     messages.append({"role": "assistant", "content": _normalize_tool_content(raw)})
                     fake = to_fake_tool_calls(valid)
+                    t_tool_start = time.time()
                     results = ToolRunner.run_parallel(fake, question, TOOL_EXECUTORS)
+                    t_tool_end = time.time()
                     for r in results:
                         text = self._validate_result(r.name, r.text, r.sources)
                         messages.append({"role": "user",
@@ -151,6 +168,10 @@ class ReActMixin:
                             if tool_provided_evidence(r.name, r.sources, r.text):
                                 evidence_found = True
                                 evidence_texts.append(r.text or "")
+                        if exec_log:
+                            exec_log.add_tool_call(
+                                round_idx, r.name, len(r.sources), text[:60],
+                                int((t_tool_end - t_tool_start) * 1000))
                     continue
 
             if raw and not _looks_like_tool_call(raw):
