@@ -3,15 +3,27 @@
 | 项目 | 内容 |
 |---|---|
 | 系统名称 | 招投标采购智能问答与辅助评标系统（Bidding_QA_Chatbot） |
-| 报告版本 | V2.6（#11 vLLM 实际部署完成：阿里云 GPU 服务器 NVIDIA L20 48GB 上 vLLM v0.30.0 运行 GLM-4-9B-Chat，`.env` 切 LLM_PROVIDER=vllm，前端端到端实测通过；延迟对比实测 vLLM 3142ms vs DeepSeek 1517ms，延迟降低 50%+ 目标未达成但"减少外部依赖/数据不出内网/无 API 费用"三项目标全部达成；第 8 章 ADR 8.3③ 诚实状态从"尚未验收"更新为已完成并补实测数据）。前序 V2.5（纯文档增补，无产品代码变更：新增第 8 章「选型报告与工程落地偏差说明（ADR）」，将三份桌面选型报告（embidding选型(2) 选 Qwen3-Emb-0.6B、vector_db_final_report_v4 选 Milvus、llm_evaluation_report_v2 选 GLM-4-9B）的结论与本仓库实际实现（BGE-M3／Qdrant／DeepSeek 云端＋本地 vLLM Qwen2.5-3B-AWQ）逐项比对，记录环境约束下的选型降级依据、已落地的防御性要求、未复刻评测资产的原因与回迁触发条件；第 6 章新增 R14 索引项）。前序 V2.4（架构优化建议 #9「官网爬取入库」补齐：财政部/中国政府采购网/住建部三个权威信息源声明式注册，requests+bs4 静态爬取（限速/重试/robots/域名白名单/正文长度阈值），content_sha 状态去重，500/80 滑窗分片＋BGE-M3 入 Qdrant（doc_type=official_web、visibility=public、source_url/publish_date 回传），确定性哈希点 ID 幂等覆盖；WebCrawlScheduler 默认关闭随服务启停，admin 管理端点 2 个；真机实测 9 篇 65 分片 618→683、二跑全跳过、政策类问题 hybrid top5 全部命中并带回官网链接；新增离线单测 9 项。前端零改动）。前序 V2.3：多专家协作接入＋Agent 端到端评测基准＋小范围可用性验证前置（multi_agent 接入主问答、12 题评测基准、交互审计落库/query 改写重试/脱敏种子数据、意图三业务线路由及 D25 修复） |
-| 测试日期 | 2026-09-22（V2.6 #11 vLLM 部署：服务器 GLM-4-9B 容器启动、`.env` 切 vllm、前端端到端实测、延迟对比 3 次）；2026-09-21（V2.5 文档增补：选型报告 vs 源码逐项核对，纯文档无代码变更；V2.4 官网爬取 dry-run＋真实入库＋检索命中实测、admin 端点 401 闸门冒烟、离线 pytest 全量）；2026-09-20（V2.3 全量回归 60/60、Agent 评测 12 题两跑、浏览器实测，均为 PROFILE_ENC_KEYS 双密钥链环境；V2.1/V2.2 同日早些时候执行） |
+| 报告版本 | V3.0【2026-09-24 终验全量 60/60＝100%（run_log_v3d.txt，D28 三类 LoRA 行为缺陷修复后 P4-01/BID-01/BID-04 全转绿）】（㉒ LoRA 领域微调上线：GLM-4-9B-Chat 基座于阿里云 L20 48GB vLLM v0.30.0 上叠加领域 LoRA（glm-4-9b-bid，LLaMA-Factory 3 epochs/eval_loss=1.0981），`.env` VLLM_MODEL=glm-4-9b-bid；SFT 数据 719 条（领域 QA 634＋ReAct 工具轨迹 85＋通用 50）全流程脚本入库 scripts/sft/；修复远端 vLLM 文本工具调用路径缺陷 D26（faithfulness 0.144→0.934）；嵌入/精排远端化随 abc2b62 入库）。前序 V2.6（#11 vLLM 实际部署完成：阿里云 GPU 服务器 NVIDIA L20 48GB 上 vLLM v0.30.0 运行 GLM-4-9B-Chat，`.env` 切 LLM_PROVIDER=vllm，前端端到端实测通过；延迟对比实测 vLLM 3142ms vs DeepSeek 1517ms，延迟降低 50%+ 目标未达成但"减少外部依赖/数据不出内网/无 API 费用"三项目标全部达成；第 8 章 ADR 8.3③ 诚实状态从"尚未验收"更新为已完成并补实测数据）。前序 V2.5（纯文档增补，无产品代码变更：新增第 8 章「选型报告与工程落地偏差说明（ADR）」，将三份桌面选型报告（embidding选型(2) 选 Qwen3-Emb-0.6B、vector_db_final_report_v4 选 Milvus、llm_evaluation_report_v2 选 GLM-4-9B）的结论与本仓库实际实现（BGE-M3／Qdrant／DeepSeek 云端＋本地 vLLM Qwen2.5-3B-AWQ）逐项比对，记录环境约束下的选型降级依据、已落地的防御性要求、未复刻评测资产的原因与回迁触发条件；第 6 章新增 R14 索引项）。前序 V2.4（架构优化建议 #9「官网爬取入库」补齐：财政部/中国政府采购网/住建部三个权威信息源声明式注册，requests+bs4 静态爬取（限速/重试/robots/域名白名单/正文长度阈值），content_sha 状态去重，500/80 滑窗分片＋BGE-M3 入 Qdrant（doc_type=official_web、visibility=public、source_url/publish_date 回传），确定性哈希点 ID 幂等覆盖；WebCrawlScheduler 默认关闭随服务启停，admin 管理端点 2 个；真机实测 9 篇 65 分片 618→683、二跑全跳过、政策类问题 hybrid top5 全部命中并带回官网链接；新增离线单测 9 项。前端零改动）。前序 V2.3：多专家协作接入＋Agent 端到端评测基准＋小范围可用性验证前置（multi_agent 接入主问答、12 题评测基准、交互审计落库/query 改写重试/脱敏种子数据、意图三业务线路由及 D25 修复） |
+| 测试日期 | **2026-09-24（V3.0 终验全量 60/60＝100%，run_log_v3d.txt，D28 修复，PROFILE_ENC_KEYS 真实双密钥链）**；2026-09-23（V3.0 LoRA 微调：SFT 数据构造→LLaMA-Factory 训练→vLLM LoRA 部署→后端全量回归、D26/D27 修复，首/复跑 56→57/60）；2026-09-22（V2.6 #11 vLLM 部署：服务器 GLM-4-9B 容器启动、`.env` 切 vllm、前端端到端实测、延迟对比 3 次）；2026-09-21（V2.5 文档增补：选型报告 vs 源码逐项核对，纯文档无代码变更；V2.4 官网爬取 dry-run＋真实入库＋检索命中实测、admin 端点 401 闸门冒烟、离线 pytest 全量）；2026-09-20（V2.3 全量回归 60/60、Agent 评测 12 题两跑、浏览器实测，均为 PROFILE_ENC_KEYS 双密钥链环境；V2.1/V2.2 同日早些时候执行） |
 | 测试执行人 | 自动化验收套件（tests/acceptance/run_acceptance.py）＋离线确定性测试＋Agent 端到端评测器（tests/eval/run_agent_eval.py）＋浏览器 UI 实测＋真实 MinIO 手动实测（V2.2） |
-| 基线代码 | V2.2 commit `4dd4b50`（MinIO 实测版）；V2.3 在其上新增多专家接入与评测体系代码 |
-| 报告依据 | V2.5：三份桌面选型报告（临港目录 embidding选型(2).html、vector_db_final_report_v4.html、llm_evaluation_report_v2.html）与仓库源码逐项核对——src/rag/embedder.py（BGE_MODEL_NAME/RERANKER_MODEL_NAME）、src/rag/vector_store.py（Distance.COSINE＋Qdrant dense/sparse 双向量）、docker-compose.yml（qdrant 服务，全仓 0 处 milvus）、src/config.py＋src/clients/llm_factory.py（deepseek/zhipu/vllm/ollama 四 provider）、src/agent/evidence_gate.py＋src/agent/audit.py（无证据硬拒＋引用解析＋忠实度）、tests/eval/（retrieval_cases.json 70 例、run_retrieval_ablation.py A0-A3、run_agent_eval.py 12 题）。V2.4 真机执行日志（dry-run 3×3、真实入库 9 篇 65 分片、二跑去重、hybrid 3 问命中）、tests/test_web_crawler.py 9 项离线测试、TestClient admin 401 冒烟；V2.3 全量执行日志（60/60；意图路由版复跑 run_log_route.txt，GATE-01 36.6s 仍 gated/sources=0）、evidence.json（2026-09-20 12:54 复跑）、Agent 评测报告 agent_eval_report.json/.md（11/12，工具选择 100%）、UI 截图 v23_multi_agent.png、离线 pytest 160 项（含意图路由 14 项，见 4.5l）、硬闸门 54 断言（见 4.5l/D25） |
+| 基线代码 | V3.0 基线＝V2.6 已推送 commit `0bd5eab`（在其上新增 abc2b62 perf(rag)、13f2f78 fix(agent)、e2842d8 feat(sft)、9fd2b5c fix(agent) D26、fc526a5 fix(api) 共 5 个本地 commit）；V2.2 commit `4dd4b50`（MinIO 实测版）；V2.3 在其上新增多专家接入与评测体系代码 |
+| 报告依据 | **V3.0 终验：全量 HTTP 验收执行日志 run_log_v3d.txt（2026-09-24 08:57:47 起，60 用例 60 PASS/0 FAIL/0 ERROR）与自动生成 evidence.json；D28 三类 LoRA 行为兜底（tool_defense 工具名通用标识符＋react_loop 标书意图引导/exec_log 补齐、response_checker status 归一化＋数值条款规则比对、bid_generator 投标人身份注入）**。V3.0 首验：全量 HTTP 验收执行日志 run_log_v3.txt（60 用例）；离线 pytest 23 个测试文件显式列出共 333 项（330 passed＋3 基线失败，D27 封闭性修复后 test_embedder_lazy_load 8/8）；硬闸门 tests/eval/test_evidence_gate.py 54 断言全过；npx tsc --noEmit 退出码 0；E2E 答案质量直连对比（D26 修复前后 faithfulness 0.144→0.934，含实施条例第二十六条引用核对）；backend_run_v3.log（ready=True agent=True graph=True pg=True points=683）。V2.5：三份桌面选型报告（临港目录 embidding选型(2).html、vector_db_final_report_v4.html、llm_evaluation_report_v2.html）与仓库源码逐项核对——src/rag/embedder.py（BGE_MODEL_NAME/RERANKER_MODEL_NAME）、src/rag/vector_store.py（Distance.COSINE＋Qdrant dense/sparse 双向量）、docker-compose.yml（qdrant 服务，全仓 0 处 milvus）、src/config.py＋src/clients/llm_factory.py（deepseek/zhipu/vllm/ollama 四 provider）、src/agent/evidence_gate.py＋src/agent/audit.py（无证据硬拒＋引用解析＋忠实度）、tests/eval/（retrieval_cases.json 70 例、run_retrieval_ablation.py A0-A3、run_agent_eval.py 12 题）。V2.4 真机执行日志（dry-run 3×3、真实入库 9 篇 65 分片、二跑去重、hybrid 3 问命中）、tests/test_web_crawler.py 9 项离线测试、TestClient admin 401 冒烟；V2.3 全量执行日志（60/60；意图路由版复跑 run_log_route.txt，GATE-01 36.6s 仍 gated/sources=0）、evidence.json（2026-09-20 12:54 复跑）、Agent 评测报告 agent_eval_report.json/.md（11/12，工具选择 100%）、UI 截图 v23_multi_agent.png、离线 pytest 160 项（含意图路由 14 项，见 4.5l）、硬闸门 54 断言（见 4.5l/D25） |
 
 ---
 
 ## 1. 验收结论
+
+**V3.0 终验（2026-09-24 08:57:47 起，run_log_v3d.txt）：全量 60 项 60 PASS / 0 FAIL / 0 ERROR（通过率 100.0%，PROFILE_ENC_KEYS 真实双密钥链逗号分隔，验收脚本与后端以同一密钥链启动）。在 2026-09-23 首/复跑 56→57/60 的基础上，定位并修复 LoRA 领域模型（glm-4-9b-bid）在真实 vLLM 文本工具调用链路上暴露的 3 类行为缺陷（合并记 D28），三个连续两轮同点失败的用例 P4-01/BID-01/BID-04 全部转绿，且 57 项存量防线零回退。**
+
+本轮（㉒-收尾 D28 LoRA 行为兜底）关键结论：
+
+1. **BID-01 根因＝文本工具调用解析器只认 `search_` 前缀**（高，先红后绿）：vLLM v0.30.0 对 GLM-4-9B(+LoRA) 无匹配原生 tool_calls 解析器，模型以裸 JSON `{"name": "generate_bid_draft", ...}` 输出标书工具调用，而 tool_defense 的 `_JSON_RE`/`_GLM_TEXT_RE`/`_GLM_BARE_RE` 工具名仅覆盖检索类前缀，非检索工具名被丢弃 → 模型两轮零工具调用被硬闸门判 gated。修复：三处正则工具名统一放宽为通用标识符 `[a-z_]\w*`（非法名仍由 react_loop 的 TOOL_EXECUTORS 白名单兜底过滤）；同时补齐文本分支 `exec_log.add_tool_call`（此前即使调到工具也不记轨迹），并在 `_chat_stream_tools` 入口对"生成/撰写/起草标书章节"意图注入定向引导 hint。终验 BID-01：工具轨迹 `['generate_bid_draft']`、gated=False、答案 1278 字（38.6s）。
+2. **P4-01 根因＝领域模型 status 字段失效但判定写在 detail**（高）：22 条条款 LLM 全部输出 status="none"，detail 却写明"质保期优于要求，为正偏离"。两层确定性兜底：①`_normalize_status` 从 detail 关键词（正偏离/负偏离/未提及，未提及优先级最高）反推合法四值；②`_numeric_assist` 对工期（更短为优）/质保期（更长为优）/投标有效期（更长为优）三类可量化条款用正则抽值直接比对，只做保守纠正（none/response→positive/negative），不覆盖 LLM 已判偏离。终验 P4-01：总 22 条＝响应 1＋正偏离 5，verdict=attention（53.9s）。
+3. **BID-04 根因＝模型忽略企业资料块且不写占位符**（中）：fill_info.filled=[]、正文无公司名，回填链路完全落空。`bid_generator._ensure_bidder_identity` 在正文未引用公司全称时于首个标题后确定性插入"投标人：{公司全称}"并把"公司全称"计入 filled（同时 `_strip_code_fence` 剥掉误包的 ```markdown 围栏）。终验 BID-04：技术方案 966 字、占位符回填 1 项（公司全称）、无 [公司全称] 残留（22.5s）。
+4. **PROFILE-03 环境教训**：2026-09-23 复跑一度 59/60（仅 PROFILE-03 ERROR），根因为重连时误把非 Fernet 格式的占位 JSON 数组当密钥，真实逗号分隔双密钥一直存于 prof_keys_v3.txt；以真实密钥链同值注入后端与脚本后终验全绿（K1 新写/K2 历史密文 HTTP 可解/dry-run 扫描 163 行/重加密后 key_index=0，10.7s）。
+5. **零回退实证**：BID-06 整本 SSE（64.3s，事件 meta1/start2/done2/matrix1/done1/error0）、CERT-01 OCR（33.4s，编号 BZ-2025-777888）、MATRIX-02 缓存（46.5s，首 cached=False 次 cached=True，12 条）、GATE-01 硬闸门（5.5s gated）、MULTI-01 多专家（16.8s，3 专家）等 57 项存量防线在 LoRA 模型下全部持续有效；离线 pytest 330 passed＋3 基线失败、硬闸门 54 断言、tsc 0 报错维持不变。
+
+---
 
 **V2.4（架构优化建议 #9）补齐「官网权威信息源自动化爬取＋结构化入库」：财政部政策发布、中国政府采购网政策法规、住房城乡建设部三个源声明式注册，纯 requests+bs4 静态解析（无浏览器依赖），礼貌爬取（UA/1.5s 限速/重试/robots/域名白名单/正文长度阈值），content_sha 状态持久化增量去重，政策正文复用既有 500/80 滑窗＋BGE-M3 dense/sparse 入 Qdrant（doc_type=official_web、business_line=regulation、visibility=public、source_url/publish_date 元数据全链路透传），点 ID 由 url 哈希确定性生成、重爬幂等覆盖。定时调度默认关闭（WEB_CRAWL_ENABLED=false）随 API 生命周期启停，另提供 admin-only 状态查询与手动触发端点。真机实测：dry-run 9/9 抽取成功；真实入库 9 篇 65 分片，Qdrant 618→683；同参二跑 3 源全部 skipped；3 个政策类问题 hybrid_search top5 全部命中 official_web 分片并带回官网原文链接（前端 SourceCard 既有 url 契约自动渲染"打开链接"，本期前端零改动，无 tsc 项）。**
 
@@ -210,6 +222,7 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | **⑱ V2.1 检测主动预警** | 五类检测（合规高/中风险、资格不满足/部分满足、废标 risk/uncertain、响应性负偏离/未响应、报价 error/warning 异常码）完成后前端主动弹红/黄预警，AlertModal 通用组件+锚点定位详情，无异常不弹窗 | ALERT-01 |
 | **⑳ V2.3 多专家协作接入＋Agent 评测基准** | multi_agent（主管 LLM 拆解→LAW/CASE/PRICE 专家并行 ReAct→WRITER 综合）接入主问答：琥珀色开关+专家过程可折叠面板，端点鉴权/限频/行级隔离 ContextVar 传播/伪 DSML 工具调用防御；Agent 端到端基准 12 题（单跳/多跳/跨域），工具选择+事实组双指标纯函数打分器+HTTP 评测器 | MULTI-01（评测见 4.5k） |
 | **㉑ V2.3 三业务线显式意图路由** | 招投标/企业/法规/通用 规则评分分类器（强弱信号词＋分差阈值＋零信号历史继承），显著单域才裁剪 active_tools（法规 3/企业 7），跨域弱信号保守回退全集；RAG 底座恒保留；INTENT_ROUTING_ENABLED 开关；并修复 D25（R13-R16 权威目录工具纳入证据门证据集合） | test_intent_routing 14 项＋硬闸门 54 断言（见 4.5l） |
+| **㉒ V3.0 LoRA 领域微调上线** | GLM-4-9B-Chat＋领域 LoRA（glm-4-9b-bid）远端 vLLM 部署：SFT 数据 719 条（领域 QA 634＋ReAct 工具轨迹 85＋通用 50）构造脚本入库 scripts/sft/、LLaMA-Factory 3 epochs（eval_loss=1.0981）、vLLM v0.30.0 LoRA 热加载；嵌入/精排远端推理化（vllm-embed:7997/vllm-rerank:7998，SSH 隧道，断线熔断回退本地 CPU）；修复 D26（远端 vLLM 文本工具调用路径致有证据仍拒答，faithfulness 0.144→0.934）；全量回归 60 用例 LLM 路径均走新模型 | 全量回归 60 用例＋E2E faithfulness 对比＋D26 直连对照（见 4.2/4.5m） |
 | Workflow | 预置清单、合规 DAG、评标辅助 DAG | WF-01 ~ WF-03 |
 | **离线专项** | 检索质量评测（17 例 5 指标）、页码切分、RAG 召回行级隔离、**硬闸门纯函数 44 断言**、**占位符回填/跨 chunk 流式/prompt 注入离线自测、pytest（test_new_tools.py 67 项：含证书 OCR 正则/LLM/存储隔离、对照表校验+缓存、字段加密+掩码、存储抽象、多密钥轮换、S3 Stubber 全链路；全量 250 passed，test_intent 3 项为基线既有失败）** | tests/eval/ 四个脚本＋tests/test_new_tools.py |
 | **① OCR/Excel** | 扫描件 OCR、xlsx 提取（离线手工实测，见 4.4） | 离线实测 |
@@ -219,6 +232,7 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 
 - **智慧问答四类功能已全部实现**（①R16 操作引导 ②R14 范本推荐 ③R13 异常解释 ④R15 异议投诉），均为内置静态结构化知识库 + Agent 工具查表模式，规避 LLM 编造；**V2.1 落地 R17 检测结果前端主动弹窗预警**（五类检测完成即弹窗，见 4.5i）；**V2.3 将原孤立的 multi_agent 多专家协作原型正式接入主问答**（前端开关+专家过程面板+MULTI-01，见 4.5k），并建立 Agent 端到端评测基准（12 题双指标）；后续增强项：范本库与操作流程库接入运营后台动态维护、异常 code 与操作 stage 随业务扩展持续补录；**多专家调度计划目前为一次性 LLM 拆解（不支持中途追加专家/人机协同修正计划），且 PRICE 专家依赖的 PG bidding_procurement 历史中标表在本环境未部署（价格专家会如实报告数据缺口而非编造，见 4.5k 截图）**；
 - **Agent 评测基准当前为 12 题小规模基准、事实判定为关键词组字符串匹配（非 LLM 评审）**：能稳定区分"工具选错"与"答非所问"，但对同义改写（如"850 万元/8,500,000 元"）需在题面显式列举候选锚点；后续扩充至 50+ 题、增加多次运行的稳定性（flaky）统计与语义级事实判定；
+- **LoRA 微调为 719 条/3 epochs 轻量领域适配**：答案质量提升经 E2E 小样本实证（D26 修复后 faithfulness 0.144→0.934，正确引用法条），未做大规模人工评审与基座模型盲测对比；LoRA 权重与训练资产在服务器侧不入库；**vLLM v0.30.0 对 GLM-4-9B(+LoRA) 无匹配的原生工具调用解析器**（glm45 为 GLM-4.7 MoE 专用、hermes 需 `<tool_call>` 标签，模型输出裸 JSON），实际经 ReAct 文本解析路径执行工具（D26 修复），若后续切换支持原生 tool_calls 的模型/版本需回归 MULTI-01 与 M2-01；
 - 压力/并发性能、安全渗透（token 篡改/过期/水平越权穷举扫描）；
 - 移动端 H5/公众号、CA/USBKey 认证、敏感词过滤、平台对接（属后续二期，已在需求符合性评估中记录）；
 - OCR/Excel 未纳入 HTTP 自动验收（以离线实测＋META-01 上传链路间接覆盖 PDF 侧，证书 OCR 由 CERT-01 覆盖）；
@@ -239,7 +253,8 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | 鉴权 | python-jose（JWT, HS256）＋ bcrypt rounds=12；4 角色 RBAC |
 | PostgreSQL | 本地 localhost:5432，库名 chatbot |
 | Qdrant | 本地实例，集合 bid_qa_v2，V2.3 回归开始时 **551 点**（验收上传后 562 点，含权限回填；V2.1 轮为 374 点） |
-| 嵌入/精排 | BGE-M3（dense+sparse）＋ reranker-v2-m3 |
+| LLM 推理 | V2.6 起远端 vLLM v0.30.0（阿里云 L20 48GB，47.117.189.10:8000）运行 GLM-4-9B-Chat；**V3.0 叠加领域 LoRA glm-4-9b-bid**（LLaMA-Factory 3 epochs/eval_loss=1.0981，SFT 719 条），`.env` VLLM_MODEL=glm-4-9b-bid、LLM_PROVIDER=vllm；工具调用走 ReAct 文本解析路径（D26，见 2.2） |
+| 嵌入/精排 | BGE-M3（dense+sparse）＋ reranker-v2-m3；**V3.0 起默认走远端 vLLM 推理服务**（vllm-embed:7997/vllm-rerank:7998，SSH 隧道转发至本地 localhost），断线熔断回退本地 CPU |
 | OCR/文档 | rapidocr-onnxruntime 1.4.4（懒加载）、pymupdf、openpyxl |
 | 对象存储 | boto3 1.43（仅 CERT_STORAGE_TYPE=s3 时懒加载，兼容 AWS S3 / MinIO，path-style+s3v4） |
 | 前后端 | Next.js localhost:3000；uvicorn localhost:8001（V1.7 起验收以 PROFILE_ENC_KEYS=K1,K2 双密钥链启动；V2.1 起验收脚本与后端必须同密钥链，否则直连 PG 密文断言 PROFILE-02/03 失败） |
@@ -254,7 +269,24 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 
 ## 4. 测试用例执行情况
 
-### 4.1 总览（V2.3 全量回归，2026-09-20 03:43 起，PROFILE_ENC_KEYS 双密钥链环境，脚本与后端同密钥链）
+### 4.1 总览（V3.0 终验：2026-09-24 08:57:47 起，run_log_v3d.txt，PROFILE_ENC_KEYS 真实双密钥链）
+
+- **V3.0 终验共 60 项：PASS 60，FAIL 0，ERROR 0，通过率 100.0%**；
+- 原始输出：全量执行日志 run_log_v3d.txt（仓库未纳管，留存本地）；结构化结果：`tests/acceptance/evidence.json`；
+- 较 2026-09-23 首验 56/60、复跑 57/60，D28 修复后 P4-01/BID-01/BID-04 三个连续两轮同点失败用例全部转绿，PROFILE-03 以真实双密钥链复跑通过，57 项存量防线零回退。
+
+**V3.0 三个转绿用例真实观测（取自 run_log_v3d.txt）**：
+
+| 用例 | 结果 | 耗时 | 关键观测 |
+|---|---|---|---|
+| P4-01 | PASS | 53.9s | 总 22 条＝响应 1＋正偏离 5，verdict=attention（status 归一化＋数值条款规则比对生效） |
+| BID-01 | PASS | 38.6s | 工具轨迹=['generate_bid_draft']、gated=False、答案 1278 字（解析器工具名放宽后标书工具被正确识别） |
+| BID-04 | PASS | 22.5s | 技术方案 966 字、占位符回填 1 项（公司全称）、无 [公司全称] 残留 |
+| PROFILE-03 | PASS | 10.7s | K1 新写/K2 历史密文 HTTP 可解/dry-run 扫描 163 行/重加密后 key_index=0 |
+
+<details><summary>V2.3 全量回归明细（2026-09-20，历史基线，点击展开）</summary>
+
+#### 4.1 总览（V2.3 全量回归，2026-09-20 03:43 起，PROFILE_ENC_KEYS 双密钥链环境，脚本与后端同密钥链）
 
 - **共 60 项：PASS 60，FAIL 0，ERROR 0，通过率 100.0%**；
 - 原始输出：全量执行日志 run_log_v23.txt（仓库未纳管，留存本地）；结构化结果：`tests/acceptance/evidence.json`。
@@ -286,6 +318,8 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | **⑱ V2.1 检测主动预警** | **1/1**（ALERT-01） |
 | **⑳ V2.3 多专家协作接入** | **1/1**（MULTI-01，207.3s 真实主管拆解+双专家并行+写作综合） |
 | **合计** | **60/60** |
+
+</details>
 
 ### 4.2 新增用例明细（本轮，关键观测均取自实际日志）
 
@@ -476,6 +510,25 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 - 真实冒烟：直连 `_build_context` 法规题 9→3、标书题 9→9、预算题 9→9；HTTP 法规题"政府采购的质疑期限是几天？"路由日志 domain=regulation tools 9->3，gated=False、consult_appeal 作答"7 个工作日"；GATE-01 月球无证据题在路由改动后直连复测仍 gated=True/sources=0/无编造数字。
 - 路由暴露并修复既有缺口 **D25**（见第 5 章）：四个 R13-R16 本地权威目录工具此前不在证据门证据工具集合内，裁剪后单走目录即被误判无证据；修复后硬闸门离线断言由 44 增至 **54 项全过**（新增目录实质内容=证据、空匹配/未识别=无证据、法条正文"无权质疑投诉"不误杀共 10 条）。
 
+### 4.5m V3.0 LoRA 领域微调补充实测（pytest 离线＋硬闸门＋tsc＋E2E 对比，均通过）
+
+- **离线 pytest（2026-09-23，.venv Python 3.12.10）**：按规约显式列出 23 个测试文件执行（严禁 `pytest tests/`，tests/eval/test_evidence_gate.py 为顶层带 sys.exit 的可执行脚本），共收集 **333 项：330 passed＋3 failed**；3 项失败为 tests/test_intent.py 基线既有失败（is_out_of_scope/诚实约束，V1.7 起记录在案，本期未触碰意图分类模块），非新增回归。
+- **D27（测试封闭性修复，先红后绿）**：新增远端推理服务后，test_reranker_sorts_by_score 在 SSH 隧道（rerank:7998）在线时会绕过本地 CrossEncoder 模型桩、走真实远端网络路径导致排序断言失败；测试内补 `patch.object(rr, "_rerank_remote", return_value=None)` 封闭远端路径后该文件 8/8 通过。属测试隔离性缺陷，非产品回归。
+- **硬闸门**：`python tests/eval/test_evidence_gate.py` **54 断言全部通过**（目录工具证据、特征词覆盖、RAG 低分噪声拦截等全部保留）。
+- **前端回归**：`npx tsc --noEmit` 退出码 0（本期前端零改动，防基线漂移）。
+- **E2E 答案质量对比（D26）**：修复前 LoRA 模型在证据充足时仍拒答/泛泛而谈（faithfulness_score=0.144）；修复 react_loop 文本工具调用路径（assistant 原始文本入历史＋工具结果提示词由"判断是否足够"改为"直接回答并引用"）后，同题答案正确引用《实施条例》第二十六条（保证金 2%），faithfulness_score=0.934。
+- **py_compile**：api/server.py、src/clients/llm_factory.py、src/agent/react_loop.py、tests/test_embedder_lazy_load.py 全部通过。
+
+### 4.5n V3.0 终验补测（2026-09-24，D28 修复后全量 60/60，真实日志 run_log_v3d.txt）
+
+- **全量 HTTP 验收**：60 项 60 PASS / 0 FAIL / 0 ERROR（2026-09-24 08:57:47 起，PROFILE_ENC_KEYS 真实双密钥链逗号分隔，后端与脚本同链）。三个 2026-09-23 连续两轮同点失败用例全部转绿：
+  - **P4-01（53.9s）**：22 条＝响应 1＋正偏离 5、verdict=attention；`_normalize_status` 从 detail 反推 status 与 `_numeric_assist` 工期/质保/有效期规则比对生效；
+  - **BID-01（38.6s）**：工具轨迹 `['generate_bid_draft']`、gated=False、答案 1278 字；tool_defense 三处正则工具名放宽为通用标识符后标书工具被正确解析，react_loop 文本分支 exec_log 轨迹补齐；
+  - **BID-04（22.5s）**：技术方案 966 字、占位符回填 1 项（公司全称）、无 [公司全称] 残留；`_ensure_bidder_identity` 确定性身份注入生效。
+- **存量重型用例零回退（LoRA 模型下）**：BID-06 整本 SSE 64.3s（事件 meta1/start2/done2/matrix1/done1/error0，对照 verdict=fail）、CERT-01 OCR 33.4s（编号 BZ-2025-777888、匿名 401/越权 404/穿越 404/非法 400/孤儿 404）、MATRIX-02 缓存 46.5s（首 cached=False 次 cached=True，12 条）、GATE-01 硬闸门 5.5s（gated=True/sources=0/受控话术 155 字）、MULTI-01 多专家 16.8s（LAW/CASE/PRICE 三专家、来源 7 条）、PROFILE-03 密钥轮换 10.7s（K1/K2 双密钥、dry-run 163 行、重加密 key_index=0）。
+- **离线回归维持**：工具相关 pytest 116 项、硬闸门纯函数 54 断言、test_embedder_lazy_load 8 项全过；前端 `npx tsc --noEmit` 0 报错（本期前端零改动）。
+- **环境说明（非代码问题）**：2026-09-23 复跑曾 59/60，唯一 PROFILE-03 ERROR 系重连时误用非 Fernet 格式占位密钥；真实逗号分隔双密钥存于 prof_keys_v3.txt，同值注入两端后终验全绿。
+
 ### 4.6 浏览器 UI 实测（V1.3：2026-09-18；V1.4 补测：2026-09-19，admin/admin123）
 
 | 验证点 | 结果 | 证据 |
@@ -525,6 +578,9 @@ V1.3 轮（⑨⑩）交付的关键结论（持续有效）：
 | D23 | 中（V2.3 可用性前置，已关闭） | **问答交互无审计留痕**：原 audit_logs 仅覆盖企业资料/证书 OCR/密钥轮换三类敏感操作，用户每次问答（/api/chat、/api/chat/stream）不落库，小范围试用无法收集 badcase 与用量统计 | 在 core.py `_chat_events` 的 done 分支调用 `record_audit`，action 为 `chat.answer`/`chat.gated`/`chat.out_of_scope`/`chat.vague`；detail 仅存 q_len/ans_len/sources/web/gated/elapsed_ms，changed_fields 存实际调用工具名列表，**不存问题原文与回答原文**；失败降级不阻断主流程；server.py 透传 user 与 request.client.host | 直查 audit_logs 表：chat.answer 记录含 q_len=28 sources=6 gated=False elapsed_ms=39711 等字段，问答均落库 | 已关闭 |
 | D24 | 中（V2.3 可用性前置，已关闭） | **PRICE 专家与价格分析依赖的 bidding_procurement 表未部署**：postgresql_client 仅查询不建表，price_analyzer/search_postgresql 报"数据缺口"，价格类问题直接拒答 | 新增 scripts/seed_bidding_procurement.py：建表（11 字段，含 project_code 唯一键＋purchaser/subject/amount 索引）＋写入 30 条脱敏合成数据（覆盖货物/工程/服务三类、多采购人多地域、含同名项目跨地域对比行）；幂等 UPSERT，--reset 可重灌 | 直连 PG：avg winning_amount=374.33、top_by_amount 返回 3450/1280/920、keyword "办公设备"命中 3 条；price_analyzer 链路可用 | 已关闭 |
 | D25 | 中（V2.3 意图路由，已关闭） | **四个本地权威目录工具未计入证据门，返回实质内容仍被判"无证据"拒答**：consult_appeal/recommend_template/guide_operation/explain_anomaly 是 R13-R16 人工编排的受控目录，但不在 evidence_gate 的 `_EVIDENCE_TOOLS` 内。此前 LLM 多并行调用 search_bidding_knowledge 而未暴露；意图路由把纯法规题裁剪为 3 工具后，LLM 先调 consult_appeal（返回"质疑 7 个工作日"实质指引），证据门仍 gated 拒答。另裸"无权"空标记会误命中合法法条正文"供应商无权质疑投诉" | ①新增 `_CURATED_CATALOG_TOOLS` 四目录工具并入 `_EVIDENCE_TOOLS`，实质文本（不含空匹配措辞）即证据；②空标记补 未匹配/暂无/暂未识别，裸"无权"收紧为 无权访问/无权查看（真实越权文案均含"无权访问"，已全仓 grep 核实）；③特征词覆盖校验保持不变，GATE-01 虚构项目即使误中目录仍 gated | 新增 10 条目录证据硬闸门断言（共 54 断言全过）；法规题 HTTP 冒烟 gated=False、consult_appeal 作答"7 个工作日"；GATE-01 直连复测仍 gated=True/sources=0/无编造数字 | 已关闭 |
+| D26 | 高（V3.0 修） | **远端 vLLM 对 GLM-4-9B(+LoRA) 返回文本格式工具调用（JSON 直接落在 content，无原生 tool_calls 字段），ReAct 文本解析路径两处缺陷导致"有证据仍拒答"**：①解析出工具调用后 assistant 原始文本未写入消息历史，模型失去自身推理上下文；②工具结果注入的提示词为"请判断信息是否足够再回答"，措辞过严致模型倾向拒答。E2E 实测 faithfulness_score=0.144。注：vLLM v0.30.0 的 glm45 解析器为 GLM-4.7 MoE 专用、不匹配 GLM-4-9B 裸 JSON 输出，hermes 需 `<tool_call>` 标签，原生 tool_calls 链路对该模型不可用 | react_loop.py 文本工具调用分支：①解析成功即以 assistant 角色 `_normalize_tool_content(raw)` 写入历史；②工具结果提示词改为"请根据以上检索结果直接回答用户问题，引用相关法规或数据" | 直连 vLLM 带上下文回答正常（佐证模型本身无问题）；修复后同题 E2E 正确引用实施条例第二十六条（2% 保证金），faithfulness 0.144→0.934；硬闸门 54 断言全过 | 已关闭 |
+| D27 | 低（V3.0 修，测试侧） | **test_reranker_sorts_by_score 未封闭网络路径**：新增远端 rerank 推理服务后，SSH 隧道在线时 `Reranker.rerank` 先走 `_rerank_remote` 真实网络路径，绕过测试注入的本地 CrossEncoder 模型桩，排序断言失败——单测隔离性缺陷，非产品回归 | 测试内 `patch.object(rr, "_rerank_remote", return_value=None)` 屏蔽远端路径，保证本地模型路径封闭可测 | 该文件 8/8 通过；全量 330 passed | 已关闭 |
+| D28 | 高（V3.0 终验修，LoRA 行为兜底，3 子项） | **LoRA 领域模型（glm-4-9b-bid）在真实 vLLM 文本工具调用链路上暴露 3 类行为缺陷，致 P4-01/BID-01/BID-04 连续两轮同点失败**：①文本工具调用解析器 `_JSON_RE`/`_GLM_TEXT_RE`/`_GLM_BARE_RE` 工具名仅覆盖 `search_` 前缀，模型裸 JSON 输出的 `generate_bid_draft` 被丢弃→两轮零工具调用被硬闸门判 gated，且文本分支漏记 exec_log；②响应性判定 22 条 status 全输出 "none"，但正确结论写在 detail（"质保期优于要求，为正偏离"）；③标书生成忽略企业资料块、不写占位符（filled=[]、正文无公司名） | ①tool_defense 三处正则工具名统一放宽为通用标识符 `[a-z_]\w*`（非法名由 react_loop TOOL_EXECUTORS 白名单兜底），react_loop 文本分支补 `exec_log.add_tool_call`，并对"生成/撰写/起草标书章节"意图在 `_chat_stream_tools` 入口注入定向引导 hint；②response_checker 加 `_normalize_status`（从 detail 关键词反推四值，未提及优先级最高）＋`_numeric_assist`（工期/质保/投标有效期正则抽值规则比对，只做 none/response→positive/negative 保守纠正）；③bid_generator 加 `_ensure_bidder_identity`（首个标题后插入"投标人：公司全称"并计入 filled）＋`_strip_code_fence` 剥代码围栏 | 终验 run_log_v3d.txt：BID-01 工具=['generate_bid_draft']/gated=False/1278 字（38.6s）；P4-01 22 条＝响应1＋正偏离5/verdict=attention（53.9s）；BID-04 966 字/回填 1 项公司全称/无占位符残留（22.5s）；离线规则断言（工期/质保/有效期/资质四场景）与身份注入三场景断言全过；全量 60/60 | 已关闭 |
 
 V1.1 的 D1-D6 修复在本轮回归中持续有效。
 
@@ -546,6 +602,8 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 
 **V2.3（⑳ 多专家接入＋Agent 评测基准）发现并修复 3 个真实产品缺陷 D19-D21、观测 1 个稳定性问题 D22（未关闭）**：D19/D20/D21 均在"原型端点首次被真实调用"时暴露——500 限流方法名错误（2s 即崩）、contextvars Context 并发重入（72s 崩，离线 Barrier 测试已锁死回归）、全角 DSML 标记泄漏终稿，三处均先红后绿：MULTI-01 与两次独立冒烟从 500/脏终稿变为 200/干净事实终稿。评测侧发现的题集质量问题（E2E-05 锚定未部署数据）经 PG/KG 直连查证后换题，属基准维护而非放松标准；E2E-04/E2E-07 的轮次差异定性为检索波动（D22），未改证据门任何阈值。
 
+**V3.0（㉒ LoRA 领域微调）发现并修复 1 个真实产品缺陷 D26＋1 个测试封闭性缺陷 D27，终验阶段再修 1 组 LoRA 行为兜底缺陷 D28（3 子项）**：D26 由"LoRA 模型答案质量差（faithfulness 0.144）"的 E2E 异常追查定位——根因不在模型本身，而在 vLLM 对 GLM-4-9B(+LoRA) 仅能返回文本格式工具调用、ReAct 文本解析路径存在上下文缺失与提示词过严两处缺陷，修复后同题 faithfulness 0.934 且正确引用法条；D27 为新增远端推理服务后单测未封闭网络路径所致（先红后绿，属测试隔离性修正）。**D28 为终验阶段（2026-09-24）在 LoRA 模型真实跑全量时暴露的 3 类行为缺陷**：①工具调用解析器仅认 `search_` 前缀致 `generate_bid_draft` 裸 JSON 被丢弃（BID-01）；②响应性判定 status 字段失效但结论写在 detail（P4-01，22 条全 none）；③标书生成忽略企业资料不写占位符（BID-04）。三处均以"解析放宽＋确定性规则兜底"修复（不依赖模型当轮发挥），全量回归 60/60。另观测：意图分类模块 3 项基线失败与 V1.7 起记录一致，非本期回归；本期未触碰证据门任何阈值。
+
 ---
 
 ## 6. 风险评估与遗留事项
@@ -554,7 +612,7 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 |---|---|---|---|
 | R1 | 围串标仅识别标准元数据/正文 IP·MAC，平台专有机器码不支持 | 特定省市平台加密标书需适配 | 收集样本扩展；线索强制人工复核 |
 | R2 | ~~LLM 非确定性：条款条数波动、M2-01 当轮未调工具~~（V1.3 已对"问答事实性"上硬闸门：无证据不放行、低相关/通用 FAQ 不背书） | 偶发拒答/条数变化仍可能存在 | 硬闸门＋强制补检索已上线；温度固定；M5 人工复核兜底；条款条数类波动可后续加结构化校验 |
-| R3 | 默认 LLM 走云端 API（deepseek），非全本地闭环；日志明文；无敏感词过滤/CA 认证 | 政务场景合规差距 | 切 vLLM/Ollama 本地模型配置、加联网 kill-switch、日志加密、敏感词中间件（需求评估已列） |
+| R3 | ~~默认 LLM 走云端 API（deepseek），非全本地闭环~~ **已闭环（V2.6 部署＋V3.0 领域微调）**：LLM_PROVIDER=vllm，远端 vLLM v0.30.0 运行 GLM-4-9B-Chat＋领域 LoRA（glm-4-9b-bid），嵌入/精排同机推理（embed:7997/rerank:7998）；剩余：日志明文；无敏感词过滤/CA 认证 | 政务场景合规差距（日志/敏感词/CA 部分仍开放） | 联网 kill-switch、日志加密、敏感词中间件（需求评估已列）；SSH 隧道为常驻依赖，建议改阿里云安全组直放行 7997/7998 |
 | R4 | 业务端点保持匿名兼容（通过 public 文档实现，非跳过检查） | 匿名只能触达公开数据，符合设计；但部署方需正确标注 internal | 上传默认策略已按角色强制；部署文档说明 |
 | R5 | 检索评测引用准确率 32.94%（top5 中平均仅约 1/3 分片与期望证据直接相关） | 不影响命中（HitRate 100%），但上下文有噪声、耗 token | 调 diversity/rerank 阈值；扩充评测集至 50+ 例后持续观测 |
 | R6 | 测试数据残留（acpt_*、uibid_* 账号，db_id 18-22 等） | 统计口径污染 | 提供清理脚本或测试数据标记 |
@@ -565,7 +623,7 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 | R11（新增 V1.5） | ~~证书原件存本地 `uploads/certs/{uid}/`，未接入对象存储/CDN；OCR 识别准确度依赖图片清晰度~~ **V1.6 部分关闭**：存储抽象为 `CertStorage` 基类＋`LocalCertStorage`（默认）＋`S3CertStorage`（接口占位）；OCR 前加灰度化+小图放大预处理。**V1.7 完全关闭对象存储**：boto3 实际接入 S3CertStorage（put/get/delete/list 批量清理、s3v4 预签名 307、MinIO endpoint+path-style 适配、auto_bucket 自动建桶、中文原名 URL 编码 D18），OCR 改字节流、预览双通道，7 项 Stubber 单测全过。**V2.2 真实连通实测关闭**：真实 MinIO server 端到端 13/13 PASS（含 D18 metadata 真实服务复验、s3v4 预签名匿名 GET、批删/404 映射，manual_minio_live.py） | 多实例部署/生产可靠性、识别准确度 | Local/S3 双后端均已可用且经真实服务实证（CERT_STORAGE_TYPE 切换，.env.example 已补全部配置，复测步骤见 7.3）；剩余：商用 AWS S3 未实测（同 S3v4+path-style 协议，风险低）；复杂版式/手写/印章遮挡仍需人工核对 |
 | R12（新增 V1.9） | ~~智慧问答四类功能覆盖不完整~~ **V2.0 四类已全部关闭**：②范本智能推荐（R14，11 份静态范本库+中文分词匹配）、③异常预警问答（R13，12 code 原因/处置/法规解释层，检测能力 P4-P9 早已具备）、④异议投诉咨询（R15，11 主题专项库，工程招投标与政采两套渠道区分）、①操作智能引导（R16，7 流程 27 阶段，三角色阶段识别+前后衔接）。**V2.1 另关闭"检测结果前端主动弹窗预警"（R17）**：合规/资格/废标/响应性/报价五类检测完成即红/黄弹窗（ALERT-01+浏览器实测全过） | 面向交易平台用户的服务完整性 | 后续增强：范本/流程/异常知识库接运营后台动态维护、异常 code 与操作 stage 随业务扩展持续补录；弹窗阈值可随业务反馈分级调优 |
 | R13（新增 V2.3） | ①~~multi_agent 多专家工作流为孤立原型（仅 /api/multi-agent/run，前端无入口、验收无覆盖）~~ **V2.3 已接入主问答**（开关/面板/MULTI-01/浏览器全过，D19-D21 已修）；遗留：调度计划为一次性 LLM 拆解，不支持中途追加专家/人工修正；非流式整链路 185-242s，仅适合复杂问题，不宜默认开启（前端默认关闭）；PRICE 专家依赖 PG bidding_procurement 历史中标表，**本环境未部署该表**（浏览器实测中价格专家如实报告数据缺口，不编造；price_analyzer 早有"请先部署 PG 并导入数据"降级提示）。②Agent 端到端基准仅 12 题、事实判定为关键词组匹配，复杂多跳存在 D22 轮次波动（E2E-07 两跑一过一拒） | 多专家的速度/可干预性、价格分析在无历史库环境不可用；评测基准覆盖与稳定性统计尚浅 | 部署方导入 bidding_procurement 后复跑评测（题集锚点需随库扩充）；评测扩至 50+ 题、多跑取 flaky 率、引入语义级事实判定；多专家改流式/子问题级进度推送、支持计划人工修订（后续版本） |
-| R14（新增 V2.5） | 三份外部选型报告首选（Qwen3-Emb-0.6B／Milvus／GLM-4-9B）与本仓库落地栈（BGE-M3／Qdrant／DeepSeek＋本地 Qwen2.5-3B-AWQ）不一致；报告中的 V3 五指标评测器、2000 题/400 人工标注、4 库 benchmark 台、ABCD 四档分层未复刻 | 外部审计/答辩时可能被质疑"报告结论未落地"；本地模型 vLLM 部署（#11）尚在进行（权重已就位、镜像待拉取），内网闭环未最终验证 | 差异依据与回迁触发条件已形成 ADR（见第 8 章）：精度差距不构成切换理由、硬件/规模约束不满足报告中选前提；#11 完成后补本地模型端到端延迟与质量记录；获 24GB+ GPU 或向量规模触达迁移门槛时按 ADR 第 4 节重评 |
+| R14（新增 V2.5） | 三份外部选型报告首选（Qwen3-Emb-0.6B／Milvus／GLM-4-9B）与本仓库落地栈（BGE-M3／Qdrant／远端 vLLM GLM-4-9B＋LoRA）不完全一致——**GLM-4-9B 首选项已落地闭合**（V2.6 实际部署、V3.0 叠加领域 LoRA glm-4-9b-bid，E2E faithfulness 0.934）；报告中的 V3 五指标评测器、2000 题/400 人工标注、4 库 benchmark 台、ABCD 四档分层未复刻 | 外部审计/答辩时可能被质疑"报告结论未落地"——GLM-4-9B 项已闭合；Qwen3-Emb-0.6B/Milvus 两项差异仍维持 | 差异依据与回迁触发条件已形成 ADR（见第 8 章）：精度差距不构成切换理由、硬件/规模约束不满足报告中选前提；嵌入/向量库两项待获 24GB+ GPU 或向量规模触达迁移门槛时按 ADR 第 4 节重评 |
 
 ---
 
@@ -591,7 +649,8 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
 | **eval/agent_eval_report.json/.md** | **V2.3 评测报告：11/12 通过、工具选择 1.00、事实覆盖 0.909（单跳4/4、跨域4/4、多跳3/4，E2E-07 gated 波动）** |
 | eval/test_page_chunking.py | 按页切分与元数据透传离线测试 |
 | eval/test_retrieval_access.py | RAG 召回行级隔离离线测试 |
-| eval/test_evidence_gate.py | **硬闸门纯函数离线测试（44 断言，无需 HTTP/LLM）** |
+| eval/test_evidence_gate.py | **硬闸门纯函数离线测试（54 断言，无需 HTTP/LLM）** |
+| **scripts/sft/** | **V3.0 LoRA 领域微调全流程（SFT 数据构造→LLaMA-Factory 训练→vLLM LoRA 部署）：extract_sources/build_domain_qa/build_toolcall_sft/merge_dataset 四个数据构造脚本、glm4_lora.yaml 训练配置、dataset_info.json 数据集注册、upload_and_train.sh 服务器侧训练部署脚本；配套数据与产出 sft_train/val/domain/toolcall.json（719 条＝领域 QA 634＋ReAct 工具轨迹 85＋通用 50）与 sources_bid/legal/seed.jsonl 数据清单** |
 | acceptance/manual_minio_live.py | **V2.2 真实 MinIO 端到端连通手动实测脚本（13 断言，需真实 MinIO server；非自动套件，脚本头部含下载/启动/运行步骤，自动收尾清桶）** |
 | **scripts/seed_bidding_procurement.py** | **V2.3 可用性前置：bidding_procurement 建表＋30 条脱敏历史中标种子数据（货物/工程/服务三类，含跨地域对比行），幂等 UPSERT，--reset 重灌；使 PRICE 专家与价格分析可用** |
 
@@ -633,7 +692,7 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
    - `.venv\Scripts\python.exe tests/eval/run_retrieval_eval.py`
    - `.venv\Scripts\python.exe tests/eval/test_retrieval_access.py`
    - `.venv\Scripts\python.exe tests/eval/test_page_chunking.py`
-   - `.venv\Scripts\python.exe tests/eval/test_evidence_gate.py`（硬闸门 44 断言）
+   - `.venv\Scripts\python.exe tests/eval/test_evidence_gate.py`（硬闸门 54 断言）
    - V2.3 新增：`.venv\Scripts\python.exe -m pytest tests/test_multi_agent.py tests/test_agent_eval_scoring.py tests/test_tool_text_parsing.py -q`（34 项，秒级）
 4. 标书闭环：浏览器 http://localhost:3000/documents → 文档行钢笔按钮 → 选章节流式生成 → 复制/导出 Word；V1.4 另可访问 http://localhost:3000/profile 维护企业资料库，弹窗内"整本合稿＋响应对照"一键成册；接口侧见 BID-01~06、PROFILE-01 与 4.5b/4.5c。后端单测：`.venv\Scripts\python.exe -m pytest tests/test_new_tools.py -q`（**102 项**）；审计查询：admin/auditor 登录后 `GET /api/audit/logs?user_id=<uid>&action=profile.update`；异常解释：`POST /api/anomaly/explain {"code":"OVER_CONTROL_PRICE"}`；范本推荐：`POST /api/templates/recommend {"query":"工程施工"}`（V1.9 新增，均无需登录）。
 5. 浏览器：frontend 目录 `npm run dev` 后访问 http://localhost:3000/documents，按 4.6 节路径复测。
@@ -643,6 +702,7 @@ V1.1 的 D1-D6 修复在本轮回归中持续有效。
    - 执行：`.venv\Scripts\python.exe tests/acceptance/manual_minio_live.py`，预期末行 `13/13 PASS`；脚本自行设置 CERT_S3_* 环境变量并在结束时清空删除测试桶，无需改 .env。
 7. **V2.3 Agent 端到端评测复跑（需后端＋LLM，约 5-7 分钟）**：确认 /api/health ready 后执行 `.venv\Scripts\python.exe tests/eval/run_agent_eval.py`（12 题逐题打 /api/chat，默认超时 280s/题；可用 `--base-url/--timeout/--fact-threshold/--min-pass`），末行打印通过率并生成 tests/eval/agent_eval_report.json/.md；注意 LLM/检索波动会使个别题（当前观测为 E2E-07）在 gated 拒答与通过间波动，**不得修改题集事实锚点凑分**，扩库后需同步更新锚点。
 8. **V2.3 多专家协作复测**：接口侧 POST /api/multi-agent/run `{"question": "...跨域问题...", "deep_thinking": false}`（非流式，约 1-4 分钟，返回 plan/expert_results/final_answer/sources）；UI 侧首页打开"多专家协作"琥珀开关后发问，验证徽标＋可折叠专家过程面板＋终稿＋来源（参考 4.6 v23_multi_agent.png）。
+9. **V3.0 LoRA 领域微调复测**：①SFT 数据构造（本地，顺序执行 extract_sources→build_domain_qa→build_toolcall_sft→merge_dataset，产出 719 条数据集并在 dataset_info.json 注册）；②训练与部署（服务器侧 `bash upload_and_train.sh`：LLaMA-Factory 3 epochs 训练 LoRA→vLLM 以 LoRA 适配器加载，glm-4-9b-bid @ 47.117.189.10:8000）；③本地后端 `.env` 置 VLLM_MODEL=glm-4-9b-bid、LLM_PROVIDER=vllm；④远端嵌入/精排依赖 SSH 隧道 `ssh -N -L 7997:127.0.0.1:7997 -L 7998:127.0.0.1:7998 <user>@47.117.189.10`（vllm-embed/vllm-rerank 容器，断线时 RAG 熔断回退本地 CPU）；⑤答案质量对比可用 tests/eval/run_agent_eval.py（12 题）＋faithfulness 抽样核对。
 
 ---
 
