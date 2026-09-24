@@ -39,3 +39,6 @@ _ui_cert_source.png
 
 # 浏览器录屏中间产物 (mp4 为交付物可入库, webm 为可重生成的原始录屏)
 tests/acceptance/videos/*.webm
+
+# 服务器迁移中转目录 (模型权重 ~28GB, 一次性产物)
+server-migrate/
