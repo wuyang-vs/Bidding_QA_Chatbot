@@ -67,14 +67,15 @@ def test_reranker_skip_single_doc():
 
 
 def test_reranker_sorts_by_score():
-    """多文档应按 score 降序"""
+    """多文档应按 score 降序 (屏蔽远端 rerank, 保证本地模型路径封闭可测)"""
     rr = Reranker()
     fake_model = MagicMock()
     fake_model.predict.return_value = [0.1, 0.9, 0.5]
     rr._model = fake_model
 
     docs = [{"answer": "a"}, {"answer": "b"}, {"answer": "c"}]
-    out = rr.rerank("q", docs, top_k=2)
+    with patch.object(rr, "_rerank_remote", return_value=None):
+        out = rr.rerank("q", docs, top_k=2)
     assert len(out) == 2
     assert out[0]["score"] >= out[1]["score"]
     # 预测分数最高的应排第一
