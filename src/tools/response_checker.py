@@ -137,6 +137,10 @@ def check_response(
     # 步骤 2: 逐条判定响应性
     responses = _judge_responses(clauses_raw, bid_analyze, llm_client)
 
+    # 步骤 2.5: 数值类条款 (工期/质保期/投标有效期) 规则比对兜底,
+    # 修正 LLM 漏判 (实测领域模型会把"质保3年 vs 要求2年"这类明确优待判成"未响应")
+    _numeric_assist(clauses_raw, responses, bid_analyze)
+
     # 规整
     clauses: list[dict[str, Any]] = []
     stats = {"response": 0, "positive": 0, "negative": 0, "none": 0}
@@ -236,6 +240,34 @@ def _fallback_extract(tender_text: str, clause: str | None) -> list[dict[str, An
     return found[:15]
 
 
+_STATUS_CANON = ("response", "positive", "negative", "none")
+
+
+def _normalize_status(raw: Any, detail: Any) -> str:
+    """把 LLM 输出的 status 归一化为四值之一.
+
+    实测领域模型 (glm-4-9b-bid) 会把 prompt 里的枚举说明
+    "response|positive|negative|none" 原样抄进 status 字段, 但正确判定
+    写在 detail 里 (如"质保期优于要求，为正偏离"). 因此:
+      1. 合法值直接采用;
+      2. 非法值从 detail 关键词推导 (未提及/未响应 优先级最高,
+         避免"未提及资质，可能为负偏离"被误判成 negative).
+    """
+    raw_s = str(raw or "").strip().lower()
+    if raw_s in _STATUS_CANON:
+        return raw_s
+    d = str(detail or "")
+    if "未提及" in d or "未响应" in d or "未在" in d:
+        return "none"
+    if "正偏离" in d or "优于" in d:
+        return "positive"
+    if "负偏离" in d:
+        return "negative"
+    if "满足" in d or "符合" in d or "等于" in d:
+        return "response"
+    return "none"
+
+
 def _judge_responses(
     clauses: list[dict[str, Any]],
     bid_text: str,
@@ -254,8 +286,10 @@ def _judge_responses(
         f"【招标实质性条款】\n{clauses_text}\n\n"
         f"【投标文件】\n{bid_text}\n\n"
         "请逐条判定投标文件的响应情况, 输出 JSON:\n"
+        '  status 字段必须且只能是 response / positive / negative / none 这四个单词之一,\n'
+        '  不要输出别的文字, 不要把四个选项连在一起输出.\n'
         '{"responses": [\n'
-        '  {"index": 1, "status": "response|positive|negative|none",\n'
+        '  {"index": 1, "status": "positive",\n'
         '   "evidence": "投标文件中对应原文片段(none时为空)",\n'
         '   "detail": "判定说明(一句话, 如工期满足/质保优于要求/未提及付款方式)"}\n'
         "]}"
@@ -277,7 +311,8 @@ def _judge_responses(
             idx = resp.get("index", 0)
             if isinstance(idx, int) and 1 <= idx <= len(result):
                 result[idx - 1] = {
-                    "status": resp.get("status", "none"),
+                    "status": _normalize_status(resp.get("status", "none"),
+                                                resp.get("detail", "")),
                     "evidence": resp.get("evidence", ""),
                     "detail": resp.get("detail", ""),
                 }
@@ -294,3 +329,64 @@ def _empty_result(note: str) -> dict[str, Any]:
         "verdict": "unknown",
         "note": note,
     }
+
+
+# ────────────────── 数值类条款规则比对兜底 ──────────────────
+
+# (类别关键词元组, 投标文本行关键词元组, 数值正则, 方向)
+# 方向: +1 投标值更大为优 (质保期/有效期), -1 投标值更小为优 (工期/交货期)
+_NUMERIC_METRICS = [
+    (("工期", "交货期", "交付时间", "供货期"),
+     ("工期", "交货", "交付", "供货"),
+     r"(\d+(?:\.\d+)?)\s*((?:个)?(?:日历)?[天日])", -1),
+    (("质保期", "保修期", "质量保证期"),
+     ("质保", "保修", "质量保证"),
+     r"(\d+(?:\.\d+)?)\s*(年)", +1),
+    (("投标有效期", "报价有效期"),
+     ("有效期",),
+     r"(\d+(?:\.\d+)?)\s*((?:个)?(?:日历)?[天日])", +1),
+]
+
+
+def _numeric_assist(clauses: list[dict[str, Any]], responses: list[dict[str, Any]],
+                    bid_text: str) -> None:
+    """工期/质保期/投标有效期等可量化条款用规则比对兜底.
+
+    LLM 漏判时 (如"投标工期100天 vs 要求120天"判成未响应), 依据要求值与
+    投标值的数值比较直接纠正: 更优→positive, 更差→negative, 相等→response.
+    只做保守纠正 (none/response → positive/negative), 不覆盖 LLM 已判出的偏离.
+    """
+    lines = [ln for ln in (bid_text or "").splitlines() if ln.strip()]
+    for c, resp in zip(clauses, responses):
+        if resp.get("status") not in ("none", "response"):
+            continue
+        cat = str(c.get("category", ""))
+        req_text = f"{c.get('requirement', '')} {c.get('tender_clause', '')}"
+        for cat_kws, line_kws, pattern, sign in _NUMERIC_METRICS:
+            if not (any(k in cat for k in cat_kws) or any(k in req_text for k in cat_kws)):
+                continue
+            m_req = re.search(pattern, req_text)
+            if not m_req:
+                break
+            req_val, req_unit = float(m_req.group(1)), m_req.group(2)
+            bid_val = bid_unit = None
+            for ln in lines:
+                if any(k in ln for k in line_kws):
+                    m_bid = re.search(pattern, ln)
+                    if m_bid:
+                        bid_val, bid_unit = float(m_bid.group(1)), m_bid.group(2)
+                        break
+            if bid_val is None:
+                break
+            better = (bid_val - req_val) * sign
+            if better > 0:
+                status, label = "positive", "正偏离"
+            elif better < 0:
+                status, label = "negative", "负偏离"
+            else:
+                status, label = "response", "满足要求"
+            resp["status"] = status
+            resp["detail"] = (f"规则比对: 投标{bid_val}{bid_unit} vs 要求{req_val}{req_unit}"
+                              f" → {label}" +
+                              (f" (LLM原判: {resp.get('detail', '')})" if resp.get("detail") else ""))
+            break

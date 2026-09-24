@@ -12,6 +12,7 @@ Agent 调用方式 (通过 skill 触发):
 from __future__ import annotations
 
 import logging
+import re
 from datetime import date
 from typing import Any
 
@@ -21,6 +22,40 @@ from src.tools.company_profile import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _strip_code_fence(text: str) -> str:
+    """领域模型偶尔把整段正文包进 ```markdown 代码围栏, 剥掉以保证 Markdown 正常渲染."""
+    m = re.match(r"^```(?:markdown|md)?\s*\n(.*?)\n?```\s*$", text, re.DOTALL)
+    return m.group(1) if m else text
+
+
+def _ensure_bidder_identity(body: str, company_profile: dict | None, fill_info: dict) -> str:
+    """企业资料已提供但 LLM 正文未引用公司名时的确定性身份注入 (BID-04 根因兜底).
+
+    领域模型会忽略企业资料块且不写占位符, 导致回填链路完全落空.
+    此时在首个标题行之后插入"投标人：公司全称", 保证标书正文始终体现投标人主体;
+    并把"公司全称"计入 fill_info.filled, 与占位符回填行为对齐.
+    """
+    from src.tools.company_profile import _norm
+    p = _norm(company_profile)
+    name = (p.get("company_name") or "").strip()
+    if not name:
+        return body
+    body = _strip_code_fence(body)
+    if name in body:
+        return body
+    lines = body.splitlines()
+    insert_at = 0
+    for i, ln in enumerate(lines[:5]):
+        if ln.lstrip().startswith("#"):
+            insert_at = i + 1
+            break
+    lines.insert(insert_at, f"\n投标人：{name}\n")
+    filled = fill_info.setdefault("filled", [])
+    if "公司全称" not in filled:
+        filled.append("公司全称")
+    return "\n".join(lines)
 
 
 # 5 个核心章节定义: 标题 + 生成 prompt 模板
@@ -192,6 +227,7 @@ def generate_section(
     ], temperature=0.4)
 
     body, fill_info = apply_profile_placeholders(content.strip(), company_profile)
+    body = _ensure_bidder_identity(body, company_profile, fill_info)
     md = f"## {SECTIONS[section_key]['title']}\n\n{body}"
     return md, fill_info
 
